@@ -8,7 +8,7 @@ export function createClient() {
   // Validate URL format to prevent build errors
   try {
     new URL(supabaseUrl)
-  } catch (error) {
+  } catch {
     console.warn('Invalid Supabase URL provided, using placeholder')
     const fallbackUrl = 'https://placeholder.supabase.co'
     return createBrowserClient(fallbackUrl, supabaseAnonKey)

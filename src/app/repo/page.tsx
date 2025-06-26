@@ -9,19 +9,35 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Mic, Square, Play, Pause, Upload, Loader2 } from 'lucide-react'
+import { Mic, Square, Upload, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 type RecordingState = 'idle' | 'recording' | 'paused' | 'processing'
 
+interface RepoSession {
+  id: string
+  title: string
+  transcript: string
+  ai_analysis: string
+  created_at: string
+  session_type: string
+  privacy_level: string
+}
+
+interface User {
+  id: string
+  email?: string
+  [key: string]: unknown
+}
+
 export default function RepoPage() {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [recordingState, setRecordingState] = useState<RecordingState>('idle')
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [transcript, setTranscript] = useState('')
   const [aiAnalysis, setAiAnalysis] = useState('')
-  const [repoSessions, setRepoSessions] = useState<any[]>([])
+  const [repoSessions, setRepoSessions] = useState<RepoSession[]>([])
   const [isLoading, setIsLoading] = useState(false)
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -32,8 +48,11 @@ export default function RepoPage() {
   const router = useRouter()
 
   useEffect(() => {
-    checkUser()
-    loadRepoSessions()
+    const initializePage = async () => {
+      await checkUser()
+      await loadRepoSessions()
+    }
+    initializePage()
   }, [])
 
   const checkUser = async () => {
@@ -244,7 +263,7 @@ export default function RepoPage() {
             <div className="p-4 bg-muted rounded-lg">
               <p className="text-sm font-medium mb-2">Recording completed</p>
               <p className="text-sm text-muted-foreground">
-                Click "Process Recording" to transcribe and analyze with AI
+                Click &ldquo;Process Recording&rdquo; to transcribe and analyze with AI
               </p>
             </div>
           )}
