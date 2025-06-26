@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 import { User as DatabaseUser } from '@/types/database'
@@ -102,10 +103,12 @@ export default function Dashboard() {
               <p className="text-xs text-gray-600 mb-3">
                 Record a new career conversation with AI
               </p>
-              <Button size="sm" className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                New Session
-              </Button>
+              <Link href="/repo">
+                <Button size="sm" className="w-full">
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Session
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 
@@ -190,10 +193,12 @@ export default function Dashboard() {
                     <Mic className="mx-auto h-12 w-12 text-gray-300" />
                     <p className="mt-2">No repo sessions yet</p>
                     <p className="text-sm">Start your first career conversation to build your repository</p>
-                    <Button className="mt-4" size="sm">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create First Session
-                    </Button>
+                    <Link href="/repo">
+                      <Button className="mt-4" size="sm">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create First Session
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </CardContent>
