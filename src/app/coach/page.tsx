@@ -111,13 +111,64 @@ export default function CoachPage() {
     
     setConversationState('listening')
     
-    // In a real implementation, you'd use streaming speech recognition
-    // For now, we'll simulate it
-    setTimeout(() => {
-      if (conversationState === 'listening') {
-        simulateUserInput()
+    // Use Web Speech API for real speech recognition
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+      const recognition = new SpeechRecognition()
+      
+      recognition.continuous = false
+      recognition.interimResults = false
+      recognition.lang = 'en-US'
+      
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript
+        handleUserInput(transcript)
       }
-    }, 3000)
+      
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error)
+        setConversationState('idle')
+        // Retry listening after a short delay
+        setTimeout(() => {
+          if (isConnected) {
+            startListening()
+          }
+        }, 2000)
+      }
+      
+      recognition.onend = () => {
+        // If still connected and not processing, start listening again
+        if (isConnected && conversationState === 'listening') {
+          setTimeout(() => startListening(), 500)
+        }
+      }
+      
+      recognition.start()
+    } else {
+      // Fallback to simulation if speech recognition not supported
+      setTimeout(() => {
+        if (conversationState === 'listening') {
+          simulateUserInput()
+        }
+      }, 3000)
+    }
+  }
+
+  const handleUserInput = (transcript: string) => {
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: transcript,
+      isUser: true,
+      timestamp: new Date()
+    }
+    
+    setMessages(prev => [...prev, userMessage])
+    setConversationState('thinking')
+    
+    // Process with AI
+    setTimeout(() => {
+      generateAIResponse(transcript)
+    }, 1500)
   }
 
   const simulateUserInput = () => {
@@ -133,16 +184,47 @@ export default function CoachPage() {
     
     // Simulate AI processing
     setTimeout(() => {
-      generateAIResponse()
+      generateAIResponse(userMessage.text)
     }, 1500)
   }
 
-  const generateAIResponse = async () => {
+  const generateAIResponse = async (userInput: string) => {
     try {
-      // In real implementation, call OpenAI streaming API
       setConversationState('speaking')
       
-      const aiResponse = "I understand that feeling of being stuck can be really challenging. Let's explore this together. Can you tell me what specifically about your current role feels limiting? Is it the type of work you're doing, the growth opportunities, or perhaps the company culture?"
+      // Get user profile for context
+      const { data: profile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user?.id)
+        .single()
+      
+      // Get recent repo sessions for context
+      const { data: recentSessions } = await supabase
+        .from('repo_sessions')
+        .select('transcript, ai_analysis')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false })
+        .limit(3)
+      
+      // Call OpenAI API with context
+      const response = await fetch('/api/coach-conversation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userInput,
+          conversationHistory: messages,
+          userProfile: profile,
+          recentSessions: recentSessions || []
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to get AI response')
+      }
+      
+      const result = await response.json()
+      const aiResponse = result.response
       
       const aiMessage: Message = {
         id: Date.now().toString(),
@@ -167,7 +249,27 @@ export default function CoachPage() {
       
     } catch (error) {
       console.error('Error generating AI response:', error)
-      setConversationState('idle')
+      // Fallback response
+      const fallbackResponse = "I'm having trouble processing that right now. Could you try rephrasing your question?"
+      
+      const aiMessage: Message = {
+        id: Date.now().toString(),
+        text: fallbackResponse,
+        isUser: false,
+        timestamp: new Date()
+      }
+      
+      setMessages(prev => [...prev, aiMessage])
+      
+      if (isVoiceEnabled) {
+        await speakText(fallbackResponse)
+      }
+      
+      setTimeout(() => {
+        if (isConnected) {
+          startListening()
+        }
+      }, 1000)
     }
   }
 
