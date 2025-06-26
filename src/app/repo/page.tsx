@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Mic, Square, Upload, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { User } from '@supabase/supabase-js'
 
 type RecordingState = 'idle' | 'recording' | 'paused' | 'processing'
 
@@ -23,12 +24,6 @@ interface RepoSession {
   created_at: string
   session_type: string
   privacy_level: string
-}
-
-interface User {
-  id: string
-  email?: string
-  [key: string]: unknown
 }
 
 export default function RepoPage() {
