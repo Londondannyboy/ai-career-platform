@@ -1,9 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-
-// Disable static generation for this page since it needs user authentication
-export const dynamic = 'force-dynamic'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'

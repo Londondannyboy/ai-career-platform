@@ -3,9 +3,6 @@
 import { signIn } from '@/lib/auth'
 import { useState } from 'react'
 
-// Disable static generation for this page
-export const dynamic = 'force-dynamic'
-
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
 
