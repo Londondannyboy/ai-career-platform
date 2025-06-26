@@ -64,7 +64,8 @@ export default function ProfilePage() {
   }
 
   // Parse LinkedIn data if available
-  const linkedinData = profile.linkedin_data || {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const linkedinData = (profile.linkedin_data as Record<string, any>) || {}
   const linkedinPicture = linkedinData.picture || linkedinData.avatar_url || profile.profile_image
 
   return (
