@@ -156,16 +156,18 @@ export default function Dashboard() {
                 <div className="rounded-lg bg-orange-100 p-2 mr-3">
                   <MessageCircle className="h-4 w-4 text-orange-600" />
                 </div>
-                Get Coaching
+                AI Coach Chat
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-gray-600 mb-3">
-                Connect with mentors and coaches
+                Real-time voice conversation with AI coach
               </p>
-              <Button size="sm" variant="outline" className="w-full">
-                Find Coaches
-              </Button>
+              <Link href="/coach">
+                <Button size="sm" variant="outline" className="w-full">
+                  Start Coaching
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>

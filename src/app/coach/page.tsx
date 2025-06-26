@@ -1,0 +1,408 @@
+'use client'
+
+// Force this page to be dynamically rendered
+export const dynamic = 'force-dynamic'
+
+import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { User } from '@supabase/supabase-js'
+import Navigation from '@/components/Navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff } from 'lucide-react'
+
+type ConversationState = 'idle' | 'listening' | 'thinking' | 'speaking'
+
+interface Message {
+  id: string
+  text: string
+  isUser: boolean
+  timestamp: Date
+}
+
+export default function CoachPage() {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [conversationState, setConversationState] = useState<ConversationState>('idle')
+  const [messages, setMessages] = useState<Message[]>([])
+  const [isConnected, setIsConnected] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true)
+  
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  
+  const router = useRouter()
+  const supabase = createClient()
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/login')
+        return
+      }
+      setUser(user)
+      setLoading(false)
+    }
+    checkUser()
+  }, [])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const startConversation = async () => {
+    try {
+      // Request microphone permission
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 16000
+        }
+      })
+      
+      streamRef.current = stream
+      setIsConnected(true)
+      
+      // Add welcome message
+      const welcomeMessage: Message = {
+        id: Date.now().toString(),
+        text: "Hi! I'm your AI career coach. I'm here to help you explore your career goals, discuss challenges, and plan your next steps. What would you like to talk about today?",
+        isUser: false,
+        timestamp: new Date()
+      }
+      setMessages([welcomeMessage])
+      
+      // Start listening
+      startListening()
+      
+      // Speak welcome message if voice is enabled
+      if (isVoiceEnabled) {
+        speakText(welcomeMessage.text)
+      }
+      
+    } catch (error) {
+      console.error('Error accessing microphone:', error)
+      alert('Could not access microphone. Please check permissions.')
+    }
+  }
+
+  const endConversation = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+    }
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop()
+    }
+    setIsConnected(false)
+    setConversationState('idle')
+    
+    // Save conversation to repo
+    saveConversationToRepo()
+  }
+
+  const startListening = () => {
+    if (!streamRef.current) return
+    
+    setConversationState('listening')
+    
+    // In a real implementation, you'd use streaming speech recognition
+    // For now, we'll simulate it
+    setTimeout(() => {
+      if (conversationState === 'listening') {
+        simulateUserInput()
+      }
+    }, 3000)
+  }
+
+  const simulateUserInput = () => {
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: "I'm feeling stuck in my current role and not sure what direction to take my career.",
+      isUser: true,
+      timestamp: new Date()
+    }
+    
+    setMessages(prev => [...prev, userMessage])
+    setConversationState('thinking')
+    
+    // Simulate AI processing
+    setTimeout(() => {
+      generateAIResponse(userMessage.text)
+    }, 1500)
+  }
+
+  const generateAIResponse = async (userInput: string) => {
+    try {
+      // In real implementation, call OpenAI streaming API
+      setConversationState('speaking')
+      
+      const aiResponse = "I understand that feeling of being stuck can be really challenging. Let's explore this together. Can you tell me what specifically about your current role feels limiting? Is it the type of work you're doing, the growth opportunities, or perhaps the company culture?"
+      
+      const aiMessage: Message = {
+        id: Date.now().toString(),
+        text: aiResponse,
+        isUser: false,
+        timestamp: new Date()
+      }
+      
+      setMessages(prev => [...prev, aiMessage])
+      
+      // Speak AI response if voice is enabled
+      if (isVoiceEnabled) {
+        await speakText(aiResponse)
+      }
+      
+      // Start listening again
+      setTimeout(() => {
+        if (isConnected) {
+          startListening()
+        }
+      }, 1000)
+      
+    } catch (error) {
+      console.error('Error generating AI response:', error)
+      setConversationState('idle')
+    }
+  }
+
+  const speakText = async (text: string): Promise<void> => {
+    return new Promise((resolve) => {
+      if (!isVoiceEnabled || isMuted) {
+        resolve()
+        return
+      }
+      
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.rate = 0.9
+      utterance.pitch = 1
+      utterance.volume = 0.8
+      
+      utterance.onend = () => {
+        resolve()
+      }
+      
+      speechSynthesis.speak(utterance)
+    })
+  }
+
+  const saveConversationToRepo = async () => {
+    if (!user || messages.length === 0) return
+    
+    try {
+      const conversation = messages.map(m => `${m.isUser ? 'You' : 'AI Coach'}: ${m.text}`).join('\n\n')
+      
+      await supabase.from('repo_sessions').insert({
+        user_id: user.id,
+        title: `Career Coaching Session ${new Date().toLocaleDateString()}`,
+        transcript: conversation,
+        ai_analysis: 'Real-time coaching conversation completed.',
+        session_type: 'voice_coaching',
+        privacy_level: 'private'
+      })
+    } catch (error) {
+      console.error('Error saving conversation:', error)
+    }
+  }
+
+  const getStateIndicator = () => {
+    switch (conversationState) {
+      case 'listening':
+        return (
+          <div className="flex items-center space-x-2 text-green-600">
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <span>Listening...</span>
+          </div>
+        )
+      case 'thinking':
+        return (
+          <div className="flex items-center space-x-2 text-blue-600">
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+            <span>Thinking...</span>
+          </div>
+        )
+      case 'speaking':
+        return (
+          <div className="flex items-center space-x-2 text-purple-600">
+            <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
+            <span>Speaking...</span>
+          </div>
+        )
+      default:
+        return (
+          <div className="flex items-center space-x-2 text-gray-500">
+            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+            <span>Ready to start</span>
+          </div>
+        )
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+      </div>
+    )
+  }
+
+  if (!user) return null
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      
+      <main className="mx-auto max-w-4xl px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">AI Career Coach</h1>
+          <p className="mt-2 text-gray-600">
+            Have a real-time conversation with your AI career coach. Just speak naturally!
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Conversation Area */}
+          <div className="lg:col-span-2">
+            <Card className="h-[600px] flex flex-col">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Career Coaching Session</span>
+                  {getStateIndicator()}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col">
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+                  {messages.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Mic className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                      <p>Click "Start Conversation" to begin your coaching session</p>
+                      <p className="text-sm">Your AI coach will guide you through career discussions</p>
+                    </div>
+                  ) : (
+                    messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                            message.isUser
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-200 text-gray-900'
+                          }`}
+                        >
+                          <p className="text-sm">{message.text}</p>
+                          <p className="text-xs mt-1 opacity-70">
+                            {message.timestamp.toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Controls */}
+                <div className="border-t pt-4">
+                  <div className="flex justify-center space-x-4">
+                    {!isConnected ? (
+                      <Button 
+                        onClick={startConversation}
+                        size="lg"
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <Phone className="mr-2 h-5 w-5" />
+                        Start Conversation
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          onClick={() => setIsMuted(!isMuted)}
+                          variant={isMuted ? "destructive" : "outline"}
+                          size="lg"
+                        >
+                          {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                        </Button>
+                        
+                        <Button
+                          onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+                          variant={!isVoiceEnabled ? "destructive" : "outline"}
+                          size="lg"
+                        >
+                          {isVoiceEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                        </Button>
+                        
+                        <Button 
+                          onClick={endConversation}
+                          variant="destructive"
+                          size="lg"
+                        >
+                          <PhoneOff className="mr-2 h-5 w-5" />
+                          End Session
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Session Info */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Session Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Status</span>
+                    <span className={`text-sm font-medium ${
+                      isConnected ? 'text-green-600' : 'text-gray-500'
+                    }`}>
+                      {isConnected ? 'Connected' : 'Offline'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Messages</span>
+                    <span className="text-sm font-medium">{messages.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Voice Output</span>
+                    <span className={`text-sm font-medium ${
+                      isVoiceEnabled ? 'text-green-600' : 'text-gray-500'
+                    }`}>
+                      {isVoiceEnabled ? 'On' : 'Off'}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Tips</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <p>• Speak naturally and clearly</p>
+                  <p>• Take your time to think</p>
+                  <p>• Be specific about your challenges</p>
+                  <p>• Ask follow-up questions</p>
+                  <p>• Your conversation is private and saved to your repo</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}
