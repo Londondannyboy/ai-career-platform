@@ -11,6 +11,10 @@ export async function GET(request: Request) {
     
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     
+    console.log('Auth callback - Code:', code)
+    console.log('Auth callback - Data:', data)
+    console.log('Auth callback - Error:', error)
+    
     if (!error && data.user) {
       // Check if user profile exists, if not create it
       const { data: existingProfile } = await supabase
@@ -33,16 +37,13 @@ export async function GET(request: Request) {
         ])
       }
 
-      const forwardedHost = request.headers.get('x-forwarded-host')
-      const isLocalEnv = process.env.NODE_ENV === 'development'
+      // Always redirect to the production URL for consistency
+      const redirectUrl = process.env.NODE_ENV === 'development' 
+        ? `${origin}${next}`
+        : `https://ai-career-platform.vercel.app${next}`
       
-      if (isLocalEnv) {
-        return NextResponse.redirect(`${origin}${next}`)
-      } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`)
-      } else {
-        return NextResponse.redirect(`${origin}${next}`)
-      }
+      console.log('Redirecting to:', redirectUrl)
+      return NextResponse.redirect(redirectUrl)
     }
   }
 
