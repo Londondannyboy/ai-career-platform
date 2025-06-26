@@ -112,39 +112,47 @@ export default function CoachPage() {
     setConversationState('listening')
     
     // Use Web Speech API for real speech recognition
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
-      const recognition = new SpeechRecognition()
       
-      recognition.continuous = false
-      recognition.interimResults = false
-      recognition.lang = 'en-US'
-      
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript
-        handleUserInput(transcript)
-      }
-      
-      recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error)
-        setConversationState('idle')
-        // Retry listening after a short delay
-        setTimeout(() => {
-          if (isConnected) {
-            startListening()
-          }
-        }, 2000)
-      }
-      
-      recognition.onend = () => {
-        // If still connected and not processing, start listening again
-        if (isConnected && conversationState === 'listening') {
-          setTimeout(() => startListening(), 500)
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition()
+        
+        recognition.continuous = false
+        recognition.interimResults = false
+        recognition.lang = 'en-US'
+        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        recognition.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript
+          handleUserInput(transcript)
         }
+        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error)
+          setConversationState('idle')
+          // Retry listening after a short delay
+          setTimeout(() => {
+            if (isConnected) {
+              startListening()
+            }
+          }, 2000)
+        }
+        
+        recognition.onend = () => {
+          // If still connected and not processing, start listening again
+          if (isConnected && conversationState === 'listening') {
+            setTimeout(() => startListening(), 500)
+          }
+        }
+        
+        recognition.start()
+      } else {
+        throw new Error('Speech recognition not supported')
       }
-      
-      recognition.start()
-    } else {
+    } catch {
       // Fallback to simulation if speech recognition not supported
       setTimeout(() => {
         if (conversationState === 'listening') {

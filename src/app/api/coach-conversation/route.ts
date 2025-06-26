@@ -36,7 +36,7 @@ User Profile:
     if (recentSessions && recentSessions.length > 0) {
       repoContext = `
 Recent Career Conversations:
-${recentSessions.map((session: any, index: number) => `
+${recentSessions.map((session: { transcript?: string; ai_analysis?: string }, index: number) => `
 ${index + 1}. Previous Discussion:
 ${session.transcript ? session.transcript.substring(0, 500) + '...' : 'No transcript'}
 
@@ -50,7 +50,7 @@ AI Analysis: ${session.ai_analysis ? session.ai_analysis.substring(0, 300) + '..
     if (conversationHistory && conversationHistory.length > 0) {
       conversationContext = `
 Current Conversation:
-${conversationHistory.map((msg: any) => `${msg.isUser ? 'User' : 'Coach'}: ${msg.text}`).join('\n')}
+${conversationHistory.map((msg: { isUser: boolean; text: string }) => `${msg.isUser ? 'User' : 'Coach'}: ${msg.text}`).join('\n')}
 `
     }
 
