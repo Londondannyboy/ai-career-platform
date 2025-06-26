@@ -57,7 +57,14 @@ export default function CoachPage() {
 
   const startConversation = async () => {
     try {
+      // Check if browser supports speech recognition
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert('Your browser does not support speech recognition. Please use Chrome, Safari, or Edge.')
+        return
+      }
+
       // Request microphone permission
+      console.log('Requesting microphone permission...')
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
@@ -66,29 +73,33 @@ export default function CoachPage() {
         }
       })
       
+      console.log('Microphone permission granted')
       streamRef.current = stream
       setIsConnected(true)
       
       // Add welcome message
       const welcomeMessage: Message = {
         id: Date.now().toString(),
-        text: "Hi! I'm your AI career coach. I'm here to help you explore your career goals, discuss challenges, and plan your next steps. What would you like to talk about today?",
+        text: "Hi! I'm your AI career coach. I can hear you now! Tell me what you'd like to discuss about your career.",
         isUser: false,
         timestamp: new Date()
       }
       setMessages([welcomeMessage])
       
-      // Start listening
-      startListening()
-      
       // Speak welcome message if voice is enabled
       if (isVoiceEnabled) {
-        speakText(welcomeMessage.text)
+        await speakText(welcomeMessage.text)
       }
+      
+      // Start listening after welcome message
+      setTimeout(() => {
+        console.log('Starting to listen for speech...')
+        startListening()
+      }, 1000)
       
     } catch (error) {
       console.error('Error accessing microphone:', error)
-      alert('Could not access microphone. Please check permissions.')
+      alert(`Could not access microphone: ${error}. Please check permissions and try again.`)
     }
   }
 
@@ -107,8 +118,12 @@ export default function CoachPage() {
   }
 
   const startListening = () => {
-    if (!streamRef.current) return
+    if (!streamRef.current) {
+      console.log('No audio stream available')
+      return
+    }
     
+    console.log('Setting conversation state to listening...')
     setConversationState('listening')
     
     // Use Web Speech API for real speech recognition
@@ -117,48 +132,77 @@ export default function CoachPage() {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
       
       if (SpeechRecognition) {
+        console.log('Creating speech recognition instance...')
         const recognition = new SpeechRecognition()
         
         recognition.continuous = false
-        recognition.interimResults = false
+        recognition.interimResults = true
         recognition.lang = 'en-US'
+        
+        recognition.onstart = () => {
+          console.log('Speech recognition started - speak now!')
+        }
         
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         recognition.onresult = (event: any) => {
+          console.log('Speech recognition result:', event)
           const transcript = event.results[0][0].transcript
-          handleUserInput(transcript)
+          console.log('Transcript:', transcript)
+          if (event.results[0].isFinal) {
+            handleUserInput(transcript)
+          }
         }
         
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         recognition.onerror = (event: any) => {
-          console.error('Speech recognition error:', event.error)
+          console.error('Speech recognition error:', event.error, event)
           setConversationState('idle')
+          
+          // Show user-friendly error message
+          const errorMessage = {
+            id: Date.now().toString(),
+            text: `Speech recognition error: ${event.error}. Please try speaking again.`,
+            isUser: false,
+            timestamp: new Date()
+          }
+          setMessages(prev => [...prev, errorMessage])
+          
           // Retry listening after a short delay
           setTimeout(() => {
             if (isConnected) {
+              console.log('Retrying speech recognition...')
               startListening()
             }
           }, 2000)
         }
         
         recognition.onend = () => {
+          console.log('Speech recognition ended')
           // If still connected and not processing, start listening again
           if (isConnected && conversationState === 'listening') {
-            setTimeout(() => startListening(), 500)
+            setTimeout(() => {
+              console.log('Restarting speech recognition...')
+              startListening()
+            }, 500)
           }
         }
         
+        console.log('Starting speech recognition...')
         recognition.start()
       } else {
         throw new Error('Speech recognition not supported')
       }
-    } catch {
-      // Fallback to simulation if speech recognition not supported
-      setTimeout(() => {
-        if (conversationState === 'listening') {
-          simulateUserInput()
-        }
-      }, 3000)
+    } catch (error) {
+      console.error('Failed to start speech recognition:', error)
+      // Show fallback message
+      const fallbackMessage = {
+        id: Date.now().toString(),
+        text: "Speech recognition isn't working. You can type your response or try refreshing the page.",
+        isUser: false,
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, fallbackMessage])
+      setConversationState('idle')
     }
   }
 

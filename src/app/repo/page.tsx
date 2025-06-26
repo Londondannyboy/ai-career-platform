@@ -12,6 +12,7 @@ import { Mic, Square, Upload, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { User } from '@supabase/supabase-js'
+import Link from 'next/link'
 
 type RecordingState = 'idle' | 'recording' | 'paused' | 'processing'
 
@@ -213,6 +214,16 @@ export default function RepoPage() {
         <p className="text-muted-foreground">
           Record your career thoughts, experiences, and goals. Our AI will analyze and help you build insights.
         </p>
+        {user && (
+          <div className="mt-4 flex items-center space-x-4">
+            <span className="text-sm text-gray-600">
+              Logged in as: <strong>{user.user_metadata?.full_name || user.email}</strong>
+            </span>
+            <Link href="/profile" className="text-blue-600 hover:underline text-sm">
+              View Profile & LinkedIn Data
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Recording Interface */}
