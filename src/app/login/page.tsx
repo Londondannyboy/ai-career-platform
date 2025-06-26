@@ -2,7 +2,6 @@
 
 // Force this page to be dynamically rendered
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
 
 import { signIn } from '@/lib/auth'
 import { useState } from 'react'

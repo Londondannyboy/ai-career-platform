@@ -2,7 +2,6 @@
 
 // Force this page to be dynamically rendered
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'

@@ -2,7 +2,6 @@
 
 // Force this page to be dynamically rendered
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
 
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
@@ -48,7 +47,7 @@ export default function RepoPage() {
       await loadRepoSessions()
     }
     initializePage()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
