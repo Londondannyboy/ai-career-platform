@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 import Navigation from '@/components/Navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff } from 'lucide-react'
 
@@ -31,7 +31,7 @@ export default function CoachPage() {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true)
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioContextRef = useRef<AudioContext | null>(null)
+  // const audioContextRef = useRef<AudioContext | null>(null) // Future use
   const streamRef = useRef<MediaStream | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
@@ -49,7 +49,7 @@ export default function CoachPage() {
       setLoading(false)
     }
     checkUser()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -133,11 +133,11 @@ export default function CoachPage() {
     
     // Simulate AI processing
     setTimeout(() => {
-      generateAIResponse(userMessage.text)
+      generateAIResponse()
     }, 1500)
   }
 
-  const generateAIResponse = async (userInput: string) => {
+  const generateAIResponse = async () => {
     try {
       // In real implementation, call OpenAI streaming API
       setConversationState('speaking')
@@ -281,7 +281,7 @@ export default function CoachPage() {
                   {messages.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <Mic className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                      <p>Click "Start Conversation" to begin your coaching session</p>
+                      <p>Click &ldquo;Start Conversation&rdquo; to begin your coaching session</p>
                       <p className="text-sm">Your AI coach will guide you through career discussions</p>
                     </div>
                   ) : (

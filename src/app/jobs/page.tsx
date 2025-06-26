@@ -29,7 +29,7 @@ export default function JobsPage() {
       setLoading(false)
     }
     checkUser()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (

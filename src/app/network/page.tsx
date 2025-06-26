@@ -29,7 +29,7 @@ export default function NetworkPage() {
       setLoading(false)
     }
     checkUser()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
@@ -116,7 +116,7 @@ export default function NetworkPage() {
                 <Users className="mx-auto h-12 w-12 text-gray-300" />
                 <p className="mt-2">Professional networking features coming soon</p>
                 <p className="text-sm">
-                  We're building LinkedIn-style connections, company search, and collaboration tools.
+                  We&apos;re building LinkedIn-style connections, company search, and collaboration tools.
                 </p>
               </div>
             </CardContent>
