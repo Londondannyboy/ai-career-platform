@@ -10,8 +10,10 @@ import { User } from '@supabase/supabase-js'
 import { User as DatabaseUser } from '@/types/database'
 import Navigation from '@/components/Navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { User as UserIcon, Mail, Calendar, Linkedin } from 'lucide-react'
+import Link from 'next/link'
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null)
@@ -190,6 +192,24 @@ export default function ProfilePage() {
                   <p>🎯 <strong>AI Coaching:</strong> Your profile helps personalize coaching conversations</p>
                   <p>💼 <strong>Job Matching:</strong> LinkedIn data improves job recommendations</p>
                   <p>🗣️ <strong>Career Conversations:</strong> AI references your background in discussions</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Enhance Profile</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Add detailed career information for better AI coaching and job matching.
+                  </p>
+                  <Link href="/profile/edit">
+                    <Button className="w-full">
+                      Edit Profile Details
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
