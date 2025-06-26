@@ -223,22 +223,7 @@ export default function CoachPage() {
     }, 1500)
   }
 
-  const simulateUserInput = () => {
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: "I'm feeling stuck in my current role and not sure what direction to take my career.",
-      isUser: true,
-      timestamp: new Date()
-    }
-    
-    setMessages(prev => [...prev, userMessage])
-    setConversationState('thinking')
-    
-    // Simulate AI processing
-    setTimeout(() => {
-      generateAIResponse(userMessage.text)
-    }, 1500)
-  }
+  // Removed simulateUserInput - using real speech recognition only
 
   const generateAIResponse = async (userInput: string) => {
     try {

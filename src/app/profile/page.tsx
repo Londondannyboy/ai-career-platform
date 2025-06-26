@@ -10,8 +10,6 @@ import { User } from '@supabase/supabase-js'
 import { User as DatabaseUser } from '@/types/database'
 import Navigation from '@/components/Navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { User as UserIcon, Mail, Calendar, Linkedin } from 'lucide-react'
 
