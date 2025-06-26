@@ -1,103 +1,279 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useEffect, useState } from 'react'
+
+// Disable static generation for this page since it needs user authentication
+export const dynamic = 'force-dynamic'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { User } from '@supabase/supabase-js'
+import { User as DatabaseUser } from '@/types/database'
+import Navigation from '@/components/Navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { 
+  Mic, 
+  Users, 
+  Briefcase, 
+  MessageCircle, 
+  Plus,
+  TrendingUp,
+  Shield
+} from 'lucide-react'
+
+export default function Dashboard() {
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<DatabaseUser | null>(null)
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+  const supabase = createClient()
+
+  useEffect(() => {
+    const getUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) {
+          router.push('/login')
+          return
+        }
+        
+        setUser(user)
+        
+        // Get user profile
+        const { data: profile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        
+        setProfile(profile)
+      } catch (error) {
+        console.error('Error getting user:', error)
+        router.push('/login')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    getUser()
+  }, [router, supabase])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome back, {profile?.name || 'there'}!
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Build your career story, connect with professionals, and discover opportunities.
+          </p>
+        </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+        {/* Quick Actions */}
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="cursor-pointer transition-shadow hover:shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-sm font-medium">
+                <div className="rounded-lg bg-blue-100 p-2 mr-3">
+                  <Mic className="h-4 w-4 text-blue-600" />
+                </div>
+                Start Repo Session
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-gray-600 mb-3">
+                Record a new career conversation with AI
+              </p>
+              <Button size="sm" className="w-full">
+                <Plus className="mr-2 h-4 w-4" />
+                New Session
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer transition-shadow hover:shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-sm font-medium">
+                <div className="rounded-lg bg-green-100 p-2 mr-3">
+                  <Users className="h-4 w-4 text-green-600" />
+                </div>
+                Find Connections
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-gray-600 mb-3">
+                Discover and connect with professionals
+              </p>
+              <Button size="sm" variant="outline" className="w-full">
+                Browse Network
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer transition-shadow hover:shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-sm font-medium">
+                <div className="rounded-lg bg-purple-100 p-2 mr-3">
+                  <Briefcase className="h-4 w-4 text-purple-600" />
+                </div>
+                Search Jobs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-gray-600 mb-3">
+                Use AI to find your perfect role
+              </p>
+              <Button size="sm" variant="outline" className="w-full">
+                Voice Search
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer transition-shadow hover:shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-sm font-medium">
+                <div className="rounded-lg bg-orange-100 p-2 mr-3">
+                  <MessageCircle className="h-4 w-4 text-orange-600" />
+                </div>
+                Get Coaching
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-gray-600 mb-3">
+                Connect with mentors and coaches
+              </p>
+              <Button size="sm" variant="outline" className="w-full">
+                Find Coaches
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Recent Repo Sessions */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Recent Repo Sessions</span>
+                  <Badge variant="secondary" className="flex items-center">
+                    <Shield className="mr-1 h-3 w-3" />
+                    Private
+                  </Badge>
+                </CardTitle>
+                <CardDescription>
+                  Your latest career conversations and insights
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="text-center py-8 text-gray-500">
+                    <Mic className="mx-auto h-12 w-12 text-gray-300" />
+                    <p className="mt-2">No repo sessions yet</p>
+                    <p className="text-sm">Start your first career conversation to build your repository</p>
+                    <Button className="mt-4" size="sm">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create First Session
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Career Insights */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  Career Insights
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-center py-4 text-gray-500">
+                  <p className="text-sm">Build your repo to unlock AI-powered career insights</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Network Stats */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Users className="mr-2 h-4 w-4" />
+                  Your Network
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Connections</span>
+                    <span className="font-medium">0</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Shared Repos</span>
+                    <span className="font-medium">0</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Coaching Sessions</span>
+                    <span className="font-medium">0</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Tips */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Getting Started</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-start space-x-2">
+                    <div className="rounded-full bg-blue-100 p-1 mt-0.5">
+                      <div className="h-2 w-2 rounded-full bg-blue-600"></div>
+                    </div>
+                    <p>Start your first Repo session to build your career story</p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <div className="rounded-full bg-gray-100 p-1 mt-0.5">
+                      <div className="h-2 w-2 rounded-full bg-gray-400"></div>
+                    </div>
+                    <p>Connect with colleagues and professionals in your field</p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <div className="rounded-full bg-gray-100 p-1 mt-0.5">
+                      <div className="h-2 w-2 rounded-full bg-gray-400"></div>
+                    </div>
+                    <p>Use voice search to find jobs tailored to your experience</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
-  );
+  )
 }

@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Configuration for the AI Career Platform
+  trailingSlash: false,
 };
 
 export default nextConfig;
