@@ -11,7 +11,7 @@ export async function signIn() {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'linkedin_oidc',
     options: {
-      redirectTo: 'https://ai-career-platform.vercel.app/auth/callback',
+      redirectTo: `${window.location.origin}/auth/callback`,
       scopes: 'openid profile email'
     }
   })
