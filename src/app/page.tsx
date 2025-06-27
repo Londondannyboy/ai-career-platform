@@ -64,7 +64,7 @@ export default function Dashboard() {
               Welcome to AI Career Platform
             </h1>
             <p className="text-xl text-gray-600 mb-8">
-              Build your career repository and connect with professionals
+              Build your career repository and connect with professionals using AI
             </p>
             <SignInButton mode="modal">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
