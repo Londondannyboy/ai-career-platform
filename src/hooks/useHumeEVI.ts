@@ -28,116 +28,6 @@ export function useHumeEVI(config: HumeEVIConfig) {
   const streamRef = useRef<MediaStream | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   
-  const connect = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      console.log('🔗 Connecting to Hume AI EVI...')
-      
-      // Get microphone access first
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 16000,
-          channelCount: 1
-        }
-      })
-      streamRef.current = stream
-      console.log('🎤 Microphone access granted')
-
-      // Create audio context for processing
-      const audioContext = new AudioContext({ sampleRate: 16000 })
-      audioContextRef.current = audioContext
-      
-      // Connect to Hume AI EVI WebSocket with proper authentication
-      const apiKey = process.env.NEXT_PUBLIC_HUME_API_KEY
-      const apiSecret = process.env.NEXT_PUBLIC_HUME_API_SECRET
-      const configId = process.env.NEXT_PUBLIC_HUME_CONFIG_ID
-      
-      console.log('🔑 Hume API Key status:', apiKey ? `Present (${apiKey.substring(0, 8)}...)` : 'Missing')
-      console.log('🔐 Hume API Secret status:', apiSecret ? `Present (${apiSecret.substring(0, 8)}...)` : 'Missing')
-      console.log('⚙️ Hume Config ID status:', configId ? `Present (${configId})` : 'Missing')
-      
-      if (!apiKey || apiKey === 'your_hume_api_key' || apiKey.includes('your_')) {
-        console.error('❌ Hume API key not configured properly')
-        throw new Error('Hume API key not found or is placeholder value')
-      }
-
-      if (!configId) {
-        console.error('❌ Hume EVI Configuration ID missing')
-        throw new Error('Hume EVI Configuration ID is required')
-      }
-
-      // Use the correct EVI WebSocket endpoint with configuration ID
-      let wsUrl = `wss://api.hume.ai/v0/evi/chat?config_id=${configId}&api_key=${apiKey}`
-      console.log('🔗 Connecting to Hume AI EVI with Config ID:', configId)
-      
-      const socket = new WebSocket(wsUrl)
-      socketRef.current = socket
-
-      socket.onopen = () => {
-        console.log('✅ Connected to Hume AI EVI WebSocket with config:', configId)
-        setIsConnected(true)
-        setIsLoading(false)
-        setIsListening(true)
-        config.onConnectionChange(true)
-        
-        // EVI configuration ID already contains system prompt, voice, and settings
-        // No need to send additional configuration messages
-        
-        // Start audio streaming immediately
-        console.log('🎤 Starting audio streaming with Hume AI EVI...')
-        startAudioStreaming()
-        
-        // Send connection status message
-        config.onMessage({
-          type: 'connection_status',
-          text: 'Connected to Hume AI! I can now hear you and respond with natural, empathetic voice.',
-          timestamp: new Date(),
-          status: 'connected'
-        })
-      }
-
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          handleHumeMessage(data)
-        } catch (error) {
-          console.error('❌ Error parsing Hume message:', error)
-        }
-      }
-
-      socket.onerror = (error) => {
-        console.error('❌ Hume WebSocket error:', error)
-        console.error('❌ WebSocket URL was:', wsUrl)
-        console.error('❌ API Key used:', apiKey ? `${apiKey.substring(0, 8)}...` : 'NONE')
-        config.onError(`Hume AI connection error: ${error}`)
-      }
-
-      socket.onclose = (event) => {
-        console.log('🔌 Disconnected from Hume AI EVI', event.code, event.reason)
-        console.log('🔍 WebSocket close details:', { code: event.code, reason: event.reason, wasClean: event.wasClean })
-        setIsConnected(false)
-        setIsListening(false)
-        setIsSpeaking(false)
-        config.onConnectionChange(false)
-      }
-
-    } catch (error) {
-      console.error('❌ Failed to connect to Hume AI:', error)
-      console.error('❌ Error details:', error)
-      if (error instanceof Error) {
-        console.error('❌ Error message:', error.message)
-        console.error('❌ Error stack:', error.stack)
-      }
-      config.onError(`Connection failed: ${error}`)
-      setIsLoading(false)
-      
-      // Fallback to basic functionality
-      fallbackToBasicMode()
-    }
-  }, [config])
-
   const fallbackToBasicMode = useCallback(() => {
     console.log('🔄 Falling back to basic mode without Hume AI')
     setIsConnected(true)
@@ -248,36 +138,18 @@ export function useHumeEVI(config: HumeEVIConfig) {
         config.onError(data.message || data.error || 'Hume AI error occurred')
         break
 
-      case 'ChatMetadata':
-        console.log('📊 Chat metadata:', data)
-        // Handle chat metadata if needed
-        break
-
       default:
-        console.log('❓ Unknown Hume message type:', data.type, 'Data:', data)
+        console.log('📨 Unknown Hume AI message type:', data.type)
     }
-  }, [config])
+  }, [config, setIsSpeaking])
 
-  const playHumeAudio = useCallback(async (audioData: number[] | string) => {
+  const playHumeAudio = useCallback(async (audioData: string) => {
+    if (!audioContextRef.current) return
+
     try {
-      if (!audioContextRef.current) return
-
-      let buffer: ArrayBuffer
-
-      if (typeof audioData === 'string') {
-        // Base64 encoded audio
-        const binaryString = atob(audioData)
-        buffer = new ArrayBuffer(binaryString.length)
-        const view = new Uint8Array(buffer)
-        for (let i = 0; i < binaryString.length; i++) {
-          view[i] = binaryString.charCodeAt(i)
-        }
-      } else {
-        // Array of numbers
-        buffer = new Uint8Array(audioData).buffer
-      }
-
-      const decodedAudio = await audioContextRef.current.decodeAudioData(buffer)
+      // Decode base64 audio data from Hume AI
+      const audioBytes = Uint8Array.from(atob(audioData), c => c.charCodeAt(0))
+      const decodedAudio = await audioContextRef.current.decodeAudioData(audioBytes.buffer)
       
       const source = audioContextRef.current.createBufferSource()
       source.buffer = decodedAudio
@@ -295,7 +167,117 @@ export function useHumeEVI(config: HumeEVIConfig) {
       console.error('❌ Failed to play Hume audio:', error)
       setIsSpeaking(false)
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const connect = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      console.log('🔗 Connecting to Hume AI EVI...')
+      
+      // Get microphone access first
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 16000,
+          channelCount: 1
+        }
+      })
+      streamRef.current = stream
+      console.log('🎤 Microphone access granted')
+
+      // Create audio context for processing
+      const audioContext = new AudioContext({ sampleRate: 16000 })
+      audioContextRef.current = audioContext
+      
+      // Connect to Hume AI EVI WebSocket with proper authentication
+      const apiKey = process.env.NEXT_PUBLIC_HUME_API_KEY
+      const apiSecret = process.env.NEXT_PUBLIC_HUME_API_SECRET
+      const configId = process.env.NEXT_PUBLIC_HUME_CONFIG_ID
+      
+      console.log('🔑 Hume API Key status:', apiKey ? `Present (${apiKey.substring(0, 8)}...)` : 'Missing')
+      console.log('🔐 Hume API Secret status:', apiSecret ? `Present (${apiSecret.substring(0, 8)}...)` : 'Missing')
+      console.log('⚙️ Hume Config ID status:', configId ? `Present (${configId})` : 'Missing')
+      
+      if (!apiKey || apiKey === 'your_hume_api_key' || apiKey.includes('your_')) {
+        console.error('❌ Hume API key not configured properly')
+        throw new Error('Hume API key not found or is placeholder value')
+      }
+
+      if (!configId) {
+        console.error('❌ Hume EVI Configuration ID missing')
+        throw new Error('Hume EVI Configuration ID is required')
+      }
+
+      // Use the correct EVI WebSocket endpoint with configuration ID
+      const wsUrl = `wss://api.hume.ai/v0/evi/chat?config_id=${configId}&api_key=${apiKey}`
+      console.log('🔗 Connecting to Hume AI EVI with Config ID:', configId)
+      
+      const socket = new WebSocket(wsUrl)
+      socketRef.current = socket
+
+      socket.onopen = () => {
+        console.log('✅ Connected to Hume AI EVI WebSocket with config:', configId)
+        setIsConnected(true)
+        setIsLoading(false)
+        setIsListening(true)
+        config.onConnectionChange(true)
+        
+        // EVI configuration ID already contains system prompt, voice, and settings
+        // No need to send additional configuration messages
+        
+        // Start audio streaming immediately
+        console.log('🎤 Starting audio streaming with Hume AI EVI...')
+        startAudioStreaming()
+        
+        // Send connection status message
+        config.onMessage({
+          type: 'connection_status',
+          text: 'Connected to Hume AI! I can now hear you and respond with natural, empathetic voice.',
+          timestamp: new Date(),
+          status: 'connected'
+        })
+      }
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          handleHumeMessage(data)
+        } catch (error) {
+          console.error('❌ Error parsing Hume message:', error)
+        }
+      }
+
+      socket.onerror = (error) => {
+        console.error('❌ Hume WebSocket error:', error)
+        console.error('❌ WebSocket URL was:', wsUrl)
+        console.error('❌ API Key used:', apiKey ? `${apiKey.substring(0, 8)}...` : 'NONE')
+        config.onError(`Hume AI connection error: ${error}`)
+      }
+
+      socket.onclose = (event) => {
+        console.log('🔌 Disconnected from Hume AI EVI', event.code, event.reason)
+        console.log('🔍 WebSocket close details:', { code: event.code, reason: event.reason, wasClean: event.wasClean })
+        setIsConnected(false)
+        setIsListening(false)
+        setIsSpeaking(false)
+        config.onConnectionChange(false)
+      }
+
+    } catch (error) {
+      console.error('❌ Failed to connect to Hume AI:', error)
+      console.error('❌ Error details:', error)
+      if (error instanceof Error) {
+        console.error('❌ Error message:', error.message)
+        console.error('❌ Error stack:', error.stack)
+      }
+      config.onError(`Connection failed: ${error}`)
+      setIsLoading(false)
+      
+      // Fallback to basic functionality
+      fallbackToBasicMode()
+    }
+  }, [config]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const sendMessage = useCallback((text: string) => {
     if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {

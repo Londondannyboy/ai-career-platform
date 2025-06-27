@@ -38,7 +38,7 @@ export default function QuestPage() {
   
   const supabase = createClient()
 
-  const ensureUserExists = async () => {
+  const ensureUserExists = useCallback(async () => {
     if (!user?.id) return
 
     try {
@@ -70,7 +70,7 @@ export default function QuestPage() {
     } catch (error) {
       console.error('❌ Error ensuring user exists:', error)
     }
-  }
+  }, [user])
 
   // Hume AI EVI integration
   const humeConfig = {
@@ -123,7 +123,7 @@ export default function QuestPage() {
         console.log('🚨 User interruption detected')
         setConversationState('listening')
       }
-    }, [currentPlaybook]),
+    }, [currentPlaybook]), // eslint-disable-line react-hooks/exhaustive-deps
     
     onConnectionChange: useCallback((connected: boolean) => {
       console.log('🔗 Hume connection changed:', connected)
@@ -157,13 +157,13 @@ export default function QuestPage() {
         loadPreviousConversation(user.id)
       })
     }
-  }, [isLoaded, user])
+  }, [isLoaded, user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const loadPreviousConversation = async (userId: string) => {
+  const loadPreviousConversation = useCallback(async (userId: string) => {
     try {
       console.log('🔍 Loading previous conversations for user:', userId)
       console.log('👤 Current Clerk user info:', {
@@ -212,7 +212,7 @@ export default function QuestPage() {
     } catch {
       console.log('No previous quest conversation found, starting fresh')
     }
-  }
+  }, [user, supabase])
 
   const detectPlaybook = (userInput: string): PlaybookType => {
     const input = userInput.toLowerCase()

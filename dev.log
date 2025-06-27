@@ -1,0 +1,74 @@
+
+> ai-career-platform@0.1.0 dev
+> next dev --turbopack
+
+   ▲ Next.js 15.3.4 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.160:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+Slow filesystem detected. If /Users/dankeegan/ai-career-platform/.next is a network drive, consider moving it to a local folder. If you have an antivirus enabled, consider excluding your project directory.
+ ○ Compiling middleware ...
+ ✓ Compiled middleware in 573ms
+ ✓ Ready in 2.2s
+ ○ Compiling /quest ...
+ ✓ Compiled /quest in 10.3s
+Invalid Supabase URL provided, using placeholder
+ HEAD /quest 200 in 11036ms
+Invalid Supabase URL provided, using placeholder
+ GET /quest 200 in 313ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1948ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 2324ms
+Invalid Supabase URL provided, using placeholder
+ GET /quest 200 in 716ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 254ms
+Invalid Supabase URL provided, using placeholder
+ GET /quest 200 in 165ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 271ms
+Invalid Supabase URL provided, using placeholder
+ GET /quest 200 in 594ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 235ms
+   Reload env: .env.local
+ GET /quest 200 in 1348ms
+ ⚠ Fast Refresh had to perform a full reload when ./src/hooks/useHumeEVI.ts changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ✓ Compiled in 264ms
+Invalid Supabase URL provided, using placeholder
+ GET /quest 200 in 479ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 282ms
+ ⚠ Fast Refresh had to perform a full reload when ./src/hooks/useHumeEVI.ts changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ✓ Compiled in 146ms
+Invalid Supabase URL provided, using placeholder
+ GET /quest 200 in 500ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 252ms
+Invalid Supabase URL provided, using placeholder
+ GET /quest 200 in 109ms
+Invalid Supabase URL provided, using placeholder
+ HEAD /quest 200 in 80ms
+Invalid Supabase URL provided, using placeholder
+ GET /quest 200 in 173ms
+   Reload env: .env.local
+ GET /quest 200 in 1057ms
+ GET /quest 200 in 77ms
+ ⚠ Fast Refresh had to perform a full reload when ./src/hooks/useHumeEVI.ts changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ⚠ Fast Refresh had to perform a full reload when ./src/hooks/useHumeEVI.ts changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ✓ Compiled in 169ms
+Invalid Supabase URL provided, using placeholder
+ GET /quest 200 in 413ms
+Invalid Supabase URL provided, using placeholder
+ GET /quest 200 in 292ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 303ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 251ms
+ ⚠ Fast Refresh had to perform a full reload when ./src/hooks/useHumeEVI.ts changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ⚠ Fast Refresh had to perform a full reload when ./src/hooks/useHumeEVI.ts changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ✓ Compiled in 149ms
+Invalid Supabase URL provided, using placeholder
+ GET /quest 200 in 442ms
+Invalid Supabase URL provided, using placeholder
+ GET /quest 200 in 365ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 374ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 245ms
+ ✓ Compiled in 153ms
+ ✓ Compiled in 148ms
+ ✓ Compiled in 157ms

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hume AI WebSocket Test</title>
+</head>
+<body>
+    <h1>Hume AI WebSocket Connection Test</h1>
+    <button onclick="testConnection()">Test Hume AI Connection</button>
+    <div id="output"></div>
+
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += '<p>' + new Date().toLocaleTimeString() + ': ' + message + '</p>';
+            console.log(message);
+        }
+
+        async function testConnection() {
+            const apiKey = 'cL5dGCBT1EAaAau7eNA84WVfQ3QpS3t2WRZgZvhwYUWhgN0V';
+            const apiSecret = 'fHlJ1vY69ly0dqt3iqZ9XX8PjGyM9OjMkMlBNxXwSaKFgMKG1Sy7hbXqJd0W65i6';
+            const configId = '8f16326f-a45d-4433-9a12-890120244ec3';
+            
+            log('🔗 Testing Hume AI EVI connection...');
+            log('🔑 API Key: ' + apiKey.substring(0, 8) + '...');
+            log('🔐 API Secret: ' + apiSecret.substring(0, 8) + '...');
+            log('⚙️ Config ID: ' + configId);
+
+            // Test the correct URL format with configuration ID
+            const urls = [
+                `wss://api.hume.ai/v0/evi/chat?config_id=${configId}&api_key=${apiKey}`,
+                `wss://api.hume.ai/v0/evi/chat?api_key=${apiKey}&config_id=${configId}`,
+                `wss://api.hume.ai/v0/evi/chat?configId=${configId}&apiKey=${apiKey}`,
+            ];
+
+            for (let i = 0; i < urls.length; i++) {
+                const url = urls[i];
+                log(`📡 Trying URL ${i + 1}: ${url.replace(apiKey, 'HIDDEN')}`);
+                
+                try {
+                    const socket = new WebSocket(url);
+                    
+                    socket.onopen = () => {
+                        log(`✅ Connected to ${url.replace(apiKey, 'HIDDEN')}`);
+                        
+                        // Try authentication message
+                        socket.send(JSON.stringify({
+                            type: 'authenticate',
+                            apiKey: apiKey,
+                            apiSecret: apiSecret
+                        }));
+                        log('🔐 Sent authentication message');
+                        
+                        setTimeout(() => {
+                            socket.close();
+                        }, 2000);
+                    };
+                    
+                    socket.onmessage = (event) => {
+                        log('📨 Received: ' + event.data);
+                    };
+                    
+                    socket.onerror = (error) => {
+                        log(`❌ Error on ${url.replace(apiKey, 'HIDDEN')}: ${error}`);
+                    };
+                    
+                    socket.onclose = (event) => {
+                        log(`🔌 Closed ${url.replace(apiKey, 'HIDDEN')}: Code ${event.code}, Reason: ${event.reason}`);
+                    };
+                    
+                    // Wait before trying next URL
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    
+                } catch (error) {
+                    log(`💥 Exception with ${url.replace(apiKey, 'HIDDEN')}: ${error.message}`);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
