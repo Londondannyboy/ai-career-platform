@@ -7,8 +7,8 @@ import {
   Mic, 
   Users, 
   Briefcase, 
-  MessageCircle, 
-  Bell
+  Bell,
+  Compass
 } from 'lucide-react'
 
 export default function Navigation() {
@@ -28,13 +28,21 @@ export default function Navigation() {
               <div className="rounded-lg bg-blue-600 p-2">
                 <Mic className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-900">AI Career</span>
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Quest</span>
             </Link>
           </div>
 
           {/* Navigation Links */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-center space-x-4">
+              <Link
+                href="/quest"
+                className="flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              >
+                <Compass className="h-4 w-4" />
+                <span>Start Quest</span>
+              </Link>
+              
               <Link
                 href="/repo"
                 className="flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
@@ -57,14 +65,6 @@ export default function Navigation() {
               >
                 <Briefcase className="h-4 w-4" />
                 <span>Jobs</span>
-              </Link>
-              
-              <Link
-                href="/coaching"
-                className="flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-              >
-                <MessageCircle className="h-4 w-4" />
-                <span>Coaching</span>
               </Link>
             </div>
           </div>

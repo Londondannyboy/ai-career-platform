@@ -972,7 +972,7 @@ export default function CoachPage() {
                       🔊 Test Audio Output
                     </button>
                     <div className="text-xs text-gray-400 mt-1 text-center">
-                      Click if you can't hear the AI coach
+                      Click if you cannot hear the AI coach
                     </div>
                   </div>
                 </div>
