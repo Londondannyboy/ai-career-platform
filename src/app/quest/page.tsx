@@ -33,7 +33,7 @@ export default function QuestPage() {
   const [currentPlaybook, setCurrentPlaybook] = useState<PlaybookType>('career_coaching')
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [lastSessionId, setLastSessionId] = useState<string | null>(null)
+  const [_lastSessionId, setLastSessionId] = useState<string | null>(null)
   const [conversationHistory, setConversationHistory] = useState<{id: string; title: string; transcript: string; ai_analysis: string; created_at: string}[]>([])
   
   const supabase = createClient()
@@ -77,8 +77,20 @@ export default function QuestPage() {
     onMessage: useCallback((humeMessage: HumeMessage) => {
       console.log('📨 Hume message received:', humeMessage.type)
       
-      if (humeMessage.type === 'user_message' && humeMessage.text) {
-        // User spoke
+      if (humeMessage.type === 'connection_status' && humeMessage.text) {
+        // Hume AI connection status update
+        const statusMessage: Message = {
+          id: Date.now().toString(),
+          text: humeMessage.text,
+          isUser: false,
+          timestamp: humeMessage.timestamp,
+          playbook: currentPlaybook
+        }
+        setMessages(prev => [...prev, statusMessage])
+        setConversationState('listening')
+        
+      } else if (humeMessage.type === 'user_message' && humeMessage.text) {
+        // User spoke - Hume AI transcribed it
         const userMessage: Message = {
           id: Date.now().toString(),
           text: humeMessage.text,
@@ -92,10 +104,10 @@ export default function QuestPage() {
         // Process with our quest logic
         setTimeout(() => {
           generateQuestResponse(humeMessage.text!, humeMessage.emotionalMeasures)
-        }, 1000)
+        }, 1500)
         
       } else if (humeMessage.type === 'assistant_message' && humeMessage.text) {
-        // AI response received
+        // AI response received (either from Hume or our fallback)
         const aiMessage: Message = {
           id: Date.now().toString(),
           text: humeMessage.text,
@@ -117,9 +129,8 @@ export default function QuestPage() {
       console.log('🔗 Hume connection changed:', connected)
       if (connected) {
         setConversationState('listening')
-        // Send welcome message
-        const welcomeText = generateWelcomeMessage()
-        hume.sendMessage(welcomeText)
+        // For Hume AI, the welcome message will be sent automatically
+        // No need to manually send as Hume handles voice generation
       } else {
         setConversationState('idle')
       }
@@ -203,23 +214,6 @@ export default function QuestPage() {
     }
   }
 
-  const generateWelcomeMessage = (): string => {
-    let userName = 'there'
-    if (user?.firstName) {
-      userName = user.firstName
-    }
-    
-    let welcomeText = `Hi ${userName}! Welcome to Quest - your AI-powered journey to career success.`
-    
-    if (lastSessionId) {
-      welcomeText += " I can see we've talked before. What would you like to work on today?"
-    } else {
-      welcomeText += " I'm here to help with career coaching, job searching, CV improvement, or practice interviews. What's on your mind?"
-    }
-    
-    return welcomeText
-  }
-
   const detectPlaybook = (userInput: string): PlaybookType => {
     const input = userInput.toLowerCase()
     
@@ -288,7 +282,7 @@ export default function QuestPage() {
       
       const result = await response.json()
       
-      // Send AI response back to Hume for voice synthesis
+      // Send AI response back to Hume AI for voice synthesis
       hume.sendMessage(result.response)
       
     } catch (error) {
