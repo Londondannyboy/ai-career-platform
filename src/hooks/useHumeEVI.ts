@@ -66,13 +66,11 @@ export function useHumeEVI(config: HumeEVIConfig) {
         setIsListening(true)
         config.onConnectionChange(true)
         
-        // Send session configuration
+        // Send session configuration with correct format
         socket.send(JSON.stringify({
-          type: 'session_settings',
-          language: 'en',
-          voice: {
-            provider: 'hume',
-            name: 'ITO'
+          type: 'SessionSettings',
+          session_settings: {
+            language: 'en'
           }
         }))
         
@@ -148,15 +146,17 @@ export function useHumeEVI(config: HumeEVIConfig) {
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0 && socketRef.current?.readyState === WebSocket.OPEN) {
-          // Convert audio data for Hume AI
+          console.log('🎤 Audio data available, size:', event.data.size, 'type:', event.data.type)
+          
+          // Send binary audio data directly to Hume AI
+          // Hume AI likely expects raw binary data, not JSON-wrapped arrays
           event.data.arrayBuffer().then(buffer => {
-            const audioData = new Uint8Array(buffer)
+            console.log('📡 Sending binary audio to Hume AI, size:', buffer.byteLength)
             
-            // Send audio data to Hume AI EVI
-            socketRef.current?.send(JSON.stringify({
-              type: 'audio_input',
-              data: Array.from(audioData)
-            }))
+            // Try sending as binary data instead of JSON
+            socketRef.current?.send(buffer)
+          }).catch(error => {
+            console.error('❌ Error processing audio data:', error)
           })
         }
       }
@@ -171,37 +171,40 @@ export function useHumeEVI(config: HumeEVIConfig) {
   }, [config])
 
   const handleHumeMessage = useCallback((data: any) => {
-    console.log('📨 Hume AI message:', data.type)
+    console.log('📨 Hume AI message received:', data.type, data)
 
     switch (data.type) {
-      case 'user_message':
-        // User speech was transcribed
+      case 'UserMessage':
+        // User speech was transcribed by Hume AI
+        console.log('🎤 User speech transcribed:', data.message?.content)
         config.onMessage({
           type: 'user_message',
-          text: data.message?.content || data.text || '',
+          text: data.message?.content || '',
           timestamp: new Date(),
-          emotionalMeasures: data.prosody || data.emotions
+          emotionalMeasures: data.models?.prosody || data.prosody
         })
         break
 
-      case 'assistant_message':
+      case 'AssistantMessage':
         // AI generated a text response
+        console.log('🤖 Assistant message:', data.message?.content)
         setIsSpeaking(true)
         config.onMessage({
           type: 'assistant_message',
-          text: data.message?.content || data.text || '',
+          text: data.message?.content || '',
           timestamp: new Date()
         })
         break
 
-      case 'audio_output':
+      case 'AudioOutput':
         // AI generated audio to play
-        if (data.data || data.audio) {
-          playHumeAudio(data.data || data.audio)
+        console.log('🔊 Audio output received from Hume AI')
+        if (data.data) {
+          playHumeAudio(data.data)
         }
         break
 
-      case 'user_interruption':
+      case 'UserInterruption':
         // User interrupted the AI
         console.log('🚨 User interruption detected by Hume AI')
         setIsSpeaking(false)
@@ -211,13 +214,18 @@ export function useHumeEVI(config: HumeEVIConfig) {
         })
         break
 
-      case 'error':
-        console.error('❌ Hume AI error:', data.message)
-        config.onError(data.message || 'Hume AI error occurred')
+      case 'Error':
+        console.error('❌ Hume AI error:', data.message || data.error)
+        config.onError(data.message || data.error || 'Hume AI error occurred')
+        break
+
+      case 'ChatMetadata':
+        console.log('📊 Chat metadata:', data)
+        // Handle chat metadata if needed
         break
 
       default:
-        console.log('❓ Unknown Hume message type:', data.type, data)
+        console.log('❓ Unknown Hume message type:', data.type, 'Data:', data)
     }
   }, [config])
 
@@ -275,9 +283,9 @@ export function useHumeEVI(config: HumeEVIConfig) {
       return
     }
 
-    // Send text message to Hume AI
+    // Send text message to Hume AI with correct format
     const message = {
-      type: 'user_input',
+      type: 'UserInput',
       text: text
     }
 
