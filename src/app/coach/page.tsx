@@ -62,6 +62,37 @@ export default function CoachPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // CRITICAL: Cleanup speech and audio when component unmounts or user leaves page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      console.log('🚨 Page unloading - stopping all speech and audio')
+      if (speechSynthesis.speaking || speechSynthesis.pending) {
+        speechSynthesis.cancel()
+      }
+      if (recognitionRef.current) {
+        recognitionRef.current.stop()
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop())
+      }
+      if (audioContext) {
+        audioContext.close()
+      }
+    }
+
+    // Add event listeners for page navigation and unload
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handleBeforeUnload)
+    
+    // Cleanup on component unmount
+    return () => {
+      console.log('🧹 Coach component unmounting - cleaning up audio')
+      handleBeforeUnload()
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handleBeforeUnload)
+    }
+  }, [audioContext]) // Include audioContext as dependency
+
   const loadPreviousConversation = async (userId: string) => {
     try {
       // Get the most recent coaching session
@@ -626,6 +657,9 @@ export default function CoachPage() {
           <p className="mt-2 text-gray-600">
             Have a real-time conversation with your AI career coach. Just speak naturally!
           </p>
+          <div className="mt-1 text-xs text-gray-400 font-mono">
+            🔧 Version: 2.0.1 - Ultra-Sensitive Interruption + Cleanup Fix
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
