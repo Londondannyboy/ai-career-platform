@@ -120,12 +120,23 @@ export default function CoachPage() {
         .order('created_at', { ascending: false })
         .limit(5)
       
-      console.log('📊 Conversation history result:', { allSessions, error })
+      console.log('📊 Conversation history result:', { 
+        allSessions, 
+        error, 
+        sessionCount: allSessions?.length || 0,
+        userId 
+      })
+      
+      if (error) {
+        console.error('❌ Database error loading conversation history:', error)
+      }
+      
       if (allSessions && allSessions.length > 0) {
         setConversationHistory(allSessions)
         console.log('✅ Loaded', allSessions.length, 'previous sessions')
       } else {
-        console.log('ℹ️ No previous coaching sessions found')
+        console.log('ℹ️ No previous coaching sessions found for user', userId)
+        setConversationHistory([]) // Ensure it's set to empty array
       }
     } catch {
       console.log('No previous conversation found, starting fresh')
@@ -140,8 +151,10 @@ export default function CoachPage() {
         return
       }
 
-      // Request microphone permission
-      console.log('Requesting microphone permission...')
+      // Request microphone permission with detailed logging
+      console.log('🎤 Requesting microphone permission...')
+      console.log('🔍 Navigator available:', !!navigator.mediaDevices)
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
@@ -150,7 +163,12 @@ export default function CoachPage() {
         }
       })
       
-      console.log('Microphone permission granted')
+      console.log('✅ Microphone stream obtained:', {
+        active: stream.active,
+        id: stream.id,
+        tracks: stream.getTracks().length,
+        audioTracks: stream.getAudioTracks().length
+      })
       streamRef.current = stream
       
       // Set up audio monitoring for immediate interruption detection
@@ -279,6 +297,7 @@ export default function CoachPage() {
       
       if (average > speechThreshold) {
         // Speech detected!
+        console.log('🔊 Audio level detected:', average, 'State:', conversationState)
         if (conversationState === 'speaking' && currentTime - lastSpeechTime > 100) {
           console.log('🎤 AUDIO LEVEL INTERRUPTION - Level:', average, 'Threshold:', speechThreshold)
           stopSpeaking()
@@ -531,20 +550,31 @@ export default function CoachPage() {
       speechSynthesisRef.current = utterance
       
       utterance.onstart = () => {
+        console.log('🔊 Speech synthesis started')
         setConversationState('speaking')
       }
       
       utterance.onend = () => {
+        console.log('✅ Speech synthesis ended')
         setConversationState('listening')
         speechSynthesisRef.current = null
         resolve()
       }
       
-      utterance.onerror = () => {
+      utterance.onerror = (event) => {
+        console.error('❌ Speech synthesis error:', event)
         setConversationState('listening')
         speechSynthesisRef.current = null
         resolve()
       }
+      
+      console.log('🗣️ Starting speech synthesis:', {
+        text: text.substring(0, 50) + '...',
+        rate: utterance.rate,
+        volume: utterance.volume,
+        voicesAvailable: speechSynthesis.getVoices().length,
+        speechSynthesisSupported: 'speechSynthesis' in window
+      })
       
       speechSynthesis.speak(utterance)
     })
@@ -586,12 +616,21 @@ export default function CoachPage() {
   }
 
   const saveConversationToRepo = async () => {
-    if (!user || messages.length === 0) return
+    if (!user || messages.length === 0) {
+      console.log('⚠️ Not saving conversation - no user or messages:', { user: !!user, messageCount: messages.length })
+      return
+    }
     
     try {
       const conversation = messages.map(m => `${m.isUser ? 'You' : 'AI Coach'}: ${m.text}`).join('\n\n')
       
-      await supabase.from('repo_sessions').insert({
+      console.log('💾 Saving conversation to repo:', {
+        userId: user.id,
+        messageCount: messages.length,
+        conversationLength: conversation.length
+      })
+      
+      const { data, error } = await supabase.from('repo_sessions').insert({
         user_id: user.id,
         title: `Career Coaching Session ${new Date().toLocaleDateString()}`,
         transcript: conversation,
@@ -599,8 +638,18 @@ export default function CoachPage() {
         session_type: 'voice_coaching',
         privacy_level: 'private'
       })
+      
+      if (error) {
+        console.error('❌ Database error saving conversation:', error)
+      } else {
+        console.log('✅ Conversation saved successfully:', data)
+        // Refresh conversation history after saving
+        if (user?.id) {
+          loadPreviousConversation(user.id)
+        }
+      }
     } catch (error) {
-      console.error('Error saving conversation:', error)
+      console.error('💥 Error saving conversation:', error)
     }
   }
 
@@ -815,8 +864,23 @@ export default function CoachPage() {
                       Your conversation history will appear here after your first session
                     </div>
                     {/* Debug info */}
-                    <div className="text-xs text-gray-300 mt-2 font-mono">
-                      Debug: {conversationHistory.length} sessions loaded
+                    <div className="text-xs text-gray-300 mt-2 font-mono space-y-1">
+                      <div>Debug: {conversationHistory.length} sessions loaded</div>
+                      <div>User ID: {user?.id?.substring(0, 8)}...</div>
+                      <div>Email: {user?.email}</div>
+                      <button 
+                        onClick={() => {
+                          console.log('🧪 Manual debug - User info:', { 
+                            userId: user?.id, 
+                            email: user?.email, 
+                            conversationHistory: conversationHistory.length 
+                          })
+                          if (user?.id) loadPreviousConversation(user.id)
+                        }}
+                        className="text-blue-400 hover:text-blue-300 underline"
+                      >
+                        🔄 Reload History
+                      </button>
                     </div>
                   </div>
                 )}
