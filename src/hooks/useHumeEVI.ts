@@ -49,32 +49,44 @@ export function useHumeEVI(config: HumeEVIConfig) {
       const audioContext = new AudioContext({ sampleRate: 16000 })
       audioContextRef.current = audioContext
       
-      // Connect to Hume AI EVI WebSocket
+      // Connect to Hume AI EVI WebSocket with proper authentication
       const apiKey = process.env.NEXT_PUBLIC_HUME_API_KEY
-      if (!apiKey) {
-        throw new Error('Hume API key not found')
+      const apiSecret = process.env.NEXT_PUBLIC_HUME_API_SECRET
+      const configId = process.env.NEXT_PUBLIC_HUME_CONFIG_ID
+      
+      console.log('🔑 Hume API Key status:', apiKey ? `Present (${apiKey.substring(0, 8)}...)` : 'Missing')
+      console.log('🔐 Hume API Secret status:', apiSecret ? `Present (${apiSecret.substring(0, 8)}...)` : 'Missing')
+      console.log('⚙️ Hume Config ID status:', configId ? `Present (${configId})` : 'Missing')
+      
+      if (!apiKey || apiKey === 'your_hume_api_key' || apiKey.includes('your_')) {
+        console.error('❌ Hume API key not configured properly')
+        throw new Error('Hume API key not found or is placeholder value')
       }
 
-      const wsUrl = `wss://api.hume.ai/v0/evi/chat?api_key=${apiKey}`
+      if (!configId) {
+        console.error('❌ Hume EVI Configuration ID missing')
+        throw new Error('Hume EVI Configuration ID is required')
+      }
+
+      // Use the correct EVI WebSocket endpoint with configuration ID
+      let wsUrl = `wss://api.hume.ai/v0/evi/chat?config_id=${configId}&api_key=${apiKey}`
+      console.log('🔗 Connecting to Hume AI EVI with Config ID:', configId)
+      
       const socket = new WebSocket(wsUrl)
       socketRef.current = socket
 
       socket.onopen = () => {
-        console.log('✅ Connected to Hume AI EVI')
+        console.log('✅ Connected to Hume AI EVI WebSocket with config:', configId)
         setIsConnected(true)
         setIsLoading(false)
         setIsListening(true)
         config.onConnectionChange(true)
         
-        // Send session configuration with correct format
-        socket.send(JSON.stringify({
-          type: 'SessionSettings',
-          session_settings: {
-            language: 'en'
-          }
-        }))
+        // EVI configuration ID already contains system prompt, voice, and settings
+        // No need to send additional configuration messages
         
-        // Start audio streaming
+        // Start audio streaming immediately
+        console.log('🎤 Starting audio streaming with Hume AI EVI...')
         startAudioStreaming()
         
         // Send connection status message
@@ -97,11 +109,14 @@ export function useHumeEVI(config: HumeEVIConfig) {
 
       socket.onerror = (error) => {
         console.error('❌ Hume WebSocket error:', error)
-        config.onError('Hume AI connection error occurred')
+        console.error('❌ WebSocket URL was:', wsUrl)
+        console.error('❌ API Key used:', apiKey ? `${apiKey.substring(0, 8)}...` : 'NONE')
+        config.onError(`Hume AI connection error: ${error}`)
       }
 
       socket.onclose = (event) => {
         console.log('🔌 Disconnected from Hume AI EVI', event.code, event.reason)
+        console.log('🔍 WebSocket close details:', { code: event.code, reason: event.reason, wasClean: event.wasClean })
         setIsConnected(false)
         setIsListening(false)
         setIsSpeaking(false)
@@ -110,6 +125,11 @@ export function useHumeEVI(config: HumeEVIConfig) {
 
     } catch (error) {
       console.error('❌ Failed to connect to Hume AI:', error)
+      console.error('❌ Error details:', error)
+      if (error instanceof Error) {
+        console.error('❌ Error message:', error.message)
+        console.error('❌ Error stack:', error.stack)
+      }
       config.onError(`Connection failed: ${error}`)
       setIsLoading(false)
       
@@ -148,13 +168,18 @@ export function useHumeEVI(config: HumeEVIConfig) {
         if (event.data.size > 0 && socketRef.current?.readyState === WebSocket.OPEN) {
           console.log('🎤 Audio data available, size:', event.data.size, 'type:', event.data.type)
           
-          // Send binary audio data directly to Hume AI
-          // Hume AI likely expects raw binary data, not JSON-wrapped arrays
+          // Send audio data in Hume AI EVI expected format
           event.data.arrayBuffer().then(buffer => {
-            console.log('📡 Sending binary audio to Hume AI, size:', buffer.byteLength)
+            console.log('📡 Sending audio to Hume AI EVI, size:', buffer.byteLength)
             
-            // Try sending as binary data instead of JSON
-            socketRef.current?.send(buffer)
+            // Convert to base64 for JSON transmission to Hume AI EVI
+            const base64Audio = btoa(String.fromCharCode(...new Uint8Array(buffer)))
+            
+            socketRef.current?.send(JSON.stringify({
+              type: 'audio_input',
+              data: base64Audio,
+              encoding: 'webm'
+            }))
           }).catch(error => {
             console.error('❌ Error processing audio data:', error)
           })
@@ -174,37 +199,41 @@ export function useHumeEVI(config: HumeEVIConfig) {
     console.log('📨 Hume AI message received:', data.type, data)
 
     switch (data.type) {
-      case 'UserMessage':
+      case 'user_message':
+      case 'transcript':
         // User speech was transcribed by Hume AI
-        console.log('🎤 User speech transcribed:', data.message?.content)
+        console.log('🎤 User speech transcribed:', data.message?.content || data.text)
         config.onMessage({
           type: 'user_message',
-          text: data.message?.content || '',
+          text: data.message?.content || data.text || '',
           timestamp: new Date(),
-          emotionalMeasures: data.models?.prosody || data.prosody
+          emotionalMeasures: data.models?.prosody || data.prosody || data.measures
         })
         break
 
-      case 'AssistantMessage':
+      case 'assistant_message':
+      case 'response':
         // AI generated a text response
-        console.log('🤖 Assistant message:', data.message?.content)
+        console.log('🤖 Assistant message:', data.message?.content || data.text)
         setIsSpeaking(true)
         config.onMessage({
           type: 'assistant_message',
-          text: data.message?.content || '',
+          text: data.message?.content || data.text || '',
           timestamp: new Date()
         })
         break
 
-      case 'AudioOutput':
+      case 'audio_output':
+      case 'audio':
         // AI generated audio to play
         console.log('🔊 Audio output received from Hume AI')
-        if (data.data) {
-          playHumeAudio(data.data)
+        if (data.data || data.audio) {
+          playHumeAudio(data.data || data.audio)
         }
         break
 
-      case 'UserInterruption':
+      case 'user_interruption':
+      case 'interruption':
         // User interrupted the AI
         console.log('🚨 User interruption detected by Hume AI')
         setIsSpeaking(false)
