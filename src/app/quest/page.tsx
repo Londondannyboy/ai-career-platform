@@ -38,6 +38,40 @@ export default function QuestPage() {
   
   const supabase = createClient()
 
+  const ensureUserExists = async () => {
+    if (!user?.id) return
+
+    try {
+      // Check if user exists
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', user.id)
+        .single()
+
+      if (!existingUser) {
+        // Create user if doesn't exist
+        console.log('📝 Creating new user in database:', user.id)
+        const { error } = await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            name: user.fullName || user.firstName || 'Quest User',
+            email: user.emailAddresses?.[0]?.emailAddress || '',
+            created_at: new Date().toISOString()
+          })
+
+        if (error) {
+          console.error('❌ Error creating user:', error)
+        } else {
+          console.log('✅ User created successfully')
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error ensuring user exists:', error)
+    }
+  }
+
   // Hume AI EVI integration
   const humeConfig = {
     onMessage: useCallback((humeMessage: HumeMessage) => {
@@ -107,7 +141,10 @@ export default function QuestPage() {
 
   useEffect(() => {
     if (isLoaded && user?.id) {
-      loadPreviousConversation(user.id)
+      // Ensure user exists in our database before loading conversations
+      ensureUserExists().then(() => {
+        loadPreviousConversation(user.id)
+      })
     }
   }, [isLoaded, user])
 
@@ -117,6 +154,14 @@ export default function QuestPage() {
 
   const loadPreviousConversation = async (userId: string) => {
     try {
+      console.log('🔍 Loading previous conversations for user:', userId)
+      console.log('👤 Current Clerk user info:', {
+        id: user?.id,
+        email: user?.emailAddresses?.[0]?.emailAddress,
+        firstName: user?.firstName,
+        fullName: user?.fullName
+      })
+      
       // Get the most recent quest session
       const { data: recentSession } = await supabase
         .from('repo_sessions')

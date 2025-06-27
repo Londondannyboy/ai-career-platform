@@ -60,11 +60,11 @@ export default function Dashboard() {
       <div className="min-h-screen bg-gray-50">
         <div className="flex min-h-screen items-center justify-center">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Welcome to AI Career Platform
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+              Welcome to Quest
             </h1>
             <p className="text-xl text-gray-600 mb-8">
-              Build your career repository and connect with professionals using AI
+              Your AI-powered journey to career success through intelligent conversations
             </p>
             <SignInButton mode="modal">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
@@ -154,22 +154,22 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer transition-shadow hover:shadow-md">
+          <Card className="cursor-pointer transition-shadow hover:shadow-md border-2 border-purple-200 bg-gradient-to-br from-blue-50 to-purple-50">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center text-sm font-medium">
-                <div className="rounded-lg bg-orange-100 p-2 mr-3">
-                  <MessageCircle className="h-4 w-4 text-orange-600" />
+                <div className="rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 p-2 mr-3">
+                  <MessageCircle className="h-4 w-4 text-white" />
                 </div>
-                AI Coach Chat
+                Start Your Quest
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-gray-600 mb-3">
-                Real-time voice conversation with AI coach
+                AI-powered career journey with smart playbooks
               </p>
-              <Link href="/coach">
-                <Button size="sm" variant="outline" className="w-full">
-                  Start Coaching
+              <Link href="/quest">
+                <Button size="sm" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                  Begin Quest
                 </Button>
               </Link>
             </CardContent>
