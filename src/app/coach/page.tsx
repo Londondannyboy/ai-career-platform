@@ -37,6 +37,8 @@ export default function CoachPage() {
   const recognitionRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [lastSessionId, setLastSessionId] = useState<string | null>(null)
   const [conversationHistory, setConversationHistory] = useState<{id: string; title: string; transcript: string; ai_analysis: string; created_at: string}[]>([])
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null)
+  const [audioAnalyser, setAudioAnalyser] = useState<AnalyserNode | null>(null)
   
   const router = useRouter()
   const supabase = createClient()
@@ -77,8 +79,9 @@ export default function CoachPage() {
         console.log('Found previous coaching session:', recentSession.title)
       }
       
-      // Load conversation history for display
-      const { data: allSessions } = await supabase
+      // Load conversation history for display  
+      console.log('🔍 Loading conversation history for user:', userId)
+      const { data: allSessions, error } = await supabase
         .from('repo_sessions')
         .select('id, title, transcript, ai_analysis, created_at')
         .eq('user_id', userId)
@@ -86,8 +89,12 @@ export default function CoachPage() {
         .order('created_at', { ascending: false })
         .limit(5)
       
-      if (allSessions) {
+      console.log('📊 Conversation history result:', { allSessions, error })
+      if (allSessions && allSessions.length > 0) {
         setConversationHistory(allSessions)
+        console.log('✅ Loaded', allSessions.length, 'previous sessions')
+      } else {
+        console.log('ℹ️ No previous coaching sessions found')
       }
     } catch {
       console.log('No previous conversation found, starting fresh')
@@ -114,6 +121,25 @@ export default function CoachPage() {
       
       console.log('Microphone permission granted')
       streamRef.current = stream
+      
+      // Set up audio monitoring for immediate interruption detection
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)() // eslint-disable-line @typescript-eslint/no-explicit-any
+        const source = audioCtx.createMediaStreamSource(stream)
+        const analyser = audioCtx.createAnalyser()
+        
+        analyser.fftSize = 256
+        analyser.smoothingTimeConstant = 0.1
+        source.connect(analyser)
+        
+        setAudioContext(audioCtx)
+        setAudioAnalyser(analyser)
+        
+        console.log('🎤 Audio monitoring setup complete')
+      } catch (error) {
+        console.log('⚠️ Audio monitoring setup failed:', error)
+      }
+      
       setIsConnected(true)
       
       // Get user's name for personalized greeting
@@ -166,6 +192,11 @@ export default function CoachPage() {
       recognitionRef.current.stop()
       recognitionRef.current = null
     }
+    if (audioContext) {
+      audioContext.close()
+      setAudioContext(null)
+      setAudioAnalyser(null)
+    }
     stopSpeaking()
     
     setIsConnected(false)
@@ -192,6 +223,49 @@ export default function CoachPage() {
     console.log('✅ AI speech stopped')
   }
 
+  const startAudioLevelMonitoring = () => {
+    if (!audioAnalyser) {
+      console.log('⚠️ No audio analyser available for level monitoring')
+      return
+    }
+    
+    const bufferLength = audioAnalyser.frequencyBinCount
+    const dataArray = new Uint8Array(bufferLength)
+    let lastSpeechTime = 0
+    
+    const checkAudioLevel = () => {
+      if (!audioAnalyser || !isConnected) return
+      
+      audioAnalyser.getByteFrequencyData(dataArray)
+      
+      // Calculate average audio level
+      const sum = dataArray.reduce((a, b) => a + b, 0)
+      const average = sum / bufferLength
+      
+      // Detect speech activity (adjust threshold as needed)
+      const speechThreshold = 10 // Lower = more sensitive
+      const currentTime = Date.now()
+      
+      if (average > speechThreshold) {
+        // Speech detected!
+        if (conversationState === 'speaking' && currentTime - lastSpeechTime > 100) {
+          console.log('🎤 AUDIO LEVEL INTERRUPTION - Level:', average, 'Threshold:', speechThreshold)
+          stopSpeaking()
+          setConversationState('listening')
+          lastSpeechTime = currentTime
+        }
+      }
+      
+      // Continue monitoring
+      if (isConnected) {
+        requestAnimationFrame(checkAudioLevel)
+      }
+    }
+    
+    console.log('🔊 Starting audio level monitoring with threshold:', 10)
+    checkAudioLevel()
+  }
+
   const startContinuousListening = () => {
     if (!streamRef.current) {
       console.log('No audio stream available')
@@ -214,10 +288,24 @@ export default function CoachPage() {
         recognition.lang = 'en-US'
         
         recognition.onstart = () => {
-          console.log('Continuous speech recognition started')
+          console.log('🎙️ Continuous speech recognition started')
           if (conversationState === 'idle') {
             setConversationState('listening')
           }
+        }
+        
+        // IMMEDIATE interruption on speech start (before any transcription)
+        recognition.onspeechstart = () => {
+          console.log('🚨 SPEECH DETECTED - IMMEDIATE INTERRUPTION CHECK')
+          if (conversationState === 'speaking') {
+            console.log('💥 INTERRUPTING AI IMMEDIATELY - USER STARTED SPEAKING')
+            stopSpeaking()
+            setConversationState('listening')
+          }
+        }
+        
+        recognition.onspeechend = () => {
+          console.log('🔇 Speech ended')
         }
         
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -226,18 +314,18 @@ export default function CoachPage() {
           const transcript = lastResult[0].transcript.trim()
           const isInterim = !lastResult.isFinal
           
-          console.log('Speech detected:', transcript, 'interim:', isInterim)
+          console.log('📝 Transcript:', transcript, 'interim:', isInterim, 'state:', conversationState)
           
-          // IMMEDIATE INTERRUPTION: Trigger on ANY speech during AI speaking
+          // Additional interruption check on ANY text (backup to onspeechstart)
           if (conversationState === 'speaking' && transcript.length > 0) {
-            console.log('🚨 IMMEDIATE INTERRUPTION - User speaking, stopping AI')
+            console.log('🔄 BACKUP INTERRUPTION - User transcription detected')
             stopSpeaking()
             setConversationState('listening')
-            // Don't return here - let it continue to process the speech
           }
           
           // Process final results for actual conversation
           if (lastResult.isFinal && transcript.length > 2) {
+            console.log('✅ Processing final user input:', transcript)
             handleUserInput(transcript)
           }
         }
@@ -279,6 +367,9 @@ export default function CoachPage() {
         }
         
         recognition.start()
+        
+        // Start audio level monitoring for ultra-fast interruption
+        startAudioLevelMonitoring()
       } else {
         throw new Error('Speech recognition not supported')
       }
@@ -658,12 +749,12 @@ export default function CoachPage() {
               </CardContent>
             </Card>
 
-            {conversationHistory.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Previous Sessions</CardTitle>
-                </CardHeader>
-                <CardContent>
+            <Card>
+              <CardHeader>
+                <CardTitle>Previous Sessions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {conversationHistory.length > 0 ? (
                   <div className="space-y-3 max-h-64 overflow-y-auto">
                     {conversationHistory.map((session, index) => {
                       const date = new Date(session.created_at).toLocaleDateString()
@@ -681,9 +772,22 @@ export default function CoachPage() {
                       )
                     })}
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                ) : (
+                  <div className="text-center py-4">
+                    <div className="text-sm text-gray-500 mb-2">
+                      No previous coaching sessions yet
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      Your conversation history will appear here after your first session
+                    </div>
+                    {/* Debug info */}
+                    <div className="text-xs text-gray-300 mt-2 font-mono">
+                      Debug: {conversationHistory.length} sessions loaded
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>
