@@ -204,12 +204,33 @@ export default function CoachPage() {
       }
       setMessages([welcomeMessage])
       
-      // Start continuous listening immediately and speak welcome
+      // Start continuous listening immediately
       startContinuousListening()
+      
+      // Test audio and speech synthesis with user interaction
+      console.log('🔊 Testing audio permissions and synthesis')
       
       // Speak welcome message if voice is enabled
       if (isVoiceEnabled) {
-        await speakTextWithInterruption(welcomeMessage.text)
+        try {
+          // Ensure audio context is resumed (required for autoplay policy)
+          if (audioContext && audioContext.state === 'suspended') {
+            await audioContext.resume()
+            console.log('🔊 Audio context resumed')
+          }
+          
+          await speakTextWithInterruption(welcomeMessage.text)
+        } catch (error) {
+          console.error('❌ Speech synthesis failed:', error)
+          // Add helpful message to UI
+          const audioErrorMessage: Message = {
+            id: Date.now().toString() + '_error',
+            text: "I can see you but can't speak yet. Click the 'Test Audio' button below to enable voice output.",
+            isUser: false,
+            timestamp: new Date()
+          }
+          setMessages(prev => [...prev, audioErrorMessage])
+        }
       }
       
     } catch (error) {
@@ -565,7 +586,44 @@ export default function CoachPage() {
         speechSynthesisSupported: 'speechSynthesis' in window
       })
       
-      speechSynthesis.speak(utterance)
+      // Robust voice loading with timeout
+      const trySpeak = () => {
+        const voices = speechSynthesis.getVoices()
+        console.log('🎤 Available voices:', voices.length)
+        
+        if (voices.length > 0) {
+          // Select best voice (prefer en-US if available)
+          const preferredVoice = voices.find(v => v.lang.includes('en-US')) || voices[0]
+          utterance.voice = preferredVoice
+          console.log('🎤 Using voice:', preferredVoice.name, preferredVoice.lang)
+          speechSynthesis.speak(utterance)
+        } else {
+          console.log('⏳ No voices available, waiting...')
+          // Fallback: try without voice selection
+          speechSynthesis.speak(utterance)
+        }
+      }
+      
+      // Try immediately
+      trySpeak()
+      
+      // Backup: If voices weren't loaded, wait for them
+      if (speechSynthesis.getVoices().length === 0) {
+        console.log('🔄 Setting up voice loading fallback')
+        const voiceTimeout = setTimeout(() => {
+          console.log('⏰ Voice loading timeout, speaking without voice selection')
+          speechSynthesis.speak(utterance)
+        }, 1000)
+        
+        speechSynthesis.onvoiceschanged = () => {
+          console.log('🎤 Voices loaded via onvoiceschanged')
+          clearTimeout(voiceTimeout)
+          // Cancel the backup speak and try with voices
+          if (!speechSynthesis.speaking) {
+            trySpeak()
+          }
+        }
+      }
     })
   }
 
@@ -887,6 +945,36 @@ export default function CoachPage() {
                   <p>• Be specific about your challenges</p>
                   <p>• Ask follow-up questions</p>
                   <p>• Your conversation is private and saved to your repo</p>
+                  <div className="mt-4 pt-3 border-t">
+                    <button
+                      onClick={async () => {
+                        console.log('🧪 Manual audio test initiated')
+                        try {
+                          // Resume audio context if suspended
+                          if (audioContext && audioContext.state === 'suspended') {
+                            await audioContext.resume()
+                            console.log('🔊 Audio context resumed manually')
+                          }
+                          
+                          // Test with user interaction
+                          const testText = isConnected 
+                            ? 'Audio test successful! I can speak to you now.'
+                            : 'Testing audio. Can you hear this? Start a conversation to begin coaching.'
+                          
+                          await speakTextWithInterruption(testText)
+                        } catch (error) {
+                          console.error('❌ Manual audio test failed:', error)
+                          alert('Audio test failed. Check browser permissions and ensure you clicked this button.')
+                        }
+                      }}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium"
+                    >
+                      🔊 Test Audio Output
+                    </button>
+                    <div className="text-xs text-gray-400 mt-1 text-center">
+                      Click if you can't hear the AI coach
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
