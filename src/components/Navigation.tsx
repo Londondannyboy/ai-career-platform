@@ -1,77 +1,20 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { User } from '@supabase/supabase-js'
-import { User as DatabaseUser } from '@/types/database'
-import { useEffect, useState } from 'react'
+import { UserButton, useUser } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
 import { 
   Mic, 
   Users, 
   Briefcase, 
   MessageCircle, 
-  Bell, 
-  Settings,
-  LogOut,
-  User as UserIcon
+  Bell
 } from 'lucide-react'
 
 export default function Navigation() {
-  const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<DatabaseUser | null>(null)
-  const router = useRouter()
-  const supabase = createClient()
+  const { user, isLoaded } = useUser()
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-      
-      if (user) {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-        setProfile(profile)
-      }
-    }
-
-    getUser()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          // Fetch user profile when auth state changes
-          getUser()
-        } else {
-          setProfile(null)
-        }
-      }
-    )
-
-    return () => subscription.unsubscribe()
-  }, [supabase])
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
-
-  if (!user) {
+  if (!isLoaded || !user) {
     return null
   }
 
@@ -132,56 +75,18 @@ export default function Navigation() {
               <Bell className="h-4 w-4" />
             </Button>
             
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage 
-                      src={profile?.profile_image || undefined} 
-                      alt={profile?.name || 'User'} 
-                    />
-                    <AvatarFallback>
-                      {profile?.name?.charAt(0) || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {profile?.name || 'User'}
-                    </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
-                    </p>
-                    {profile?.headline && (
-                      <Badge variant="secondary" className="text-xs">
-                        {profile.headline}
-                      </Badge>
-                    )}
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/profile" className="flex items-center">
-                    <UserIcon className="mr-2 h-4 w-4" />
-                    Profile
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings" className="flex items-center">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <UserButton 
+              appearance={{
+                elements: {
+                  avatarBox: "h-8 w-8",
+                  userButtonPopoverCard: "shadow-lg border",
+                  userButtonPopoverActions: "flex-col space-y-1"
+                }
+              }}
+              userProfileMode="navigation"
+              userProfileUrl="/profile"
+              afterSignOutUrl="/"
+            />
           </div>
         </div>
       </div>

@@ -4,9 +4,8 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useUser } from '@clerk/nextjs'
 import { createClient } from '@/lib/supabase/client'
-import { User } from '@supabase/supabase-js'
 import Navigation from '@/components/Navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,8 +21,7 @@ interface Message {
 }
 
 export default function CoachPage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, isLoaded } = useUser()
   const [conversationState, setConversationState] = useState<ConversationState>('idle')
   const [messages, setMessages] = useState<Message[]>([])
   const [isConnected, setIsConnected] = useState(false)
@@ -40,23 +38,14 @@ export default function CoachPage() {
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null)
   const [audioAnalyser, setAudioAnalyser] = useState<AnalyserNode | null>(null)
   
-  const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
-      setUser(user)
-      // Load previous conversation if exists
-      await loadPreviousConversation(user.id)
-      setLoading(false)
+    if (isLoaded && user?.id) {
+      // Load previous conversation when user is loaded
+      loadPreviousConversation(user.id)
     }
-    checkUser()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isLoaded, user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -193,8 +182,8 @@ export default function CoachPage() {
       
       // Get user's name for personalized greeting
       let userName = 'there'
-      if (user?.user_metadata?.name) {
-        userName = user.user_metadata.name.split(' ')[0] // First name only
+      if (user?.firstName) {
+        userName = user.firstName
       }
       
       // Create personalized welcome message
@@ -686,7 +675,7 @@ export default function CoachPage() {
     }
   }
 
-  if (loading) {
+  if (!isLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
@@ -867,12 +856,12 @@ export default function CoachPage() {
                     <div className="text-xs text-gray-300 mt-2 font-mono space-y-1">
                       <div>Debug: {conversationHistory.length} sessions loaded</div>
                       <div>User ID: {user?.id?.substring(0, 8)}...</div>
-                      <div>Email: {user?.email}</div>
+                      <div>Email: {user?.emailAddresses?.[0]?.emailAddress}</div>
                       <button 
                         onClick={() => {
                           console.log('🧪 Manual debug - User info:', { 
                             userId: user?.id, 
-                            email: user?.email, 
+                            email: user?.emailAddresses?.[0]?.emailAddress, 
                             conversationHistory: conversationHistory.length 
                           })
                           if (user?.id) loadPreviousConversation(user.id)

@@ -4,10 +4,9 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useUser, SignInButton } from '@clerk/nextjs'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { User } from '@supabase/supabase-js'
 import { User as DatabaseUser } from '@/types/database'
 import Navigation from '@/components/Navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,25 +23,14 @@ import {
 } from 'lucide-react'
 
 export default function Dashboard() {
-  const [user, setUser] = useState<User | null>(null)
+  const { user, isLoaded } = useUser()
   const [profile, setProfile] = useState<DatabaseUser | null>(null)
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
-    const getUser = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        
-        if (!user) {
-          router.push('/login')
-          return
-        }
-        
-        setUser(user)
-        
-        // Get user profile
+    const getProfile = async () => {
+      if (user?.id) {
+        // Get user profile from Supabase
         const { data: profile } = await supabase
           .from('users')
           .select('*')
@@ -50,18 +38,15 @@ export default function Dashboard() {
           .single()
         
         setProfile(profile)
-      } catch (error) {
-        console.error('Error getting user:', error)
-        router.push('/login')
-      } finally {
-        setLoading(false)
       }
     }
 
-    getUser()
-  }, [router, supabase])
+    if (user) {
+      getProfile()
+    }
+  }, [user, supabase])
 
-  if (loading) {
+  if (!isLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
@@ -69,8 +54,27 @@ export default function Dashboard() {
     )
   }
 
+  // If not signed in, show landing page with sign-in option
   if (!user) {
-    return null
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Welcome to AI Career Platform
+            </h1>
+            <p className="text-xl text-gray-600 mb-8">
+              Build your career repository and connect with professionals
+            </p>
+            <SignInButton mode="modal">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+                Get Started - Sign In
+              </Button>
+            </SignInButton>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -81,7 +85,7 @@ export default function Dashboard() {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
-            Welcome back, {profile?.name || 'there'}!
+            Welcome back, {user.firstName || profile?.name || 'there'}!
           </h1>
           <p className="mt-2 text-gray-600">
             Build your career story, connect with professionals, and discover opportunities.

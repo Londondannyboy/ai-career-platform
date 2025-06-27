@@ -1,0 +1,167 @@
+{
+  "timestamp": "2025-06-27T09:51:52.497Z",
+  "baseUrl": "https://ai-career-platform.vercel.app",
+  "summary": {
+    "totalTests": 13,
+    "passed": 10,
+    "failed": 3
+  },
+  "results": [
+    {
+      "test": "Landing Page",
+      "status": "failed",
+      "error": "SyntaxError: Failed to execute 'querySelector' on 'Document': 'button:has-text(\"Continue with LinkedIn\"), a:has-text(\"Continue with LinkedIn\")' is not a valid selector."
+    },
+    {
+      "test": "Profile Page",
+      "status": "passed",
+      "url": "/profile",
+      "title": "AI Career Platform"
+    },
+    {
+      "test": "Repo Page",
+      "status": "passed",
+      "url": "/repo",
+      "title": "AI Career Platform"
+    },
+    {
+      "test": "Coach Page",
+      "status": "passed",
+      "url": "/coach",
+      "title": "AI Career Platform"
+    },
+    {
+      "test": "Network Page",
+      "status": "passed",
+      "url": "/network",
+      "title": "AI Career Platform"
+    },
+    {
+      "test": "Jobs Page",
+      "status": "passed",
+      "url": "/jobs",
+      "title": "AI Career Platform"
+    },
+    {
+      "test": "Coaching Page",
+      "status": "passed",
+      "url": "/coaching",
+      "title": "AI Career Platform"
+    },
+    {
+      "test": "Voice Coaching Interface",
+      "status": "failed",
+      "error": "SyntaxError: Failed to execute 'querySelector' on 'Document': 'button:has-text(\"Start Conversation\")' is not a valid selector."
+    },
+    {
+      "test": "Profile Management",
+      "status": "failed",
+      "error": "SyntaxError: Failed to execute 'querySelector' on 'Document': 'button:has-text(\"Edit Profile\"), a:has-text(\"Edit Profile\")' is not a valid selector."
+    },
+    {
+      "test": "Responsive Mobile",
+      "status": "passed",
+      "viewport": "375x812",
+      "navigationVisible": false
+    },
+    {
+      "test": "Responsive Tablet",
+      "status": "passed",
+      "viewport": "768x1024",
+      "navigationVisible": false
+    },
+    {
+      "test": "Responsive Desktop",
+      "status": "passed",
+      "viewport": "1200x800",
+      "navigationVisible": false
+    },
+    {
+      "test": "Performance",
+      "status": "passed",
+      "metrics": {
+        "loadTime": 0,
+        "domContentLoaded": 0.09999999962747097,
+        "firstPaint": 192,
+        "firstContentfulPaint": 192
+      }
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "landing-page",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-landing-page-2025-06-27T09-51-39-828Z.png",
+      "timestamp": "2025-06-27T09-51-39-828Z"
+    },
+    {
+      "name": "landing-page-error",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-landing-page-error-2025-06-27T09-51-40-208Z.png",
+      "timestamp": "2025-06-27T09-51-40-208Z"
+    },
+    {
+      "name": "profile",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-profile-2025-06-27T09-51-41-310Z.png",
+      "timestamp": "2025-06-27T09-51-41-310Z"
+    },
+    {
+      "name": "repo",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-repo-2025-06-27T09-51-42-917Z.png",
+      "timestamp": "2025-06-27T09-51-42-917Z"
+    },
+    {
+      "name": "coach",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-coach-2025-06-27T09-51-44-098Z.png",
+      "timestamp": "2025-06-27T09-51-44-098Z"
+    },
+    {
+      "name": "network",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-network-2025-06-27T09-51-45-249Z.png",
+      "timestamp": "2025-06-27T09-51-45-249Z"
+    },
+    {
+      "name": "jobs",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-jobs-2025-06-27T09-51-46-448Z.png",
+      "timestamp": "2025-06-27T09-51-46-448Z"
+    },
+    {
+      "name": "coaching",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-coaching-2025-06-27T09-51-47-561Z.png",
+      "timestamp": "2025-06-27T09-51-47-561Z"
+    },
+    {
+      "name": "coach-page",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-coach-page-2025-06-27T09-51-48-327Z.png",
+      "timestamp": "2025-06-27T09-51-48-327Z"
+    },
+    {
+      "name": "coach-error",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-coach-error-2025-06-27T09-51-48-399Z.png",
+      "timestamp": "2025-06-27T09-51-48-399Z"
+    },
+    {
+      "name": "profile-view",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-profile-view-2025-06-27T09-51-49-174Z.png",
+      "timestamp": "2025-06-27T09-51-49-174Z"
+    },
+    {
+      "name": "profile-error",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-profile-error-2025-06-27T09-51-49-265Z.png",
+      "timestamp": "2025-06-27T09-51-49-265Z"
+    },
+    {
+      "name": "responsive-mobile",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-responsive-mobile-2025-06-27T09-51-50-111Z.png",
+      "timestamp": "2025-06-27T09-51-50-111Z"
+    },
+    {
+      "name": "responsive-tablet",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-responsive-tablet-2025-06-27T09-51-50-858Z.png",
+      "timestamp": "2025-06-27T09-51-50-858Z"
+    },
+    {
+      "name": "responsive-desktop",
+      "filepath": "/Users/dankeegan/ai-career-platform/tests/screenshots/screenshot-responsive-desktop-2025-06-27T09-51-51-691Z.png",
+      "timestamp": "2025-06-27T09-51-51-691Z"
+    }
+  ]
+}
