@@ -33,7 +33,7 @@ export default function QuestPage() {
   const [currentPlaybook, setCurrentPlaybook] = useState<PlaybookType>('career_coaching')
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [_lastSessionId, setLastSessionId] = useState<string | null>(null)
+  const [, setLastSessionId] = useState<string | null>(null)
   const [conversationHistory, setConversationHistory] = useState<{id: string; title: string; transcript: string; ai_analysis: string; created_at: string}[]>([])
   
   const supabase = createClient()
