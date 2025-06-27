@@ -36,6 +36,7 @@ export default function CoachPage() {
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null)
   const recognitionRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [lastSessionId, setLastSessionId] = useState<string | null>(null)
+  const [conversationHistory, setConversationHistory] = useState<{id: string; title: string; transcript: string; ai_analysis: string; created_at: string}[]>([])
   
   const router = useRouter()
   const supabase = createClient()
@@ -74,6 +75,19 @@ export default function CoachPage() {
       if (recentSession) {
         setLastSessionId(recentSession.id)
         console.log('Found previous coaching session:', recentSession.title)
+      }
+      
+      // Load conversation history for display
+      const { data: allSessions } = await supabase
+        .from('repo_sessions')
+        .select('id, title, transcript, ai_analysis, created_at')
+        .eq('user_id', userId)
+        .eq('session_type', 'voice_coaching')
+        .order('created_at', { ascending: false })
+        .limit(5)
+      
+      if (allSessions) {
+        setConversationHistory(allSessions)
       }
     } catch {
       console.log('No previous conversation found, starting fresh')
@@ -162,14 +176,20 @@ export default function CoachPage() {
   }
 
   const stopSpeaking = () => {
-    // Stop any current speech synthesis
-    if (speechSynthesis.speaking) {
+    console.log('🛑 FORCE STOPPING AI SPEECH')
+    // Aggressively stop any current speech synthesis
+    if (speechSynthesis.speaking || speechSynthesis.pending) {
       speechSynthesis.cancel()
+      // Call cancel multiple times to ensure it stops
+      setTimeout(() => speechSynthesis.cancel(), 10)
+      setTimeout(() => speechSynthesis.cancel(), 50)
     }
     if (speechSynthesisRef.current) {
       speechSynthesisRef.current.onend = null
+      speechSynthesisRef.current.onerror = null
       speechSynthesisRef.current = null
     }
+    console.log('✅ AI speech stopped')
   }
 
   const startContinuousListening = () => {
@@ -202,18 +222,22 @@ export default function CoachPage() {
         
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         recognition.onresult = (event: any) => {
-          const transcript = event.results[event.results.length - 1][0].transcript.trim()
-          console.log('Speech detected:', transcript)
+          const lastResult = event.results[event.results.length - 1]
+          const transcript = lastResult[0].transcript.trim()
+          const isInterim = !lastResult.isFinal
           
-          // If AI is speaking and user starts talking, interrupt immediately
-          if (conversationState === 'speaking' && transcript.length > 3) {
-            console.log('User interrupted AI - stopping speech')
+          console.log('Speech detected:', transcript, 'interim:', isInterim)
+          
+          // IMMEDIATE INTERRUPTION: Trigger on ANY speech during AI speaking
+          if (conversationState === 'speaking' && transcript.length > 0) {
+            console.log('🚨 IMMEDIATE INTERRUPTION - User speaking, stopping AI')
             stopSpeaking()
             setConversationState('listening')
+            // Don't return here - let it continue to process the speech
           }
           
-          // Process final results
-          if (event.results[event.results.length - 1].isFinal && transcript.length > 3) {
+          // Process final results for actual conversation
+          if (lastResult.isFinal && transcript.length > 2) {
             handleUserInput(transcript)
           }
         }
@@ -402,6 +426,41 @@ export default function CoachPage() {
       
       speechSynthesis.speak(utterance)
     })
+  }
+
+  const extractTopics = (text: string): string => {
+    if (!text) return 'General career discussion'
+    
+    const keywords = {
+      'job search': ['job search', 'job hunting', 'looking for work', 'job applications', 'job interview'],
+      'career change': ['career change', 'switching careers', 'new field', 'transition'],
+      'promotion': ['promotion', 'advancement', 'moving up', 'next level'],
+      'salary negotiation': ['salary', 'compensation', 'negotiate', 'raise', 'pay'],
+      'skills development': ['skills', 'learning', 'training', 'development', 'courses'],
+      'networking': ['networking', 'connections', 'contacts', 'professional network'],
+      'work-life balance': ['work life', 'balance', 'stress', 'burnout', 'wellness'],
+      'resume': ['resume', 'cv', 'curriculum vitae'],
+      'interview prep': ['interview', 'interviewing', 'interview preparation']
+    }
+    
+    const foundTopics: string[] = []
+    const lowerText = text.toLowerCase()
+    
+    for (const [topic, phrases] of Object.entries(keywords)) {
+      if (phrases.some(phrase => lowerText.includes(phrase))) {
+        foundTopics.push(topic)
+      }
+    }
+    
+    if (foundTopics.length === 0) {
+      return 'General career discussion'
+    } else if (foundTopics.length === 1) {
+      return `Discussed ${foundTopics[0]}`
+    } else if (foundTopics.length === 2) {
+      return `Discussed ${foundTopics[0]} and ${foundTopics[1]}`
+    } else {
+      return `Discussed ${foundTopics[0]}, ${foundTopics[1]} and ${foundTopics.length - 2} other topics`
+    }
   }
 
   const saveConversationToRepo = async () => {
@@ -599,6 +658,33 @@ export default function CoachPage() {
               </CardContent>
             </Card>
 
+            {conversationHistory.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Previous Sessions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {conversationHistory.map((session, index) => {
+                      const date = new Date(session.created_at).toLocaleDateString()
+                      const topics = extractTopics(session.transcript || session.ai_analysis || '')
+                      return (
+                        <div key={session.id} className="border-b pb-2 last:border-b-0">
+                          <div className="text-sm font-medium text-gray-900">
+                            {index === 0 ? 'Last time' : index === 1 ? 'Previous session' : `${index + 1} sessions ago`}
+                          </div>
+                          <div className="text-xs text-gray-500">{date}</div>
+                          <div className="text-sm text-gray-600 mt-1">
+                            {topics || 'General career discussion'}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <CardTitle>Tips</CardTitle>
@@ -606,7 +692,7 @@ export default function CoachPage() {
               <CardContent>
                 <div className="space-y-2 text-sm text-gray-600">
                   <p>• Speak naturally and clearly</p>
-                  <p>• Take your time to think</p>
+                  <p>• <strong>Try interrupting me!</strong> Start talking while I&apos;m speaking</p>
                   <p>• Be specific about your challenges</p>
                   <p>• Ask follow-up questions</p>
                   <p>• Your conversation is private and saved to your repo</p>
