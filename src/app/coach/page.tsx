@@ -31,9 +31,11 @@ export default function CoachPage() {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true)
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  // const audioContextRef = useRef<AudioContext | null>(null) // Future use
   const streamRef = useRef<MediaStream | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null)
+  const recognitionRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [lastSessionId, setLastSessionId] = useState<string | null>(null)
   
   const router = useRouter()
   const supabase = createClient()
@@ -46,6 +48,8 @@ export default function CoachPage() {
         return
       }
       setUser(user)
+      // Load previous conversation if exists
+      await loadPreviousConversation(user.id)
       setLoading(false)
     }
     checkUser()
@@ -54,6 +58,27 @@ export default function CoachPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  const loadPreviousConversation = async (userId: string) => {
+    try {
+      // Get the most recent coaching session
+      const { data: recentSession } = await supabase
+        .from('repo_sessions')
+        .select('id, title, transcript, created_at')
+        .eq('user_id', userId)
+        .eq('session_type', 'voice_coaching')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+      
+      if (recentSession) {
+        setLastSessionId(recentSession.id)
+        console.log('Found previous coaching session:', recentSession.title)
+      }
+    } catch {
+      console.log('No previous conversation found, starting fresh')
+    }
+  }
 
   const startConversation = async () => {
     try {
@@ -77,25 +102,37 @@ export default function CoachPage() {
       streamRef.current = stream
       setIsConnected(true)
       
-      // Add welcome message
+      // Get user's name for personalized greeting
+      let userName = 'there'
+      if (user?.user_metadata?.name) {
+        userName = user.user_metadata.name.split(' ')[0] // First name only
+      }
+      
+      // Create personalized welcome message
+      let welcomeText = `Hi ${userName}! I'm your AI career coach.`
+      
+      // Add context if previous session exists
+      if (lastSessionId) {
+        welcomeText += " I can see we've talked before. Feel free to continue where we left off or start something new."
+      } else {
+        welcomeText += " I can hear you now! What would you like to discuss about your career?"
+      }
+      
       const welcomeMessage: Message = {
         id: Date.now().toString(),
-        text: "Hi! I'm your AI career coach. I can hear you now! Tell me what you'd like to discuss about your career.",
+        text: welcomeText,
         isUser: false,
         timestamp: new Date()
       }
       setMessages([welcomeMessage])
       
+      // Start continuous listening immediately and speak welcome
+      startContinuousListening()
+      
       // Speak welcome message if voice is enabled
       if (isVoiceEnabled) {
-        await speakText(welcomeMessage.text)
+        await speakTextWithInterruption(welcomeMessage.text)
       }
-      
-      // Start listening after welcome message
-      setTimeout(() => {
-        console.log('Starting to listen for speech...')
-        startListening()
-      }, 1000)
       
     } catch (error) {
       console.error('Error accessing microphone:', error)
@@ -104,12 +141,19 @@ export default function CoachPage() {
   }
 
   const endConversation = () => {
+    // Stop all audio/speech processes
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop())
     }
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop()
     }
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
+      recognitionRef.current = null
+    }
+    stopSpeaking()
+    
     setIsConnected(false)
     setConversationState('idle')
     
@@ -117,92 +161,112 @@ export default function CoachPage() {
     saveConversationToRepo()
   }
 
-  const startListening = () => {
+  const stopSpeaking = () => {
+    // Stop any current speech synthesis
+    if (speechSynthesis.speaking) {
+      speechSynthesis.cancel()
+    }
+    if (speechSynthesisRef.current) {
+      speechSynthesisRef.current.onend = null
+      speechSynthesisRef.current = null
+    }
+  }
+
+  const startContinuousListening = () => {
     if (!streamRef.current) {
       console.log('No audio stream available')
       return
     }
     
-    console.log('Setting conversation state to listening...')
-    setConversationState('listening')
+    console.log('Starting continuous listening...')
     
-    // Use Web Speech API for real speech recognition
+    // Use Web Speech API for continuous speech recognition
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
       
       if (SpeechRecognition) {
-        console.log('Creating speech recognition instance...')
         const recognition = new SpeechRecognition()
+        recognitionRef.current = recognition
         
-        recognition.continuous = false
+        recognition.continuous = true // Key change: continuous listening
         recognition.interimResults = true
         recognition.lang = 'en-US'
         
         recognition.onstart = () => {
-          console.log('Speech recognition started - speak now!')
+          console.log('Continuous speech recognition started')
+          if (conversationState === 'idle') {
+            setConversationState('listening')
+          }
         }
         
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         recognition.onresult = (event: any) => {
-          console.log('Speech recognition result:', event)
-          const transcript = event.results[0][0].transcript
-          console.log('Transcript:', transcript)
-          if (event.results[0].isFinal) {
+          const transcript = event.results[event.results.length - 1][0].transcript.trim()
+          console.log('Speech detected:', transcript)
+          
+          // If AI is speaking and user starts talking, interrupt immediately
+          if (conversationState === 'speaking' && transcript.length > 3) {
+            console.log('User interrupted AI - stopping speech')
+            stopSpeaking()
+            setConversationState('listening')
+          }
+          
+          // Process final results
+          if (event.results[event.results.length - 1].isFinal && transcript.length > 3) {
             handleUserInput(transcript)
           }
         }
         
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         recognition.onerror = (event: any) => {
-          console.error('Speech recognition error:', event.error, event)
-          setConversationState('idle')
-          
-          // Show user-friendly error message
-          const errorMessage = {
-            id: Date.now().toString(),
-            text: `Speech recognition error: ${event.error}. Please try speaking again.`,
-            isUser: false,
-            timestamp: new Date()
-          }
-          setMessages(prev => [...prev, errorMessage])
-          
-          // Retry listening after a short delay
-          setTimeout(() => {
-            if (isConnected) {
-              console.log('Retrying speech recognition...')
-              startListening()
+          console.error('Speech recognition error:', event.error)
+          if (event.error === 'no-speech' || event.error === 'audio-capture') {
+            // These are common and expected - just restart
+            setTimeout(() => {
+              if (isConnected && recognitionRef.current) {
+                console.log('Restarting recognition after error:', event.error)
+                recognition.start()
+              }
+            }, 1000)
+          } else {
+            // More serious error
+            const errorMessage = {
+              id: Date.now().toString(),
+              text: `Speech recognition error: ${event.error}. Trying to reconnect...`,
+              isUser: false,
+              timestamp: new Date()
             }
-          }, 2000)
+            setMessages(prev => [...prev, errorMessage])
+          }
         }
         
         recognition.onend = () => {
-          console.log('Speech recognition ended')
-          // If still connected and not processing, start listening again
-          if (isConnected && conversationState === 'listening') {
+          console.log('Speech recognition ended - restarting if connected')
+          if (isConnected) {
             setTimeout(() => {
-              console.log('Restarting speech recognition...')
-              startListening()
-            }, 500)
+              try {
+                recognition.start()
+              } catch (error) {
+                console.log('Could not restart recognition:', error)
+              }
+            }, 1000)
           }
         }
         
-        console.log('Starting speech recognition...')
         recognition.start()
       } else {
         throw new Error('Speech recognition not supported')
       }
     } catch (error) {
-      console.error('Failed to start speech recognition:', error)
-      // Show fallback message
+      console.error('Failed to start continuous speech recognition:', error)
       const fallbackMessage = {
         id: Date.now().toString(),
-        text: "Speech recognition isn't working. You can type your response or try refreshing the page.",
+        text: "Speech recognition isn't working. You can try refreshing the page.",
         isUser: false,
         timestamp: new Date()
       }
       setMessages(prev => [...prev, fallbackMessage])
-      setConversationState('idle')
     }
   }
 
@@ -274,15 +338,11 @@ export default function CoachPage() {
       
       // Speak AI response if voice is enabled
       if (isVoiceEnabled) {
-        await speakText(aiResponse)
+        await speakTextWithInterruption(aiResponse)
       }
       
-      // Start listening again
-      setTimeout(() => {
-        if (isConnected) {
-          startListening()
-        }
-      }, 1000)
+      // Let continuous listening handle the next input
+      setConversationState('listening')
       
     } catch (error) {
       console.error('Error generating AI response:', error)
@@ -299,30 +359,44 @@ export default function CoachPage() {
       setMessages(prev => [...prev, aiMessage])
       
       if (isVoiceEnabled) {
-        await speakText(fallbackResponse)
+        await speakTextWithInterruption(fallbackResponse)
       }
       
-      setTimeout(() => {
-        if (isConnected) {
-          startListening()
-        }
-      }, 1000)
+      // Let continuous listening handle the next input
+      setConversationState('listening')
     }
   }
 
-  const speakText = async (text: string): Promise<void> => {
+  const speakTextWithInterruption = async (text: string): Promise<void> => {
     return new Promise((resolve) => {
       if (!isVoiceEnabled || isMuted) {
         resolve()
         return
       }
       
+      // Stop any existing speech first
+      stopSpeaking()
+      
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.rate = 0.9
       utterance.pitch = 1
       utterance.volume = 0.8
       
+      speechSynthesisRef.current = utterance
+      
+      utterance.onstart = () => {
+        setConversationState('speaking')
+      }
+      
       utterance.onend = () => {
+        setConversationState('listening')
+        speechSynthesisRef.current = null
+        resolve()
+      }
+      
+      utterance.onerror = () => {
+        setConversationState('listening')
+        speechSynthesisRef.current = null
         resolve()
       }
       

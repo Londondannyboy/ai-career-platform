@@ -21,19 +21,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No user input provided' }, { status: 400 })
     }
 
+    // Extract user's first name for personalization
+    let firstName = 'there'
+    if (userProfile?.name) {
+      firstName = userProfile.name.split(' ')[0]
+    } else if (userProfile?.linkedin_data?.name) {
+      firstName = userProfile.linkedin_data.name.split(' ')[0]
+    }
+
     // Build context from user profile and repo sessions
     let profileContext = ''
     if (userProfile) {
       profileContext = `
 User Profile:
-- Name: ${userProfile.name}
-- Email: ${userProfile.email}
+- Name: ${userProfile.name || 'Not provided'}
+- Email: ${userProfile.email || 'Not provided'}
 - LinkedIn Data: ${userProfile.linkedin_data ? JSON.stringify(userProfile.linkedin_data) : 'Not available'}
+- Enhanced Profile: ${userProfile.experience ? 'Has detailed career info' : 'Basic profile only'}
 `
     }
 
     let repoContext = ''
+    let isReturningUser = false
     if (recentSessions && recentSessions.length > 0) {
+      isReturningUser = true
       repoContext = `
 Recent Career Conversations:
 ${recentSessions.map((session: { transcript?: string; ai_analysis?: string }, index: number) => `
@@ -54,14 +65,18 @@ ${conversationHistory.map((msg: { isUser: boolean; text: string }) => `${msg.isU
 `
     }
 
+    // Determine if this is the start of a new conversation
+    const isNewConversation = !conversationHistory || conversationHistory.length <= 1
+    
     // Create coaching prompt
-    const coachingPrompt = `You are an expert AI career coach having a real-time voice conversation with a professional. Your role is to:
+    const coachingPrompt = `You are an expert AI career coach having a real-time voice conversation with ${firstName}. Your role is to:
 
 1. Listen actively and ask thoughtful follow-up questions
 2. Provide personalized career guidance based on their background
 3. Help them explore their goals, challenges, and next steps
 4. Be supportive, insightful, and encouraging
 5. Keep responses conversational and under 100 words for voice delivery
+6. Use their first name (${firstName}) naturally when appropriate
 
 ${profileContext}
 
@@ -71,7 +86,13 @@ ${conversationContext}
 
 User just said: "${userInput}"
 
-Respond as their career coach with empathy and actionable insights. If this is early in the conversation, ask questions to understand their situation better. If you have context from their profile or previous sessions, reference it naturally.`
+${isNewConversation && isReturningUser ? 
+  `This is the start of a new conversation, but ${firstName} has talked with you before. Acknowledge this briefly and let them know you remember their previous discussions.` : 
+  isNewConversation ? 
+  `This is ${firstName}'s first conversation with you. Welcome them warmly and ask about their current career situation.` : 
+  `Continue the ongoing conversation naturally.`}
+
+Respond as their career coach with empathy and actionable insights.`
 
     console.log('Coaching conversation - User input:', userInput)
     
