@@ -102,7 +102,7 @@ export default function SurfaceRepoPage() {
           {/* Tiered System Preview */}
           <Card>
             <CardHeader>
-              <CardTitle>Quest's Revolutionary Tiered Repository System</CardTitle>
+              <CardTitle>Quest&apos;s Revolutionary Tiered Repository System</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
