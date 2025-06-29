@@ -30,6 +30,7 @@ export default function RootLayout({
               type: "apiKey",
               value: process.env.NEXT_PUBLIC_HUME_API_KEY || "",
             }}
+            configId={process.env.NEXT_PUBLIC_HUME_CONFIG_ID || "8f16326f-a45d-4433-9a12-890120244ec3"}
           >
             {children}
           </VoiceProvider>

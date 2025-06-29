@@ -43,6 +43,14 @@ export default function Navigation() {
                 <span>Start Quest</span>
               </Link>
               
+              <Link
+                href="/quest-test"
+                className="flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+              >
+                <Mic className="h-4 w-4" />
+                <span>Quest Test</span>
+              </Link>
+              
               <div className="relative group">
                 <button className="flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900">
                   <Mic className="h-4 w-4" />
