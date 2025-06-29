@@ -59,6 +59,14 @@ export default function Navigation() {
                 <span>Graph 3D</span>
               </Link>
               
+              <Link
+                href="/debug-credentials"
+                className="flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+              >
+                <Bell className="h-4 w-4" />
+                <span>Debug</span>
+              </Link>
+              
               <div className="relative group">
                 <button className="flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900">
                   <Mic className="h-4 w-4" />
