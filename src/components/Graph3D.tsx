@@ -54,6 +54,7 @@ export default function Graph3D({
   onNodeClick,
   onNodeHover 
 }: Graph3DProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const graphRef = useRef<any>(null)
   const [isClient, setIsClient] = useState(false)
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
@@ -74,6 +75,7 @@ export default function Graph3D({
     }
   }, [data])
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleNodeClick = (node: any) => {
     setSelectedNode(node as Node)
     if (onNodeClick) {
@@ -96,6 +98,7 @@ export default function Graph3D({
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleNodeHover = (node: any) => {
     if (onNodeHover) {
       onNodeHover(node as Node | null)
@@ -103,8 +106,11 @@ export default function Graph3D({
   }
 
   // Simplified node styling (no custom 3D objects for now)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const nodeColor = (node: any) => node.color || '#3B82F6'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const nodeSize = (node: any) => node.size || 10
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const linkColor = (link: any) => link.color || '#999999'
 
   if (!isClient) {
@@ -120,7 +126,7 @@ export default function Graph3D({
       <div className="flex flex-col items-center justify-center h-96 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
         <div className="mb-4 text-4xl">📊</div>
         <div className="font-medium">No graph data available</div>
-        <div className="text-sm mt-2">Click "Setup Databases" to load TechFlow Solutions data</div>
+        <div className="text-sm mt-2">Click &quot;Setup Databases&quot; to load TechFlow Solutions data</div>
         <div className="text-xs mt-2 text-gray-400">Expected: 12 employees across 4 departments</div>
       </div>
     )

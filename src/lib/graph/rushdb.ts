@@ -6,6 +6,7 @@ export interface RushDBConfig {
 }
 
 class RushDBService {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private client: any = null
   private config: RushDBConfig | null = null
 
@@ -124,7 +125,7 @@ class RushDBService {
           })
         }
 
-        if (emp.collaborates_with) {
+        if (emp.collaborates_with && Array.isArray(emp.collaborates_with)) {
           for (const collabId of emp.collaborates_with) {
             await this.client.insert('relationships', {
               type: 'collaborates_with',
@@ -136,7 +137,7 @@ class RushDBService {
         }
 
         // Create skill relationships
-        if (emp.skills) {
+        if (emp.skills && Array.isArray(emp.skills)) {
           for (const skill of emp.skills) {
             await this.client.insert('skills', {
               employee_id: emp.id,
@@ -190,15 +191,15 @@ class RushDBService {
         department: emp.department,
         level: emp.level,
         // Position and styling for 3D graph
-        color: this.getDepartmentColor(emp.department),
-        size: this.getLevelSize(emp.level)
+        color: this.getDepartmentColor(emp.department as string),
+        size: this.getLevelSize(emp.level as string)
       }))
 
       const links = orgData.relationships.map((rel: Record<string, unknown>) => ({
         source: rel.from_employee,
         target: rel.to_employee,
         type: rel.relationship_type,
-        color: this.getRelationshipColor(rel.relationship_type)
+        color: this.getRelationshipColor(rel.relationship_type as string)
       }))
 
       return { nodes, links }
