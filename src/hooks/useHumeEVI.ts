@@ -34,12 +34,27 @@ export function useHumeEVI(config: HumeEVIConfig) {
       setIsLoading(true)
       console.log('🔗 Connecting to Hume AI EVI...')
       
-      // Get Hume AI credentials
+      // Get Hume AI credentials with detailed debugging
       const configId = process.env.NEXT_PUBLIC_HUME_CONFIG_ID
       const apiKey = process.env.NEXT_PUBLIC_HUME_API_KEY
       
+      // TEMPORARY DEBUG: Log environment variable details
+      console.log('🔍 ENVIRONMENT DEBUG:');
+      console.log('  configId:', configId);
+      console.log('  configId type:', typeof configId);
+      console.log('  configId undefined?:', configId === undefined);
+      console.log('  apiKey present?:', !!apiKey);
+      console.log('  All HUME env vars:', Object.keys(process.env).filter(k => k.includes('HUME')));
+      
       if (!configId || !apiKey) {
-        throw new Error('Hume AI credentials not found')
+        const errorDetails = {
+          configId: configId || 'MISSING',
+          apiKey: apiKey ? 'PRESENT' : 'MISSING',
+          allHumeVars: Object.keys(process.env).filter(k => k.includes('HUME')),
+          timestamp: new Date().toISOString()
+        };
+        console.error('❌ Hume AI credentials missing:', errorDetails);
+        throw new Error(`Hume AI credentials not found: ${JSON.stringify(errorDetails)}`)
       }
       
       // Request microphone permission
