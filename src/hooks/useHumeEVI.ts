@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 
 export interface HumeMessage {
   type: 'user_message' | 'assistant_message' | 'user_interruption' | 'audio_output' | 'connection_status'
@@ -22,54 +22,238 @@ export function useHumeEVI(config: HumeEVIConfig) {
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   
-  // Enhanced fallback mode with better UX
-  const startEnhancedMode = useCallback(() => {
-    console.log('🚀 Starting enhanced mode with improved Hume AI integration')
-    setIsConnected(true)
-    setIsLoading(false)
-    setIsListening(true)
-    config.onConnectionChange(true)
-    
-    config.onMessage({
-      type: 'connection_status',
-      text: 'Connected with enhanced Hume AI integration! Voice coaching is now powered by native SDKs.',
-      timestamp: new Date(),
-      status: 'enhanced'
-    })
-  }, [config])
+  const wsRef = useRef<WebSocket | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
 
-  // Simplified connect function that works immediately
+  // Real Hume AI EVI WebSocket connection
   const connect = useCallback(async () => {
     try {
       setIsLoading(true)
-      console.log('🔗 Connecting to enhanced Hume AI integration...')
+      console.log('🔗 Connecting to Hume AI EVI...')
       
-      // Validate configuration
+      // Get Hume AI credentials
       const configId = process.env.NEXT_PUBLIC_HUME_CONFIG_ID
       const apiKey = process.env.NEXT_PUBLIC_HUME_API_KEY
       
       if (!configId || !apiKey) {
-        console.warn('⚠️ Hume AI credentials missing, using enhanced fallback mode')
-      } else {
-        console.log('✅ Hume AI credentials found')
+        throw new Error('Hume AI credentials not found')
       }
       
-      // For now, start enhanced mode immediately
-      // TODO: Integrate native Hume SDK once API is properly understood
-      setTimeout(() => {
-        startEnhancedMode()
-      }, 1000)
+      // Request microphone permission
+      console.log('🎤 Requesting microphone permission...')
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: { 
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true
+        } 
+      })
+      
+      mediaStreamRef.current = stream
+      console.log('✅ Microphone permission granted')
+      
+      // Create audio context for processing
+      audioContextRef.current = new AudioContext({ sampleRate: 16000 })
+      
+      // Set up MediaRecorder for audio capture
+      mediaRecorderRef.current = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      })
+      
+      audioChunksRef.current = []
+      
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+      
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        sendAudioToHume(audioBlob)
+        audioChunksRef.current = []
+      }
+      
+      // Connect to Hume AI EVI WebSocket
+      const wsUrl = `wss://api.hume.ai/v0/evi/chat?config_id=${configId}&api_key=${apiKey}`
+      console.log('🔌 Connecting to Hume EVI WebSocket...')
+      
+      wsRef.current = new WebSocket(wsUrl)
+      
+      wsRef.current.onopen = () => {
+        console.log('✅ Connected to Hume AI EVI')
+        setIsConnected(true)
+        setIsLoading(false)
+        setIsListening(true)
+        config.onConnectionChange(true)
+        
+        config.onMessage({
+          type: 'connection_status',
+          text: 'Connected to Hume AI EVI! I can now hear and respond to your voice with emotional intelligence.',
+          timestamp: new Date(),
+          status: 'connected'
+        })
+        
+        // Start recording audio
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
+          mediaRecorderRef.current.start(1000) // Send audio chunks every second
+        }
+      }
+      
+      wsRef.current.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          console.log('📨 Hume AI message:', data)
+          
+          if (data.type === 'user_message') {
+            // User spoke - Hume AI transcribed it
+            config.onMessage({
+              type: 'user_message',
+              text: data.text || data.message?.content,
+              timestamp: new Date(),
+              emotionalMeasures: data.emotions || data.emotional_measures
+            })
+            setIsListening(false)
+            
+          } else if (data.type === 'assistant_message') {
+            // AI response received
+            config.onMessage({
+              type: 'assistant_message',
+              text: data.text || data.message?.content,
+              timestamp: new Date()
+            })
+            setIsSpeaking(true)
+            
+            // Play audio if provided
+            if (data.audio || data.audio_data) {
+              playAudioResponse(data.audio || data.audio_data)
+            }
+            
+          } else if (data.type === 'audio_output') {
+            // Audio response from Hume AI
+            if (data.data) {
+              playAudioResponse(data.data)
+            }
+          }
+          
+        } catch (error) {
+          console.error('❌ Error parsing Hume AI message:', error)
+        }
+      }
+      
+      wsRef.current.onerror = (error) => {
+        console.error('❌ Hume AI WebSocket error:', error)
+        config.onError('WebSocket connection error')
+        setIsLoading(false)
+      }
+      
+      wsRef.current.onclose = () => {
+        console.log('🔌 Hume AI WebSocket closed')
+        setIsConnected(false)
+        setIsListening(false)
+        setIsSpeaking(false)
+        config.onConnectionChange(false)
+      }
       
     } catch (error) {
       console.error('❌ Failed to connect to Hume AI:', error)
-      config.onError(`Connection failed: ${error}`)
+      config.onError(error instanceof Error ? error.message : 'Connection failed')
       setIsLoading(false)
+      
+      // Clean up on error
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => track.stop())
+      }
     }
-  }, [config, startEnhancedMode])
+  }, [config])
 
-  // Simplified disconnect function
+  // Send audio data to Hume AI
+  const sendAudioToHume = useCallback((audioBlob: Blob) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      return
+    }
+    
+    // Convert blob to base64 for WebSocket transmission
+    const reader = new FileReader()
+    reader.onload = () => {
+      const base64Audio = reader.result as string
+      const audioData = base64Audio.split(',')[1] // Remove data:audio/webm;base64, prefix
+      
+      const message = {
+        type: 'audio_input',
+        data: audioData,
+        encoding: 'webm'
+      }
+      
+      wsRef.current?.send(JSON.stringify(message))
+    }
+    reader.readAsDataURL(audioBlob)
+  }, [])
+  
+  // Play audio response from Hume AI
+  const playAudioResponse = useCallback(async (audioData: string) => {
+    try {
+      const audioBlob = new Blob(
+        [Uint8Array.from(atob(audioData), c => c.charCodeAt(0))],
+        { type: 'audio/webm' }
+      )
+      
+      const audioUrl = URL.createObjectURL(audioBlob)
+      const audio = new Audio(audioUrl)
+      
+      audio.onended = () => {
+        setIsSpeaking(false)
+        setIsListening(true)
+        URL.revokeObjectURL(audioUrl)
+        
+        // Resume recording if still connected
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'paused') {
+          mediaRecorderRef.current.resume()
+        }
+      }
+      
+      // Pause recording while AI speaks
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.pause()
+      }
+      
+      await audio.play()
+      
+    } catch (error) {
+      console.error('❌ Error playing audio response:', error)
+      setIsSpeaking(false)
+      setIsListening(true)
+    }
+  }, [])
+
+  // Disconnect function
   const disconnect = useCallback(() => {
     console.log('🔌 Disconnecting from Hume AI')
+    
+    // Stop recording
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop()
+    }
+    
+    // Stop media stream
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop())
+    }
+    
+    // Close WebSocket
+    if (wsRef.current) {
+      wsRef.current.close()
+    }
+    
+    // Close audio context
+    if (audioContextRef.current) {
+      audioContextRef.current.close()
+    }
+    
     setIsConnected(false)
     setIsListening(false)
     setIsSpeaking(false)
@@ -77,26 +261,23 @@ export function useHumeEVI(config: HumeEVIConfig) {
     config.onConnectionChange(false)
   }, [config])
 
-  // Enhanced send message function
+  // Send text message to Hume AI
   const sendMessage = useCallback((text: string) => {
-    if (!isConnected) {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       console.log('⚠️ Not connected to Hume AI')
       config.onError('Not connected to Hume AI')
       return
     }
 
-    console.log('📤 Processing message with enhanced AI:', text)
+    console.log('📤 Sending text message to Hume AI:', text)
     
-    // For now, provide an enhanced response
-    // TODO: Send to actual Hume AI once SDK is properly integrated
-    setTimeout(() => {
-      config.onMessage({
-        type: 'assistant_message',
-        text: `I understand you said: "${text}". I'm now running with enhanced Hume AI integration for better responses!`,
-        timestamp: new Date()
-      })
-    }, 1000)
-  }, [isConnected, config])
+    const message = {
+      type: 'user_message',
+      text: text
+    }
+    
+    wsRef.current.send(JSON.stringify(message))
+  }, [config])
 
   // Cleanup on unmount
   useEffect(() => {
