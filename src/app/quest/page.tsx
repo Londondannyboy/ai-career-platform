@@ -40,7 +40,10 @@ export default function QuestPage() {
   const supabase = createClient()
 
   const ensureUserExists = useCallback(async () => {
-    if (!user?.id) return
+    if (!user?.id) {
+      console.log('ℹ️ No user authenticated - running in debug mode')
+      return
+    }
 
     try {
       // Check if user exists
@@ -155,11 +158,15 @@ export default function QuestPage() {
   const streamingChat = useStreamingChat()
 
   useEffect(() => {
-    if (isLoaded && user?.id) {
-      // Ensure user exists in our database before loading conversations
-      ensureUserExists().then(() => {
-        loadPreviousConversation(user.id)
-      })
+    if (isLoaded) {
+      if (user?.id) {
+        // Ensure user exists in our database before loading conversations
+        ensureUserExists().then(() => {
+          loadPreviousConversation(user.id)
+        })
+      } else {
+        console.log('ℹ️ Running Quest in debug mode without authentication')
+      }
     }
   }, [isLoaded, user]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -357,7 +364,7 @@ export default function QuestPage() {
 
   const saveConversationToRepo = async () => {
     if (!user || messages.length === 0) {
-      console.log('⚠️ Not saving conversation - no user or messages')
+      console.log('ℹ️ Not saving conversation - running in debug mode or no messages')
       return
     }
     
@@ -429,7 +436,8 @@ export default function QuestPage() {
     )
   }
 
-  if (!user) return null
+  // TEMPORARY: Remove authentication requirement for debugging
+  // if (!user) return null
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
@@ -445,6 +453,7 @@ export default function QuestPage() {
           </p>
           <div className="mt-1 text-xs text-gray-400 font-mono">
             🚀 Version: 3.0.0 - Powered by Hume AI EVI + Smart Playbooks
+            {!user && <span className="ml-2 text-orange-500">🔧 DEBUG MODE (No Auth Required)</span>}
           </div>
         </div>
 
