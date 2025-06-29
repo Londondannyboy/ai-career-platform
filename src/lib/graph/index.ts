@@ -44,11 +44,156 @@ class GraphService {
     console.log('🏢 Setting up TechFlow Solutions test data across all graph databases...')
 
     try {
-      // Load test data
-      const fs = await import('fs')
-      const path = await import('path')
-      const testDataPath = path.join(process.cwd(), 'test-data', 'techflow-company.json')
-      const testData = JSON.parse(fs.readFileSync(testDataPath, 'utf8'))
+      // EMBEDDED TEST DATA - No file system dependency
+      const testData = {
+        "company": {
+          "name": "TechFlow Solutions",
+          "industry": "SaaS Platform Development",
+          "size": "50-100 employees",
+          "founded": "2019",
+          "headquarters": "Austin, TX",
+          "description": "AI-powered workflow automation platform for mid-market companies"
+        },
+        "employees": [
+          {
+            "id": "emp_001",
+            "name": "Sarah Chen",
+            "role": "VP of Engineering",
+            "department": "Engineering",
+            "level": "VP",
+            "hire_date": "2019-03-15",
+            "skills": ["Leadership", "System Architecture", "React", "Node.js", "Team Management"],
+            "previous_companies": ["Google", "Stripe"],
+            "reports": ["emp_002", "emp_003", "emp_004", "emp_005"]
+          },
+          {
+            "id": "emp_002",
+            "name": "Alex Kumar",
+            "role": "Senior Frontend Engineer",
+            "department": "Engineering",
+            "level": "Senior",
+            "hire_date": "2020-01-20",
+            "skills": ["React", "TypeScript", "CSS", "GraphQL", "Testing"],
+            "previous_companies": ["Airbnb", "Netflix"],
+            "manager": "emp_001",
+            "collaborates_with": ["emp_003", "emp_006"]
+          },
+          {
+            "id": "emp_003",
+            "name": "Maria Gonzalez",
+            "role": "Senior Backend Engineer",
+            "department": "Engineering",
+            "level": "Senior",
+            "hire_date": "2020-05-10",
+            "skills": ["Python", "Django", "PostgreSQL", "Redis", "API Design"],
+            "previous_companies": ["Uber", "Shopify"],
+            "manager": "emp_001",
+            "collaborates_with": ["emp_002", "emp_004"]
+          },
+          {
+            "id": "emp_004",
+            "name": "James Wilson",
+            "role": "DevOps Engineer",
+            "department": "Engineering",
+            "level": "Mid",
+            "hire_date": "2021-02-01",
+            "skills": ["AWS", "Docker", "Kubernetes", "Terraform", "Monitoring"],
+            "previous_companies": ["Microsoft", "DigitalOcean"],
+            "manager": "emp_001",
+            "collaborates_with": ["emp_003", "emp_005"]
+          },
+          {
+            "id": "emp_005",
+            "name": "Lisa Park",
+            "role": "Frontend Engineer",
+            "department": "Engineering",
+            "level": "Mid",
+            "hire_date": "2021-08-15",
+            "skills": ["React", "JavaScript", "CSS", "HTML", "Jest"],
+            "previous_companies": ["Slack"],
+            "manager": "emp_001",
+            "collaborates_with": ["emp_002"]
+          },
+          {
+            "id": "emp_006",
+            "name": "Michael Rodriguez",
+            "role": "Head of Product",
+            "department": "Product",
+            "level": "Director",
+            "hire_date": "2019-06-01",
+            "skills": ["Product Strategy", "User Research", "Analytics", "Roadmapping", "Leadership"],
+            "previous_companies": ["Facebook", "Dropbox"],
+            "collaborates_with": ["emp_001", "emp_002", "emp_007"]
+          },
+          {
+            "id": "emp_007",
+            "name": "Emma Davis",
+            "role": "Senior Product Manager",
+            "department": "Product",
+            "level": "Senior",
+            "hire_date": "2020-09-12",
+            "skills": ["Product Management", "User Stories", "Figma", "SQL", "A/B Testing"],
+            "previous_companies": ["Atlassian"],
+            "manager": "emp_006",
+            "collaborates_with": ["emp_002", "emp_003"]
+          },
+          {
+            "id": "emp_008",
+            "name": "Jennifer Kim",
+            "role": "VP of Sales",
+            "department": "Sales",
+            "level": "VP",
+            "hire_date": "2019-08-20",
+            "skills": ["Sales Leadership", "Enterprise Sales", "Negotiation", "CRM", "Team Management"],
+            "previous_companies": ["Salesforce", "HubSpot"],
+            "reports": ["emp_009", "emp_010"]
+          },
+          {
+            "id": "emp_009",
+            "name": "Robert Johnson",
+            "role": "Senior Account Executive",
+            "department": "Sales",
+            "level": "Senior",
+            "hire_date": "2020-11-05",
+            "skills": ["B2B Sales", "Lead Qualification", "Demos", "Closing", "Salesforce"],
+            "previous_companies": ["Zoom", "Slack"],
+            "manager": "emp_008"
+          },
+          {
+            "id": "emp_010",
+            "name": "Amanda Taylor",
+            "role": "Sales Development Rep",
+            "department": "Sales",
+            "level": "Junior",
+            "hire_date": "2022-01-10",
+            "skills": ["Lead Generation", "Cold Outreach", "LinkedIn", "Email Marketing", "CRM"],
+            "previous_companies": ["Local Startup"],
+            "manager": "emp_008"
+          },
+          {
+            "id": "emp_011",
+            "name": "David Thompson",
+            "role": "Marketing Director",
+            "department": "Marketing",
+            "level": "Director",
+            "hire_date": "2020-03-01",
+            "skills": ["Digital Marketing", "Content Strategy", "SEO", "Analytics", "Brand Management"],
+            "previous_companies": ["HubSpot", "Marketo"],
+            "collaborates_with": ["emp_008", "emp_006"]
+          },
+          {
+            "id": "emp_012",
+            "name": "Sophie Brown",
+            "role": "Content Marketing Manager",
+            "department": "Marketing",
+            "level": "Mid",
+            "hire_date": "2021-05-20",
+            "skills": ["Content Writing", "Blog Management", "Social Media", "SEO", "Email Marketing"],
+            "previous_companies": ["Buffer"],
+            "manager": "emp_011"
+          }
+        ]
+      }
 
       // Setup in Neo4j
       if (this.isNeo4jConnected) {
