@@ -10,7 +10,7 @@ import Navigation from '@/components/Navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff } from 'lucide-react'
-import { useVoice, VoiceReadyState } from '@humeai/voice-react'
+import { useHumeEVI, HumeMessage } from '@/hooks/useHumeEVI'
 import { useStreamingChat } from '@/hooks/useStreamingChat'
 
 type ConversationState = 'idle' | 'listening' | 'thinking' | 'speaking'
@@ -34,75 +34,10 @@ export default function QuestPage() {
   const [currentPlaybook, setCurrentPlaybook] = useState<PlaybookType>('career_coaching')
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [, setLastSessionId] = useState<string | null>(null)
   const [conversationHistory, setConversationHistory] = useState<{id: string; title: string; transcript: string; ai_analysis: string; created_at: string}[]>([])
   
   const supabase = createClient()
-
-  // 🎉 OFFICIAL HUME AI SDK - This is what works!
-  const { connect, disconnect, readyState, messages: voiceMessages } = useVoice()
-  
-  const isConnected = readyState === VoiceReadyState.OPEN
-  const isConnecting = readyState === VoiceReadyState.CONNECTING
-  
-  // Vercel AI SDK for enhanced streaming conversations
-  const streamingChat = useStreamingChat()
-
-  // Handle voice messages from official SDK
-  useEffect(() => {
-    if (voiceMessages && voiceMessages.length > 0) {
-      const latestMessage = voiceMessages[voiceMessages.length - 1]
-      console.log('📨 Hume AI message:', latestMessage)
-      
-      if (latestMessage.type === 'user_message' && latestMessage.message?.content) {
-        // User spoke - Hume AI transcribed it
-        const content = latestMessage.message.content
-        const userMessage: Message = {
-          id: Date.now().toString(),
-          text: content,
-          isUser: true,
-          timestamp: new Date(),
-          emotionalMeasures: (latestMessage.models?.prosody?.scores as unknown) as Record<string, unknown> || undefined
-        }
-        
-        setMessages(prev => {
-          const exists = prev.some(m => m.text === content && m.isUser === true)
-          if (exists) return prev
-          return [...prev, userMessage]
-        })
-        
-        setConversationState('thinking')
-        
-        // Detect playbook and process with streaming AI
-        const detectedPlaybook = detectPlaybook(content)
-        setCurrentPlaybook(detectedPlaybook)
-        
-        // Use Vercel AI SDK for response
-        setTimeout(() => {
-          generateQuestResponse(content)
-        }, 1000)
-        
-      } else if (latestMessage.type === 'assistant_message' && latestMessage.message?.content) {
-        // AI response received
-        const content = latestMessage.message.content
-        const aiMessage: Message = {
-          id: Date.now().toString(),
-          text: content,
-          isUser: false,
-          timestamp: new Date(),
-          playbook: currentPlaybook
-        }
-        
-        setMessages(prev => {
-          const exists = prev.some(m => m.text === content && m.isUser === false)
-          if (exists) return prev
-          return [...prev, aiMessage]
-        })
-        
-        setConversationState('speaking')
-        setTimeout(() => setConversationState('listening'), 3000)
-      }
-    }
-  }, [voiceMessages, currentPlaybook])
 
   const ensureUserExists = useCallback(async () => {
     if (!user?.id) {
@@ -141,6 +76,87 @@ export default function QuestPage() {
     }
   }, [user, supabase])
 
+  // Hume AI EVI integration
+  const humeConfig = {
+    onMessage: useCallback((humeMessage: HumeMessage) => {
+      console.log('📨 Hume message received:', humeMessage.type)
+      
+      if (humeMessage.type === 'connection_status' && humeMessage.text) {
+        // Hume AI connection status update
+        const statusMessage: Message = {
+          id: Date.now().toString(),
+          text: humeMessage.text,
+          isUser: false,
+          timestamp: humeMessage.timestamp,
+          playbook: currentPlaybook
+        }
+        setMessages(prev => [...prev, statusMessage])
+        setConversationState('listening')
+        
+      } else if (humeMessage.type === 'user_message' && humeMessage.text) {
+        // User spoke - Hume AI transcribed it
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          text: humeMessage.text,
+          isUser: true,
+          timestamp: humeMessage.timestamp,
+          emotionalMeasures: humeMessage.emotionalMeasures
+        }
+        setMessages(prev => [...prev, userMessage])
+        setConversationState('thinking')
+        
+        // Process with our quest logic
+        setTimeout(() => {
+          generateQuestResponse(humeMessage.text!)
+        }, 1500)
+        
+      } else if (humeMessage.type === 'assistant_message' && humeMessage.text) {
+        // AI response received (either from Hume or our fallback)
+        const aiMessage: Message = {
+          id: Date.now().toString(),
+          text: humeMessage.text,
+          isUser: false,
+          timestamp: humeMessage.timestamp,
+          playbook: currentPlaybook
+        }
+        setMessages(prev => [...prev, aiMessage])
+        setConversationState('speaking')
+        
+      } else if (humeMessage.type === 'user_interruption') {
+        // User interrupted - switch back to listening
+        console.log('🚨 User interruption detected')
+        setConversationState('listening')
+      }
+    }, [currentPlaybook]), // eslint-disable-line react-hooks/exhaustive-deps
+    
+    onConnectionChange: useCallback((connected: boolean) => {
+      console.log('🔗 Hume connection changed:', connected)
+      if (connected) {
+        setConversationState('listening')
+        // For Hume AI, the welcome message will be sent automatically
+        // No need to manually send as Hume handles voice generation
+      } else {
+        setConversationState('idle')
+      }
+    }, []),
+    
+    onError: useCallback((error: string) => {
+      console.error('❌ Hume AI error:', error)
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        text: `Connection error: ${error}. Please try reconnecting.`,
+        isUser: false,
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMessage])
+    }, [])
+  }
+
+  const hume = useHumeEVI(humeConfig)
+  
+  // Vercel AI SDK for enhanced streaming conversations
+  const streamingChat = useStreamingChat()
+
   useEffect(() => {
     if (isLoaded) {
       if (user?.id) {
@@ -158,11 +174,71 @@ export default function QuestPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Handle streaming chat messages from Vercel AI SDK
+  useEffect(() => {
+    if (streamingChat.messages.length > 0) {
+      const latestStreamMessage = streamingChat.messages[streamingChat.messages.length - 1]
+      
+      // Check if this is a new message we haven't processed yet
+      const messageExists = messages.some(msg => 
+        msg.text === latestStreamMessage.content && 
+        msg.isUser === (latestStreamMessage.role === 'user')
+      )
+      
+      if (!messageExists && latestStreamMessage.content) {
+        const newMessage: Message = {
+          id: `stream-${Date.now()}`,
+          text: latestStreamMessage.content,
+          isUser: latestStreamMessage.role === 'user',
+          timestamp: new Date(),
+          playbook: currentPlaybook
+        }
+        
+        // Only add if not already in messages to avoid duplicates
+        setMessages(prev => {
+          const exists = prev.some(msg => 
+            msg.text === newMessage.text && 
+            msg.isUser === newMessage.isUser
+          )
+          return exists ? prev : [...prev, newMessage]
+        })
+        
+        // Update conversation state based on message type
+        if (latestStreamMessage.role === 'assistant') {
+          setConversationState('speaking')
+          setTimeout(() => setConversationState('listening'), 2000)
+        }
+      }
+    }
+  }, [streamingChat.messages, messages, currentPlaybook])
+
   const loadPreviousConversation = useCallback(async (userId: string) => {
     try {
       console.log('🔍 Loading previous conversations for user:', userId)
+      console.log('👤 Current Clerk user info:', {
+        id: user?.id,
+        email: user?.emailAddresses?.[0]?.emailAddress,
+        firstName: user?.firstName,
+        fullName: user?.fullName
+      })
+      
+      // Get the most recent quest session
+      const { data: recentSession } = await supabase
+        .from('repo_sessions')
+        .select('id, title, transcript, created_at')
+        .eq('user_id', userId)
+        .eq('session_type', 'quest_conversation')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+      
+      if (recentSession) {
+        setLastSessionId(recentSession.id)
+        console.log('Found previous quest session:', recentSession.title)
+      }
       
       // Load conversation history for display  
+      console.log('🔍 Loading quest history for user:', userId)
       const { data: allSessions, error } = await supabase
         .from('repo_sessions')
         .select('id, title, transcript, ai_analysis, created_at')
@@ -213,9 +289,15 @@ export default function QuestPage() {
     try {
       console.log('🤖 Generating enhanced response with streaming AI for:', userInput)
       
+      // Detect which playbook to use
+      const detectedPlaybook = detectPlaybook(userInput)
+      setCurrentPlaybook(detectedPlaybook)
+      
       // Use Vercel AI SDK for streaming response
       await streamingChat.sendMessage(userInput)
       
+      // The streaming response will be handled by the useStreamingChat hook
+      // and will automatically update the conversation
       setConversationState('speaking')
       
     } catch (error) {
@@ -235,11 +317,40 @@ export default function QuestPage() {
     }
   }
 
-  // 🎉 OFFICIAL SDK CONNECTION FUNCTIONS
+  // Legacy function - now using Vercel AI SDK for enhanced prompting
+  // const getPlaybookPrompt = (playbook: PlaybookType, emotionalMeasures?: Record<string, unknown>): string => {
+  //   const basePrompt = "You are Quest, an empathetic AI career coach. "
+  //   const emotionalContext = emotionalMeasures ? ` The user's emotional state suggests they are ${getEmotionalState(emotionalMeasures)}.` : ""
+  //   
+  //   switch (playbook) {
+  //     case 'job_search':
+  //       return basePrompt + "Focus on job searching strategies, application tips, and interview preparation." + emotionalContext
+  //       
+  //     case 'cv_enhancement':
+  //       return basePrompt + "Help optimize their CV/resume, highlight relevant skills, and improve their professional presentation." + emotionalContext
+  //       
+  //     case 'peer_feedback':
+  //       return basePrompt + "Provide practice opportunities and constructive feedback on their career communication." + emotionalContext
+  //       
+  //     case 'career_coaching':
+  //     default:
+  //       return basePrompt + "Provide holistic career guidance, goal setting, and professional development advice." + emotionalContext
+  //   }
+  // }
+
+  // Legacy function - emotional analysis now handled by Vercel AI SDK
+  // const getEmotionalState = (measures: Record<string, unknown>): string => {
+  //   // Analyze Hume's emotional measures to provide context
+  //   // This is a simplified version - you'd want more sophisticated analysis
+  //   if (!measures) return "neutral"
+  //   
+  //   // Add logic to interpret Hume's emotional measurements
+  //   return "engaged and ready to learn"
+  // }
+
   const startQuestConversation = async () => {
     try {
-      console.log('🔗 Starting Quest with official Hume AI SDK...')
-      await connect()
+      await hume.connect()
     } catch (error) {
       console.error('Failed to start Quest conversation:', error)
       alert('Could not connect to Quest AI. Please check your connection and try again.')
@@ -247,8 +358,7 @@ export default function QuestPage() {
   }
 
   const endQuestConversation = () => {
-    console.log('🔌 Ending Quest with official SDK...')
-    disconnect()
+    hume.disconnect()
     saveConversationToRepo()
   }
 
@@ -286,54 +396,36 @@ export default function QuestPage() {
   }
 
   const getStateIndicator = () => {
-    if (isConnecting) {
-      return (
-        <div className="flex items-center space-x-2 text-yellow-600">
-          <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
-          <span>Connecting...</span>
-        </div>
-      )
+    switch (conversationState) {
+      case 'listening':
+        return (
+          <div className="flex items-center space-x-2 text-green-600">
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <span>Listening...</span>
+          </div>
+        )
+      case 'thinking':
+        return (
+          <div className="flex items-center space-x-2 text-blue-600">
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+            <span>Thinking...</span>
+          </div>
+        )
+      case 'speaking':
+        return (
+          <div className="flex items-center space-x-2 text-purple-600">
+            <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
+            <span>Speaking...</span>
+          </div>
+        )
+      default:
+        return (
+          <div className="flex items-center space-x-2 text-gray-500">
+            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+            <span>Ready to start your quest</span>
+          </div>
+        )
     }
-    
-    if (isConnected) {
-      switch (conversationState) {
-        case 'listening':
-          return (
-            <div className="flex items-center space-x-2 text-green-600">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <span>Listening...</span>
-            </div>
-          )
-        case 'thinking':
-          return (
-            <div className="flex items-center space-x-2 text-blue-600">
-              <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-              <span>Thinking...</span>
-            </div>
-          )
-        case 'speaking':
-          return (
-            <div className="flex items-center space-x-2 text-purple-600">
-              <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
-              <span>Speaking...</span>
-            </div>
-          )
-        default:
-          return (
-            <div className="flex items-center space-x-2 text-green-600">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <span>Connected & Ready</span>
-            </div>
-          )
-      }
-    }
-    
-    return (
-      <div className="flex items-center space-x-2 text-gray-500">
-        <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-        <span>Ready to start your quest</span>
-      </div>
-    )
   }
 
   if (!isLoaded) {
@@ -360,7 +452,7 @@ export default function QuestPage() {
             Your AI-powered journey to career success. Speak naturally about your goals!
           </p>
           <div className="mt-1 text-xs text-gray-400 font-mono">
-            🚀 Version: 4.0.0 - Official Hume AI SDK Integration (WORKING!)
+            🚀 Version: 3.0.1 - Enhanced Voice Response Debugging + Initial Greeting
             {!user && <span className="ml-2 text-orange-500">🔧 DEBUG MODE (No Auth Required)</span>}
           </div>
         </div>
@@ -418,15 +510,15 @@ export default function QuestPage() {
                 {/* Controls */}
                 <div className="border-t pt-4">
                   <div className="flex justify-center space-x-4">
-                    {!isConnected ? (
+                    {!hume.isConnected ? (
                       <Button 
                         onClick={startQuestConversation}
                         size="lg"
                         className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                        disabled={isConnecting}
+                        disabled={hume.isLoading}
                       >
                         <Phone className="mr-2 h-5 w-5" />
-                        {isConnecting ? 'Connecting...' : 'Start Quest'}
+                        {hume.isLoading ? 'Connecting...' : 'Start Quest'}
                       </Button>
                     ) : (
                       <>
@@ -473,9 +565,9 @@ export default function QuestPage() {
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Status</span>
                     <span className={`text-sm font-medium ${
-                      isConnected ? 'text-green-600' : 'text-gray-500'
+                      hume.isConnected ? 'text-green-600' : 'text-gray-500'
                     }`}>
-                      {isConnected ? 'Connected' : 'Offline'}
+                      {hume.isConnected ? 'Connected' : 'Offline'}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -490,8 +582,8 @@ export default function QuestPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Voice AI</span>
-                    <span className="text-sm font-medium text-green-600">
-                      Official Hume SDK
+                    <span className="text-sm font-medium text-purple-600">
+                      Hume EVI
                     </span>
                   </div>
                 </div>
