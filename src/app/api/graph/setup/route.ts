@@ -5,18 +5,18 @@ export async function POST() {
   try {
     console.log('🚀 Setting up graph databases...')
 
-    // Get configuration from environment variables
+    // HARDCODED CREDENTIALS FOR TESTING - REMOVE IN PRODUCTION
     const config = {
-      neo4j: process.env.NEO4J_URI ? {
-        uri: process.env.NEO4J_URI!,
-        username: process.env.NEO4J_USERNAME!,
-        password: process.env.NEO4J_PASSWORD!,
-        database: process.env.NEO4J_DATABASE || 'neo4j'
-      } : undefined,
-      rushdb: process.env.RUSHDB_API_TOKEN ? {
-        apiToken: process.env.RUSHDB_API_TOKEN!,
-        apiUrl: process.env.RUSHDB_API_URL
-      } : undefined
+      neo4j: {
+        uri: 'neo4j+s://20b2ddda.databases.neo4j.io',
+        username: 'neo4j',
+        password: 'MPfTn0be2NxKxrnM7EZ5bUGrzVb_ZxM4CGnXUWp1ylw',
+        database: 'neo4j'
+      },
+      rushdb: {
+        apiToken: '52af6990442d68cb2c1994af0fb1b633DjFdMF5cNkkw+NGtKDsyIJ2RRlGyqn5f98CkP1lX68qMDURf4LT7OfOAdaGWDCZ+',
+        apiUrl: 'https://api.rushdb.com/api/v1'
+      }
     }
 
     // Check if we have any valid configuration

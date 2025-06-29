@@ -117,10 +117,11 @@ export default function Graph3D({
 
   if (!data || !data.nodes || data.nodes.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 text-gray-500">
-        <div className="mb-4">📊</div>
-        <div>No graph data available</div>
-        <div className="text-sm">Initialize graph databases to view 3D visualization</div>
+      <div className="flex flex-col items-center justify-center h-96 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+        <div className="mb-4 text-4xl">📊</div>
+        <div className="font-medium">No graph data available</div>
+        <div className="text-sm mt-2">Click "Setup Databases" to load TechFlow Solutions data</div>
+        <div className="text-xs mt-2 text-gray-400">Expected: 12 employees across 4 departments</div>
       </div>
     )
   }

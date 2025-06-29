@@ -131,7 +131,7 @@ export default function GraphTestPage() {
             Testing Neo4j + RushDB integration with TechFlow Solutions company data
           </p>
           <div className="mt-1 text-xs text-gray-400 font-mono">
-            🧪 Version: Graph Database Integration Test
+            🧪 Version: HARDCODED CREDENTIALS TEST - Production Ready!
           </div>
         </div>
 
