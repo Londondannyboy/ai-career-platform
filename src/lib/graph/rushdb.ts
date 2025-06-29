@@ -45,7 +45,10 @@ class RushDBService {
         description: 'AI-powered workflow automation platform for mid-market companies'
       }
 
-      await this.client.insert('companies', companyData)
+      await this.client.records.createMany({
+        label: 'COMPANY',
+        data: companyData
+      })
 
       // Insert department data
       const departments = [
@@ -88,7 +91,10 @@ class RushDBService {
       ]
 
       for (const dept of departments) {
-        await this.client.insert('departments', dept)
+        await this.client.records.createMany({
+          label: 'DEPARTMENT',
+          data: dept
+        })
       }
 
       console.log('✅ TechFlow Solutions data inserted into RushDB')
@@ -113,25 +119,34 @@ class RushDBService {
           company_id: 'techflow'
         }
 
-        await this.client.insert('employees', employeeData)
+        await this.client.records.createMany({
+          label: 'EMPLOYEE',
+          data: employeeData
+        })
 
         // Create relationship records
         if (emp.manager) {
-          await this.client.insert('relationships', {
-            type: 'reports_to',
-            from_employee: emp.id,
-            to_employee: emp.manager,
-            relationship_type: 'reporting'
+          await this.client.records.createMany({
+            label: 'RELATIONSHIP',
+            data: {
+              type: 'reports_to',
+              from_employee: emp.id,
+              to_employee: emp.manager,
+              relationship_type: 'reporting'
+            }
           })
         }
 
         if (emp.collaborates_with && Array.isArray(emp.collaborates_with)) {
           for (const collabId of emp.collaborates_with) {
-            await this.client.insert('relationships', {
-              type: 'collaborates_with',
-              from_employee: emp.id,
-              to_employee: collabId,
-              relationship_type: 'collaboration'
+            await this.client.records.createMany({
+              label: 'RELATIONSHIP',
+              data: {
+                type: 'collaborates_with',
+                from_employee: emp.id,
+                to_employee: collabId,
+                relationship_type: 'collaboration'
+              }
             })
           }
         }
@@ -139,10 +154,13 @@ class RushDBService {
         // Create skill relationships
         if (emp.skills && Array.isArray(emp.skills)) {
           for (const skill of emp.skills) {
-            await this.client.insert('skills', {
-              employee_id: emp.id,
-              skill_name: skill,
-              proficiency: 'intermediate' // Default value
+            await this.client.records.createMany({
+              label: 'SKILL',
+              data: {
+                employee_id: emp.id,
+                skill_name: skill,
+                proficiency: 'intermediate' // Default value
+              }
             })
           }
         }
@@ -162,8 +180,12 @@ class RushDBService {
 
     try {
       // Query employees with their relationships
-      const employees = await this.client.query('employees', {})
-      const relationships = await this.client.query('relationships', {})
+      const employees = await this.client.records.find({
+        labels: ['EMPLOYEE']
+      })
+      const relationships = await this.client.records.find({
+        labels: ['RELATIONSHIP']
+      })
       
       return {
         employees,
@@ -183,24 +205,32 @@ class RushDBService {
     try {
       const orgData = await this.getOrgChartData()
       
-      // Transform data for 3D visualization
-      const nodes = orgData.employees.map((emp: Record<string, unknown>) => ({
-        id: emp.id,
-        name: emp.name,
-        role: emp.role,
-        department: emp.department,
-        level: emp.level,
-        // Position and styling for 3D graph
-        color: this.getDepartmentColor(emp.department as string),
-        size: this.getLevelSize(emp.level as string)
-      }))
+      // Transform data for 3D visualization (RushDB returns records with data property)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const nodes = orgData.employees.map((record: any) => {
+        const emp = record.data || record
+        return {
+          id: emp.id,
+          name: emp.name,
+          role: emp.role,
+          department: emp.department,
+          level: emp.level,
+          // Position and styling for 3D graph
+          color: this.getDepartmentColor(emp.department as string),
+          size: this.getLevelSize(emp.level as string)
+        }
+      })
 
-      const links = orgData.relationships.map((rel: Record<string, unknown>) => ({
-        source: rel.from_employee,
-        target: rel.to_employee,
-        type: rel.relationship_type,
-        color: this.getRelationshipColor(rel.relationship_type as string)
-      }))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const links = orgData.relationships.map((record: any) => {
+        const rel = record.data || record
+        return {
+          source: rel.from_employee,
+          target: rel.to_employee,
+          type: rel.relationship_type,
+          color: this.getRelationshipColor(rel.relationship_type as string)
+        }
+      })
 
       return { nodes, links }
     } catch (error) {
