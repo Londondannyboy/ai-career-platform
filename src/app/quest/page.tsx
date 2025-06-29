@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff } from 'lucide-react'
 import { useHumeEVI, HumeMessage } from '@/hooks/useHumeEVI'
+import { useStreamingChat } from '@/hooks/useStreamingChat'
 
 type ConversationState = 'idle' | 'listening' | 'thinking' | 'speaking'
 type PlaybookType = 'career_coaching' | 'job_search' | 'cv_enhancement' | 'peer_feedback'
@@ -70,7 +71,7 @@ export default function QuestPage() {
     } catch (error) {
       console.error('❌ Error ensuring user exists:', error)
     }
-  }, [user])
+  }, [user, supabase])
 
   // Hume AI EVI integration
   const humeConfig = {
@@ -103,7 +104,7 @@ export default function QuestPage() {
         
         // Process with our quest logic
         setTimeout(() => {
-          generateQuestResponse(humeMessage.text!, humeMessage.emotionalMeasures)
+          generateQuestResponse(humeMessage.text!)
         }, 1500)
         
       } else if (humeMessage.type === 'assistant_message' && humeMessage.text) {
@@ -149,6 +150,9 @@ export default function QuestPage() {
   }
 
   const hume = useHumeEVI(humeConfig)
+  
+  // Vercel AI SDK for enhanced streaming conversations
+  const streamingChat = useStreamingChat()
 
   useEffect(() => {
     if (isLoaded && user?.id) {
@@ -162,6 +166,44 @@ export default function QuestPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Handle streaming chat messages from Vercel AI SDK
+  useEffect(() => {
+    if (streamingChat.messages.length > 0) {
+      const latestStreamMessage = streamingChat.messages[streamingChat.messages.length - 1]
+      
+      // Check if this is a new message we haven't processed yet
+      const messageExists = messages.some(msg => 
+        msg.text === latestStreamMessage.content && 
+        msg.isUser === (latestStreamMessage.role === 'user')
+      )
+      
+      if (!messageExists && latestStreamMessage.content) {
+        const newMessage: Message = {
+          id: `stream-${Date.now()}`,
+          text: latestStreamMessage.content,
+          isUser: latestStreamMessage.role === 'user',
+          timestamp: new Date(),
+          playbook: currentPlaybook
+        }
+        
+        // Only add if not already in messages to avoid duplicates
+        setMessages(prev => {
+          const exists = prev.some(msg => 
+            msg.text === newMessage.text && 
+            msg.isUser === newMessage.isUser
+          )
+          return exists ? prev : [...prev, newMessage]
+        })
+        
+        // Update conversation state based on message type
+        if (latestStreamMessage.role === 'assistant') {
+          setConversationState('speaking')
+          setTimeout(() => setConversationState('listening'), 2000)
+        }
+      }
+    }
+  }, [streamingChat.messages, messages, currentPlaybook])
 
   const loadPreviousConversation = useCallback(async (userId: string) => {
     try {
@@ -236,90 +278,68 @@ export default function QuestPage() {
     return 'career_coaching'
   }
 
-  const generateQuestResponse = async (userInput: string, emotionalMeasures?: Record<string, unknown>) => {
+  const generateQuestResponse = async (userInput: string) => {
     try {
+      console.log('🤖 Generating enhanced response with streaming AI for:', userInput)
+      
       // Detect which playbook to use
       const detectedPlaybook = detectPlaybook(userInput)
       setCurrentPlaybook(detectedPlaybook)
       
-      // Get user profile for context
-      const { data: profile } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user?.id)
-        .single()
+      // Use Vercel AI SDK for streaming response
+      await streamingChat.sendMessage(userInput)
       
-      // Get recent quest sessions for context
-      const { data: recentSessions } = await supabase
-        .from('repo_sessions')
-        .select('transcript, ai_analysis')
-        .eq('user_id', user?.id)
-        .eq('session_type', 'quest_conversation')
-        .order('created_at', { ascending: false })
-        .limit(3)
-      
-      // Enhanced prompt with playbook and emotional context
-      const systemPrompt = getPlaybookPrompt(detectedPlaybook, emotionalMeasures)
-      
-      // Call our API with enhanced context
-      const response = await fetch('/api/quest-conversation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userInput,
-          conversationHistory: messages,
-          userProfile: profile,
-          recentSessions: recentSessions || [],
-          playbook: detectedPlaybook,
-          emotionalContext: emotionalMeasures,
-          systemPrompt
-        })
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to get Quest AI response')
-      }
-      
-      const result = await response.json()
-      
-      // Send AI response back to Hume AI for voice synthesis
-      hume.sendMessage(result.response)
+      // The streaming response will be handled by the useStreamingChat hook
+      // and will automatically update the conversation
+      setConversationState('speaking')
       
     } catch (error) {
       console.error('Error generating Quest response:', error)
       const fallbackResponse = "I'm having trouble processing that right now. Could you try rephrasing your question?"
-      hume.sendMessage(fallbackResponse)
+      
+      // Add fallback message to local state
+      const fallbackMessage: Message = {
+        id: Date.now().toString(),
+        text: fallbackResponse,
+        isUser: false,
+        timestamp: new Date(),
+        playbook: currentPlaybook
+      }
+      setMessages(prev => [...prev, fallbackMessage])
+      setConversationState('listening')
     }
   }
 
-  const getPlaybookPrompt = (playbook: PlaybookType, emotionalMeasures?: Record<string, unknown>): string => {
-    const basePrompt = "You are Quest, an empathetic AI career coach. "
-    const emotionalContext = emotionalMeasures ? ` The user's emotional state suggests they are ${getEmotionalState(emotionalMeasures)}.` : ""
-    
-    switch (playbook) {
-      case 'job_search':
-        return basePrompt + "Focus on job searching strategies, application tips, and interview preparation." + emotionalContext
-        
-      case 'cv_enhancement':
-        return basePrompt + "Help optimize their CV/resume, highlight relevant skills, and improve their professional presentation." + emotionalContext
-        
-      case 'peer_feedback':
-        return basePrompt + "Provide practice opportunities and constructive feedback on their career communication." + emotionalContext
-        
-      case 'career_coaching':
-      default:
-        return basePrompt + "Provide holistic career guidance, goal setting, and professional development advice." + emotionalContext
-    }
-  }
+  // Legacy function - now using Vercel AI SDK for enhanced prompting
+  // const getPlaybookPrompt = (playbook: PlaybookType, emotionalMeasures?: Record<string, unknown>): string => {
+  //   const basePrompt = "You are Quest, an empathetic AI career coach. "
+  //   const emotionalContext = emotionalMeasures ? ` The user's emotional state suggests they are ${getEmotionalState(emotionalMeasures)}.` : ""
+  //   
+  //   switch (playbook) {
+  //     case 'job_search':
+  //       return basePrompt + "Focus on job searching strategies, application tips, and interview preparation." + emotionalContext
+  //       
+  //     case 'cv_enhancement':
+  //       return basePrompt + "Help optimize their CV/resume, highlight relevant skills, and improve their professional presentation." + emotionalContext
+  //       
+  //     case 'peer_feedback':
+  //       return basePrompt + "Provide practice opportunities and constructive feedback on their career communication." + emotionalContext
+  //       
+  //     case 'career_coaching':
+  //     default:
+  //       return basePrompt + "Provide holistic career guidance, goal setting, and professional development advice." + emotionalContext
+  //   }
+  // }
 
-  const getEmotionalState = (measures: Record<string, unknown>): string => {
-    // Analyze Hume's emotional measures to provide context
-    // This is a simplified version - you'd want more sophisticated analysis
-    if (!measures) return "neutral"
-    
-    // Add logic to interpret Hume's emotional measurements
-    return "engaged and ready to learn"
-  }
+  // Legacy function - emotional analysis now handled by Vercel AI SDK
+  // const getEmotionalState = (measures: Record<string, unknown>): string => {
+  //   // Analyze Hume's emotional measures to provide context
+  //   // This is a simplified version - you'd want more sophisticated analysis
+  //   if (!measures) return "neutral"
+  //   
+  //   // Add logic to interpret Hume's emotional measurements
+  //   return "engaged and ready to learn"
+  // }
 
   const startQuestConversation = async () => {
     try {

@@ -1,66 +1,291 @@
-# Claude AI Assistant - Project Context
+# Claude AI Assistant - AI Business Partner Platform
 
 ## 🤖 For Future Claude Sessions
 
-This file helps new Claude sessions understand the project state and continue development effectively.
+This file helps new Claude sessions understand the enhanced project state and continue development with the advanced architecture.
 
-### Project Summary
-- **AI Career Platform** - Voice-based career coaching with LinkedIn integration
-- **Status**: Fully functional MVP deployed on Vercel
-- **Tech Stack**: Next.js 14, TypeScript, Supabase, OpenAI, shadcn/ui
+## Project Overview: AI Business Partner Platform
 
-### What's Working Now
-✅ LinkedIn OAuth authentication  
-✅ Real-time voice coaching with speech recognition  
-✅ AI-powered career conversations using GPT-4  
-✅ Manual profile enhancement (overcomes LinkedIn API limitations)  
-✅ Traditional voice recording → transcription → analysis  
-✅ Complete database schema with privacy controls  
-✅ Professional UI/UX across all pages  
+**Vision:** Comprehensive AI-powered business intelligence platform that provides deep company insights, professional network analysis, and career development through advanced knowledge graphs and empathic voice AI.
 
-### Key Files to Understand
-- `PROJECT_STATUS.md` - Comprehensive project overview
-- `src/app/coach/page.tsx` - Real-time voice coaching
-- `src/app/profile/edit/page.tsx` - Manual career data entry
-- `supabase/schema.sql` - Complete database schema
-- `src/app/auth/callback/route.ts` - LinkedIn OAuth handling
+**Current Status:** MVP with Hume AI voice coaching, ready for Phase 0 enhancements and hybrid database architecture
 
-### Development Commands
-```bash
-npm run dev    # Local development
-npm run build  # Test production build
-git push       # Auto-deploy to Vercel
+## Enhanced Technology Stack (Updated 2024)
+
+### Core Architecture: Hybrid Database Strategy
+```typescript
+// Three-tier database approach for optimal risk/innovation balance
+Supabase (Primary) → Core app data, auth, real-time features
+Neon PostgreSQL (Vector) → Semantic search, AI analytics, pgvector
+Neo4j + Graphiti (Graph) → Temporal relationships, career networks
+RushDB (Interface) → Simplified graph operations, 3D visualization
 ```
 
-### Important Context for AI Coaching
-- Uses user's LinkedIn data + manually entered career info
-- Speech recognition via Web Speech API
-- AI responses via OpenAI GPT-4 with conversation context
-- All conversations saved to private user repo
+### Frontend & AI Integration (Enhanced)
+- **Next.js 15** - Full-stack framework with App Router
+- **Vercel AI SDK** - Native streaming AI interactions (CRITICAL: fixes current coaching issues)
+- **Hume AI EVI** - Empathic voice interface with enhanced SDKs:
+  - **Hume React SDK** - Simplified voice components (replaces manual WebSocket)
+  - **Hume TypeScript SDK** - Type-safe API interactions
+  - **Hume MCP Server** - Enhanced Claude Code development integration
+- **Clerk** - Authentication and user management
+- **Tailwind CSS** - Styling and design system
 
-### Environment Variables (Vercel)
-- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key  
-- `OPENAI_API_KEY` - For voice transcription and AI responses
+### Data Visualization (Major Competitive Advantage)
+- **react-force-graph** - Custom 3D interactive career network visualization
+- **RushDB Dashboard** - Built-in 3D graph visualization for sales demos
+- **D3.js** - Custom business intelligence dashboards
+- **Three.js/WebGL** - Advanced 3D rendering and VR/AR capabilities
 
-### User Feedback Integration
-The platform was designed based on inspiration from Jack & Jill AI's real-time voice interface approach, focusing on immediate, conversational AI interaction rather than batch processing.
+### Data Intelligence Pipeline
+- **Repository Analysis** - GitHub integration for codebase insights and technical debt
+- **Human Data Ingestion** - Google Drive, document upload, manual forms, Slack/Teams
+- **Market Intelligence** - Real-time industry trends and salary data
+- **Relationship Mapping** - Automatic detection of professional connections
 
-### LinkedIn API Limitations Solved
-LinkedIn's API only provides basic profile data (name, email, photo). We solved this by creating a manual profile enhancement system where users can add detailed career information for better AI coaching context.
+## Development Commands
 
-## 🎯 Ready for Next Features
-The foundation is complete. Ready to implement:
-- Enhanced networking features
-- Voice-powered job search  
-- Collaborative coaching tools
-- Advanced analytics
+```bash
+npm run dev          # Start development server (localhost:3000)
+npm run build        # Test production build (MUST PASS before deployment)
+npm run lint         # Run ESLint (must be clean)
+npm run start        # Start production server
+git push             # Auto-deploy to Vercel
+```
 
-## 🚨 Remember
-- Always test builds locally before pushing
-- Voice features require HTTPS (works on Vercel)
-- Check browser console for speech recognition debugging
-- All users data is private by default (RLS enabled)
+## Current Project Structure
+
+### Key Files & Components
+- **`src/app/quest/page.tsx`** - Main voice coaching interface (Hume AI integration)
+- **`src/hooks/useHumeEVI.ts`** - Hume AI voice interface hook (NEEDS SDK MIGRATION)
+- **`src/app/layout.tsx`** - Root layout with Clerk authentication
+- **`AI_BUSINESS_PARTNER_PLATFORM_PRD.md`** - Complete product requirements document (40+ pages)
+
+### Current Database Schema (Supabase - Primary)
+```sql
+-- Core application tables (working)
+users (id, email, created_at, subscription_tier, preferences)
+user_profiles (user_id, linkedin_data, manual_profile_data, privacy_settings)
+conversations (id, user_id, transcript, ai_responses, session_metadata)
+coaching_sessions (id, user_id, duration, insights, follow_up_actions)
+repositories (id, user_id, github_url, analysis_status, last_analyzed)
+```
+
+### Future Database Extensions
+```sql
+-- Neon PostgreSQL (Vector Intelligence)
+user_embeddings (user_id, profile_vector, skills_vector, goals_vector)
+company_embeddings (company_id, description_vector, culture_vector)
+repository_analysis (repo_id, code_vectors, technical_debt_scores)
+
+-- Neo4j + Graphiti (Relationship Intelligence)
+(User)-[:WORKS_AT {from, to, role, performance}]->(Company)
+(User)-[:COLLABORATED_WITH {project, commits, impact}]->(User)
+(User)-[:SKILLED_IN {proficiency, years_experience}]->(Technology)
+```
+
+## 🚨 Phase 0 Immediate Priorities (CRITICAL)
+
+### Current Issues That Must Be Fixed
+1. **Hume AI Integration Broken** - Coaching feature not working properly due to manual WebSocket implementation
+2. **No Streaming Support** - Current setup doesn't handle real-time AI properly
+3. **Missing SDK Benefits** - Not using native Hume React SDK or Vercel AI SDK
+
+### Implementation Order (Next 1-4 weeks)
+1. **Install Hume React SDK** - Replace manual WebSocket with native components
+2. **Configure Vercel AI SDK** - Enable proper streaming and real-time interactions
+3. **Set up Hume MCP Server** - Enhance Claude Code development workflow
+4. **Migrate useHumeEVI hook** - Use TypeScript SDK for type safety
+5. **Test end-to-end** - Ensure voice coaching works reliably
+6. **Document new patterns** - Update code architecture documentation
+
+### Success Criteria for Phase 0
+- ✅ Coaching feature fully operational with reliable voice interaction
+- ✅ Vercel AI SDK streaming working for real-time conversations
+- ✅ Error-free voice sessions with proper audio handling
+- ✅ Enhanced development workflow with Hume MCP Server
+- ✅ GitHub issue resolution documented
+
+## Environment Variables
+
+### Required (Current - Working)
+```bash
+# Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_ZGFybGluZy1pbnNlY3QtNDMuY2xlcmsuYWNjb3VudHMuZGV2JA
+CLERK_SECRET_KEY=sk_test_QUTuQDGZGYSdDRqDgJkAthBc2ZshZrynBMeEoZVYVu
+
+# Database (Supabase)
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# AI Services (Hume AI - Working Credentials)
+NEXT_PUBLIC_HUME_API_KEY=cL5dGCBT1EAaAau7eNA84WVfQ3QpS3t2WRZgZvhwYUWhgN0V
+HUME_API_SECRET=fHlJ1vY69ly0dqt3iqZ9XX8PjGyM9OjMkMlBNxXwSaKFgMKG1Sy7hbXqJd0W65i6
+NEXT_PUBLIC_HUME_CONFIG_ID=8f16326f-a45d-4433-9a12-890120244ec3
+
+# Other AI
+OPENAI_API_KEY=your_openai_api_key
+```
+
+### Future Extensions (Phase 1+)
+```bash
+# Vector Database
+NEON_DATABASE_URL=your_neon_postgresql_url
+
+# Graph Database
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=your_neo4j_password
+
+# Simplified Graph Interface
+RUSHDB_API_KEY=your_rushdb_api_key
+RUSHDB_PROJECT_ID=your_rushdb_project_id
+```
+
+## Architecture Principles & Decisions
+
+### Database Strategy: Hybrid Approach (Low Risk + High Innovation)
+- **Supabase Foundation** - Keep proven core for authentication, real-time, file storage
+- **Neon Enhancement** - Add vector intelligence for semantic search and AI analytics
+- **Neo4j + Graphiti** - Temporal relationship modeling for career networks
+- **RushDB Layer** - Simplified graph interface with built-in 3D visualization
+
+### AI Integration Strategy: Native SDK First
+- **Replace Manual Implementation** - Use Hume React SDK instead of custom WebSocket
+- **Vercel AI SDK Integration** - Native Next.js streaming and real-time capabilities
+- **Type Safety** - Full TypeScript integration across all AI services
+- **MCP Development** - Enhanced Claude Code workflow with Hume MCP Server
+
+### Visualization Strategy: 3D Competitive Advantage
+- **3D Career Networks** - Interactive exploration of professional relationships (unique in market)
+- **Sales Demo Ready** - Professional RushDB dashboard for enterprise presentations
+- **Mobile Optimized** - Touch-friendly 3D interactions
+- **VR/AR Ready** - Future immersive career exploration capabilities
+
+## Key Implementation Patterns
+
+### Voice AI Integration (UPDATED - Critical for Phase 0)
+```typescript
+// OLD: Manual WebSocket (current - broken)
+const wsUrl = `wss://api.hume.ai/v0/evi/chat?config_id=${configId}&api_key=${apiKey}`
+
+// NEW: Use Hume React SDK + Vercel AI SDK
+import { useHume } from '@hume-ai/react'
+import { useChat } from '@vercel/ai/react'
+import { HumeClient } from '@hume-ai/typescript'
+```
+
+### Multi-Database Query Routing (Future)
+```typescript
+const routeQuery = async (queryType: string, userContext: UserProfile) => {
+  switch (queryType) {
+    case 'user_profile_data':
+      return await supabaseQuery(query, userContext)
+    case 'semantic_search':
+      return await neonVectorSearch(query, userContext)
+    case 'relationship_analysis':
+      return await rushDBGraphTraversal(query, userContext)
+    case 'complex_intelligence':
+      return await hybridSearch(query, userContext)
+  }
+}
+```
+
+### 3D Career Visualization (Phase 1)
+```typescript
+import ForceGraph3D from 'react-force-graph-3d'
+
+const CareerNetworkVisualization = () => (
+  <ForceGraph3D
+    graphData={rushDBData}
+    nodeThreeObject={createPersonNode}
+    linkThreeObject={createRelationshipLink}
+    onNodeClick={showCareerInsights}
+    enableNodeDrag={true}
+    enablePanInteraction={true}
+  />
+)
+```
+
+## Business Model & Value Proposition
+
+### Target Markets & Pricing
+- **Individual Users** ($29/month) - AI career coaching with 3D network visualization
+- **Team Level** ($199/month per 5 users) - Team optimization and skill gap analysis  
+- **Enterprise** ($10K+/month) - Full business intelligence and strategic consulting
+
+### Competitive Advantages
+1. **Only 3D Career Platform** - No competitor offers immersive network exploration
+2. **Hybrid Intelligence** - Combines relational stability with graph insights and vector search
+3. **Voice-First Coaching** - Empathic AI that understands emotional context
+4. **Repository Intelligence** - Deep technical insights from actual codebase analysis
+5. **Business Partner Evolution** - Platform grows from individual coaching to enterprise consulting
+
+## Critical Issues & Solutions
+
+### Current Problems (Phase 0)
+- **❌ Coaching Feature Broken** - Manual WebSocket implementation has issues
+- **❌ No Real-time Streaming** - Current setup doesn't handle live AI interactions properly
+- **❌ Missing Type Safety** - Not using Hume TypeScript SDK
+- **❌ Development Friction** - Could be enhanced with MCP Server integration
+
+### Solutions (Immediate)
+- **✅ Hume React SDK** - Replace manual implementation with native components
+- **✅ Vercel AI SDK** - Add proper streaming and real-time capabilities
+- **✅ Hume TypeScript SDK** - Implement type-safe interactions
+- **✅ Hume MCP Server** - Enhance Claude Code development workflow
+
+## Implementation Phases
+
+### Phase 0: Critical Fixes (Weeks 1-4) - CURRENT FOCUS
+- Fix Hume AI integration with native SDKs
+- Implement Vercel AI SDK for streaming
+- Set up enhanced development workflow
+- Document GitHub issue resolution
+
+### Phase 1: Foundation + Visualization (Months 1-3)
+- Add repository analysis service
+- Implement hybrid database architecture
+- Build basic 3D career visualization
+- Set up sales demo environment
+
+### Phase 2: Network Intelligence (Months 4-6)
+- Team coaching features
+- Professional network mapping
+- Advanced 3D visualization
+- Business intelligence dashboards
+
+### Phase 3: Business Partner Platform (Months 7-12)
+- Enterprise features and consulting
+- VR/AR career exploration
+- AI-guided graph navigation
+- Custom branded dashboards
+
+## Important Development Notes
+
+### Critical Reminders
+- **ALWAYS test npm run build** before pushing (deployment will fail otherwise)
+- **Voice features require HTTPS** (works on Vercel, not localhost)
+- **Hume AI needs proper SDK integration** (current manual implementation is broken)
+- **Check Vercel environment variables** - ensure all keys are properly set
+- **All user data is private** by default (RLS enabled in Supabase)
+
+### Architecture Testing (Future)
+```bash
+# Testing tools for hybrid database architecture
+npm test                    # Unit tests for React components
+npm run test:integration    # Integration tests for database layer
+npm run test:e2e           # End-to-end tests with Playwright
+npm run test:graph         # Neo4j + RushDB relationship tests
+npm run test:vector        # Neon pgvector semantic search tests
+```
+
+### Files to Reference
+- **`AI_BUSINESS_PARTNER_PLATFORM_PRD.md`** - Complete 40+ page product specification
+- **`src/hooks/useHumeEVI.ts`** - Current Hume AI implementation (needs migration)
+- **`src/app/quest/page.tsx`** - Voice coaching interface (needs SDK update)
 
 ---
-*This ensures continuity between Claude sessions and faster development iteration.*
+
+*This document provides complete context for the enhanced AI Business Partner Platform with hybrid architecture, 3D visualization, and native AI SDK integration. The immediate focus is Phase 0 critical fixes to get the coaching feature working properly.*
