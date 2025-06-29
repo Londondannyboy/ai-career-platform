@@ -452,7 +452,7 @@ export default function QuestPage() {
             Your AI-powered journey to career success. Speak naturally about your goals!
           </p>
           <div className="mt-1 text-xs text-gray-400 font-mono">
-            🚀 Version: 3.0.0 - Powered by Hume AI EVI + Smart Playbooks
+            🚀 Version: 3.0.1 - Enhanced Voice Response Debugging + Initial Greeting
             {!user && <span className="ml-2 text-orange-500">🔧 DEBUG MODE (No Auth Required)</span>}
           </div>
         </div>

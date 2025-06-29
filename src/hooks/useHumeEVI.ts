@@ -113,6 +113,16 @@ export function useHumeEVI(config: HumeEVIConfig) {
           status: 'connected'
         })
         
+        // Send initial greeting message to trigger Hume AI response
+        setTimeout(() => {
+          const greetingMessage = {
+            type: 'assistant_input',
+            text: 'Hello! How can I help you with your career quest today?'
+          }
+          console.log('📤 Sending initial greeting to Hume AI:', greetingMessage)
+          wsRef.current?.send(JSON.stringify(greetingMessage))
+        }, 1000)
+        
         // Start recording audio
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
           mediaRecorderRef.current.start(1000) // Send audio chunks every second
@@ -122,41 +132,61 @@ export function useHumeEVI(config: HumeEVIConfig) {
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
-          console.log('📨 Hume AI message:', data)
+          console.log('📨 Hume AI message received:', JSON.stringify(data, null, 2))
           
-          if (data.type === 'user_message') {
+          // Handle different Hume EVI message types
+          if (data.type === 'session_settings') {
+            console.log('⚙️ Session settings received')
+            
+          } else if (data.type === 'user_message' || data.type === 'user_input') {
             // User spoke - Hume AI transcribed it
+            console.log('🗣️ User message transcribed:', data.message?.content || data.text)
             config.onMessage({
               type: 'user_message',
-              text: data.text || data.message?.content,
+              text: data.message?.content || data.text || data.transcript,
               timestamp: new Date(),
-              emotionalMeasures: data.emotions || data.emotional_measures
+              emotionalMeasures: data.emotions || data.emotional_measures || data.inference
             })
             setIsListening(false)
             
-          } else if (data.type === 'assistant_message') {
+          } else if (data.type === 'assistant_message' || data.type === 'assistant_input') {
             // AI response received
+            const responseText = data.message?.content || data.text || data.content
+            console.log('🤖 Assistant response:', responseText)
+            
             config.onMessage({
               type: 'assistant_message',
-              text: data.text || data.message?.content,
+              text: responseText,
               timestamp: new Date()
             })
             setIsSpeaking(true)
             
             // Play audio if provided
-            if (data.audio || data.audio_data) {
-              playAudioResponse(data.audio || data.audio_data)
+            if (data.audio || data.audio_data || data.data) {
+              console.log('🔊 Playing audio response')
+              playAudioResponse(data.audio || data.audio_data || data.data)
+            } else {
+              console.log('⚠️ No audio data in assistant message')
             }
             
-          } else if (data.type === 'audio_output') {
+          } else if (data.type === 'audio_output' || data.type === 'audio') {
             // Audio response from Hume AI
-            if (data.data) {
-              playAudioResponse(data.data)
+            console.log('🎵 Audio output received')
+            if (data.data || data.audio) {
+              playAudioResponse(data.data || data.audio)
             }
+            
+          } else if (data.type === 'expression_measurement') {
+            // Emotion/expression data
+            console.log('😊 Expression measurement:', data.inference)
+            
+          } else {
+            console.log('❓ Unknown message type:', data.type, data)
           }
           
         } catch (error) {
           console.error('❌ Error parsing Hume AI message:', error)
+          console.error('Raw message data:', event.data)
         }
       }
       
@@ -212,15 +242,37 @@ export function useHumeEVI(config: HumeEVIConfig) {
   // Play audio response from Hume AI
   const playAudioResponse = useCallback(async (audioData: string) => {
     try {
-      const audioBlob = new Blob(
-        [Uint8Array.from(atob(audioData), c => c.charCodeAt(0))],
-        { type: 'audio/webm' }
-      )
+      console.log('🎵 Attempting to play audio, data length:', audioData?.length)
+      
+      if (!audioData) {
+        console.log('⚠️ No audio data provided')
+        return
+      }
+      
+      // Try different audio formats that Hume AI might use
+      let audioBlob
+      try {
+        // Try base64 decode first
+        const binaryString = atob(audioData)
+        const bytes = new Uint8Array(binaryString.length)
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i)
+        }
+        audioBlob = new Blob([bytes], { type: 'audio/wav' }) // Try WAV format
+        console.log('✅ Created audio blob as WAV, size:', audioBlob.size)
+      } catch {
+        console.log('⚠️ Base64 decode failed, trying direct blob creation')
+        audioBlob = new Blob([audioData], { type: 'audio/webm' })
+      }
       
       const audioUrl = URL.createObjectURL(audioBlob)
       const audio = new Audio(audioUrl)
       
+      audio.onloadstart = () => console.log('🎵 Audio loading started')
+      audio.oncanplay = () => console.log('🎵 Audio can play')
+      audio.onplay = () => console.log('🎵 Audio started playing')
       audio.onended = () => {
+        console.log('🎵 Audio playback ended')
         setIsSpeaking(false)
         setIsListening(true)
         URL.revokeObjectURL(audioUrl)
@@ -231,11 +283,19 @@ export function useHumeEVI(config: HumeEVIConfig) {
         }
       }
       
+      audio.onerror = (e) => {
+        console.error('🚨 Audio playback error:', e)
+        setIsSpeaking(false)
+        setIsListening(true)
+        URL.revokeObjectURL(audioUrl)
+      }
+      
       // Pause recording while AI speaks
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.pause()
       }
       
+      console.log('🎵 Starting audio playback...')
       await audio.play()
       
     } catch (error) {
