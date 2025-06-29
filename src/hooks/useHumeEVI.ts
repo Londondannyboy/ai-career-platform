@@ -35,7 +35,7 @@ export function useHumeEVI(config: HumeEVIConfig) {
       console.log('🔗 Connecting to Hume AI EVI...')
       
       // Get Hume AI credentials with detailed debugging
-      const configId = process.env.NEXT_PUBLIC_HUME_CONFIG_ID
+      const configId = process.env.NEXT_PUBLIC_HUME_CONFIG_ID || '8f16326f-a45d-4433-9a12-890120244ec3' // TEMPORARY FALLBACK
       const apiKey = process.env.NEXT_PUBLIC_HUME_API_KEY
       
       // TEMPORARY DEBUG: Log environment variable details
