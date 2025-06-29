@@ -52,7 +52,7 @@ export default function DebugCredentialsPage() {
       } else {
         setError(data.error || 'Failed to check credentials')
       }
-    } catch (err) {
+    } catch {
       setError('Network error checking credentials')
     } finally {
       setLoading(false)
