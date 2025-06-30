@@ -64,14 +64,18 @@ export default function Graph3D({
   }, [])
 
   useEffect(() => {
-    if (graphRef.current && data?.nodes) {
-      // Center the graph
-      graphRef.current.centerAt(0, 0, 200)
-      graphRef.current.cameraPosition({ z: 400 })
-      
-      // Add some initial force
-      graphRef.current.d3Force('charge').strength(-300)
-      graphRef.current.d3Force('link').distance(100)
+    if (graphRef.current && data?.nodes && data.nodes.length > 0) {
+      try {
+        // Center the graph
+        graphRef.current.centerAt(0, 0, 200)
+        graphRef.current.cameraPosition({ z: 400 })
+        
+        // Add some initial force
+        graphRef.current.d3Force('charge').strength(-300)
+        graphRef.current.d3Force('link').distance(100)
+      } catch (error) {
+        console.error('Error configuring 3D graph:', error)
+      }
     }
   }, [data])
 

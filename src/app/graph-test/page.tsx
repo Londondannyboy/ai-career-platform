@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Navigation from '@/components/Navigation'
 import Graph3D from '@/components/Graph3D'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -39,11 +39,11 @@ export default function GraphTestPage() {
   const [selectedSource, setSelectedSource] = useState<'neo4j' | 'rushdb' | 'hybrid'>('hybrid')
   const [logs, setLogs] = useState<string[]>([])
 
-  const addLog = (message: string) => {
+  const addLog = useCallback((message: string) => {
     setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`])
-  }
+  }, [])
 
-  const checkStatus = async () => {
+  const checkStatus = useCallback(async () => {
     try {
       const response = await fetch('/api/graph/setup')
       const data = await response.json()
@@ -53,9 +53,30 @@ export default function GraphTestPage() {
     } catch (error) {
       addLog(`Status check failed: ${error}`)
     }
-  }
+  }, [addLog])
 
-  const setupGraphDatabases = async () => {
+  const loadVisualizationData = useCallback(async () => {
+    setLoading(true)
+    addLog(`Loading visualization data from: ${selectedSource}`)
+    
+    try {
+      const response = await fetch(`/api/graph/visualization?source=${selectedSource}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setGraphData(data.data)
+        addLog(`✅ Loaded ${data.metadata.nodeCount} nodes, ${data.metadata.linkCount} links`)
+      } else {
+        addLog(`❌ Failed to load data: ${data.error}`)
+      }
+    } catch (error) {
+      addLog(`❌ Data loading error: ${error}`)
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedSource, addLog])
+
+  const setupGraphDatabases = useCallback(async () => {
     setLoading(true)
     addLog('Starting graph database setup...')
     
@@ -81,38 +102,17 @@ export default function GraphTestPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const loadVisualizationData = async () => {
-    setLoading(true)
-    addLog(`Loading visualization data from: ${selectedSource}`)
-    
-    try {
-      const response = await fetch(`/api/graph/visualization?source=${selectedSource}`)
-      const data = await response.json()
-      
-      if (data.success) {
-        setGraphData(data.data)
-        addLog(`✅ Loaded ${data.metadata.nodeCount} nodes, ${data.metadata.linkCount} links`)
-      } else {
-        addLog(`❌ Failed to load data: ${data.error}`)
-      }
-    } catch (error) {
-      addLog(`❌ Data loading error: ${error}`)
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [loadVisualizationData, addLog])
 
   useEffect(() => {
     checkStatus()
-  }, [])
+  }, [checkStatus])
 
   useEffect(() => {
     if (setupComplete && selectedSource) {
       loadVisualizationData()
     }
-  }, [selectedSource, setupComplete])
+  }, [selectedSource, setupComplete, loadVisualizationData])
 
   const handleNodeClick = (node: { name: string; role: string }) => {
     addLog(`Clicked: ${node.name} (${node.role})`)
@@ -260,12 +260,22 @@ export default function GraphTestPage() {
                 <CardTitle>TechFlow Solutions - 3D Organization Network</CardTitle>
               </CardHeader>
               <CardContent className="h-full">
-                <Graph3D
-                  data={graphData || undefined}
-                  width={800}
-                  height={600}
-                  onNodeClick={handleNodeClick}
-                />
+                {graphData ? (
+                  <Graph3D
+                    data={graphData}
+                    width={800}
+                    height={600}
+                    onNodeClick={handleNodeClick}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    <div className="text-center">
+                      <div className="text-4xl mb-4">📊</div>
+                      <div>No visualization data available</div>
+                      <div className="text-sm mt-2">Set up databases first</div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
