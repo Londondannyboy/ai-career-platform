@@ -291,7 +291,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(mockHybridData)
-
+    }
   } catch (error) {
     console.error('❌ Hybrid synthetic intelligence error:', error)
     return NextResponse.json({
