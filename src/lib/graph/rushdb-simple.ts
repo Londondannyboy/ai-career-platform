@@ -1,15 +1,31 @@
 import RushDB from '@rushdb/javascript-sdk'
 
-// Simple RushDB implementation following their documentation exactly
+// Simple RushDB implementation using same pattern as working main service
 class SimpleRushDBService {
-  private db: RushDB
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private client: any = null
 
   constructor() {
-    // Initialize exactly as shown in docs
-    this.db = new RushDB('52af6990442d68cb2c1994af0fb1b633DjFdMF5cNkkw+NGtKDsyIJ2RRlGyqn5f98CkP1lX68qMDURf4LT7OfOAdaGWDCZ+')
+    // Use same initialization pattern as working service
+    this.connect()
+  }
+
+  private connect() {
+    try {
+      this.client = new RushDB('52af6990442d68cb2c1994af0fb1b633DjFdMF5cNkkw+NGtKDsyIJ2RRlGyqn5f98CkP1lX68qMDURf4LT7OfOAdaGWDCZ+', {
+        url: 'https://api.rushdb.com/api/v1'
+      })
+      console.log('✅ Simple RushDB connection initialized')
+    } catch (error) {
+      console.error('❌ Simple RushDB connection failed:', error)
+    }
   }
 
   async createTestData() {
+    if (!this.client) {
+      throw new Error('RushDB client not initialized')
+    }
+
     console.log('🚀 Creating simple test data in RushDB...')
     
     try {
@@ -48,7 +64,7 @@ class SimpleRushDBService {
       ]
 
       for (const emp of employees) {
-        await this.db.records.createMany({
+        await this.client.records.createMany({
           label: "EMPLOYEE",
           data: emp
         })
@@ -62,10 +78,14 @@ class SimpleRushDBService {
   }
 
   async getEmployees() {
+    if (!this.client) {
+      throw new Error('RushDB client not initialized')
+    }
+
     console.log('🔍 Querying employees from RushDB...')
     
     try {
-      const results = await this.db.records.find({
+      const results = await this.client.records.find({
         labels: ["EMPLOYEE"]
       })
       
