@@ -1,4 +1,4 @@
-# AI Business Partner Platform - Product Requirements Document
+# Quest AI Platform - Product Requirements Document
 
 ## Executive Summary
 
@@ -288,8 +288,11 @@ interface CompanyIntelligence {
 - **Type Safety** - Better development experience and fewer runtime errors
 
 #### APIs & Integrations
-- **MCP Browser** - Live web intelligence gathering
-- **GitHub API** - Repository analysis and code insights
+- **Multi-Search Intelligence Strategy:**
+  - **Tavily API** - Primary market intelligence, salary data, industry trends
+  - **Brave MCP Server** - Interactive live coaching sessions with real-time browsing
+  - **Perplexity API** - AI-powered career analysis and complex queries
+- **GitHub API** - Repository analysis and code collaboration insights
 - **LinkedIn API** - Professional network data
 - **Slack/Teams APIs** - Workplace communication analysis
 

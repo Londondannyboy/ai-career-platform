@@ -1,10 +1,10 @@
-# Claude AI Assistant - AI Business Partner Platform
+# Quest AI Platform - Claude Code Integration Guide
 
 ## 🤖 For Future Claude Sessions
 
 This file helps new Claude sessions understand the enhanced project state and continue development with the advanced architecture.
 
-## Project Overview: AI Business Partner Platform
+## Project Overview: Quest AI Platform
 
 **Vision:** Comprehensive AI-powered business intelligence platform that provides deep company insights, professional network analysis, and career development through advanced knowledge graphs and empathic voice AI.
 
@@ -107,7 +107,38 @@ repository_analysis (repo_id, code_vectors, technical_debt_scores)
 
 **📖 Implementation Details**: See `VOICE_INTEGRATION_MODULE.md` for the complete reusable pattern documentation.
 
-## ✅ Phase 1 Complete - 3D Graph Visualization Module! (NEW MILESTONE)
+## ✅ Phase 1 Complete - 3D Graph Visualization Module! (MILESTONE)
+
+## 🚀 Phase 2 Planning - Voice AI + Multi-Search Integration (NEXT)
+
+### Multi-Search Intelligence Strategy
+**Status**: Architecture Designed (December 2024)
+
+#### Three-Tier Search Approach
+```typescript
+// Intelligent search routing for comprehensive career intelligence
+Tier 1: Tavily API (Primary) → Market intelligence, salary data, industry trends
+Tier 2: Brave MCP (Interactive) → Live coaching sessions, real-time browsing
+Tier 3: GitHub API (Technical) → Repository analysis, code collaboration patterns
+```
+
+#### Voice-Controlled Experience
+- **"Show me Python developers and current market rates"** → Graph + Tavily search
+- **"Find React jobs in this company"** → Network visualization + job intelligence
+- **"Who should I talk to about technical debt?"** → GitHub analysis + team mapping
+
+#### Dual Visualization Strategy
+1. **In-App**: Interactive 3D exploration with voice control and real-time search
+2. **Presentations**: RushDB Dashboard + Neo4j Browser for professional demos
+
+#### GitHub-Inspired Quest Language
+**Revolutionary Coaching Approach**: Use developer-native language throughout
+- **Objectives → Commits** - "Let's commit to learning React this quarter"
+- **Advice → Branching** - "I'm going to branch you toward technical leadership"
+- **Milestones → Pull Requests** - "Submit a PR for that promotion conversation"
+- **Skills → Repositories** - "Your Python repo is getting great commits lately"
+
+**Target Market Value**: Creates native language for tech professionals while remaining accessible to others
 
 ### 3D Graph Database Visualization System
 **Status**: ✅ Production Ready & Modular (December 2024)
@@ -249,6 +280,14 @@ NEO4J_PASSWORD=your_neo4j_password
 # Simplified Graph Interface
 RUSHDB_API_KEY=your_rushdb_api_key
 RUSHDB_PROJECT_ID=your_rushdb_project_id
+
+# Multi-Search Intelligence Strategy
+TAVILY_API_KEY=your_tavily_api_key         # Primary: Market intelligence, salary data
+BRAVE_API_KEY=your_brave_api_key           # Interactive: Live coaching search
+PERPLEXITY_API_KEY=your_perplexity_key     # Alternative: AI-powered career analysis
+
+# GitHub Integration
+GITHUB_TOKEN=your_github_token             # Repository analysis and collaboration data
 ```
 
 ## Architecture Principles & Decisions
