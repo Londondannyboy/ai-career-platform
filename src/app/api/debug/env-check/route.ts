@@ -23,7 +23,9 @@ export async function GET() {
       
       // Environment info
       timestamp: new Date().toISOString(),
-      platform: process.platform
+      platform: process.platform,
+      buildTime: new Date().toISOString(),
+      vercelRegion: process.env.VERCEL_REGION || 'unknown'
     }
 
     console.log('🔍 Environment Check:', envCheck)
