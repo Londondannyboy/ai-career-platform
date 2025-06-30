@@ -24,26 +24,22 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Try multiple possible environment variable names
-    const token = process.env.DATAMAGNET_API_TOKEN || 
-                  process.env.NEXT_PUBLIC_DATAMAGNET_TOKEN ||
-                  process.env.datamagnet_api_token
+    // Try environment variables first, fallback to hardcoded for testing
+    let token = process.env.DATAMAGNET_API_TOKEN || 
+                process.env.NEXT_PUBLIC_DATAMAGNET_TOKEN ||
+                process.env.datamagnet_api_token
+    
+    // Temporary fallback while debugging Vercel environment variables
+    if (!token) {
+      console.log('⚠️ Company API: Environment variables not found, using hardcoded token for testing')
+      token = '2d7d15e9232a10e31ebb07242e79c4a4218b78ab430371d32ad657264103efe1'
+    }
     
     console.log('🔍 Company API Environment check:')
     console.log('- DATAMAGNET_API_TOKEN:', !!process.env.DATAMAGNET_API_TOKEN)
     console.log('- NEXT_PUBLIC_DATAMAGNET_TOKEN:', !!process.env.NEXT_PUBLIC_DATAMAGNET_TOKEN)
+    console.log('- Using hardcoded fallback:', !process.env.DATAMAGNET_API_TOKEN)
     console.log('- Final token found:', !!token)
-    
-    if (!token) {
-      return NextResponse.json({
-        error: 'DataMagnet API token not configured in any environment variable',
-        debug: {
-          DATAMAGNET_API_TOKEN: !!process.env.DATAMAGNET_API_TOKEN,
-          NEXT_PUBLIC_DATAMAGNET_TOKEN: !!process.env.NEXT_PUBLIC_DATAMAGNET_TOKEN,
-          NODE_ENV: process.env.NODE_ENV
-        }
-      }, { status: 500 })
-    }
 
     console.log('🏢 DataMagnet Company Vanilla API Test')
     console.log('📍 Endpoint: https://api.datamagnet.co/api/v1/linkedin/company')
