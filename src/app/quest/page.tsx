@@ -14,7 +14,7 @@ import { useVoice, VoiceReadyState } from '@humeai/voice-react'
 import { useStreamingChat } from '@/hooks/useStreamingChat'
 
 type ConversationState = 'idle' | 'listening' | 'thinking' | 'speaking'
-type PlaybookType = 'career_coaching' | 'job_search' | 'cv_enhancement' | 'peer_feedback'
+type PlaybookType = 'career_coaching' | 'job_search' | 'cv_enhancement' | 'peer_feedback' | 'synthetic_intelligence'
 
 interface Message {
   id: string
@@ -189,6 +189,14 @@ export default function QuestPage() {
 
   const detectPlaybook = (userInput: string): PlaybookType => {
     const input = userInput.toLowerCase()
+    
+    // Synthetic intelligence keywords
+    if (input.includes('create synthetic') || input.includes('synthetic view') || 
+        input.includes('company intelligence') || input.includes('organizational structure') ||
+        input.includes('competitor analysis') || input.includes('map company') ||
+        input.includes('ck delta') || input.includes('company org chart')) {
+      return 'synthetic_intelligence'
+    }
     
     // Job search keywords
     if (input.includes('job') || input.includes('hiring') || input.includes('application') || input.includes('interview')) {
