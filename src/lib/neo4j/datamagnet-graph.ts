@@ -16,6 +16,15 @@ export class DataMagnetGraphService {
     
     try {
       // Create or update the main person node
+      const linkedinUrl = profileData.linkedin_url || profileData.url || `https://linkedin.com/in/${profileData.public_identifier}`
+      
+      console.log('Storing person profile:', {
+        linkedinUrl,
+        name: profileData.display_name,
+        recommendations: profileData.recommendations?.length || 0,
+        alsoViewed: profileData.also_viewed?.length || 0
+      })
+      
       await session.run(
         `
         MERGE (p:Person {linkedinUrl: $linkedinUrl})
@@ -29,7 +38,7 @@ export class DataMagnetGraphService {
             p.lastUpdated = datetime()
         `,
         {
-          linkedinUrl: profileData.linkedin_url || profileData.url,
+          linkedinUrl,
           name: profileData.display_name,
           displayName: profileData.display_name,
           jobTitle: profileData.job_title,
@@ -56,7 +65,7 @@ export class DataMagnetGraphService {
             {
               recommenderName: rec.recommender_name || 'Anonymous',
               recommenderTitle: rec.recommender_title || '',
-              profileUrl: profileData.linkedin_url || profileData.url,
+              profileUrl: linkedinUrl,
               text: rec.text || rec.recommendation || '',
               relationshipType: this.extractRelationshipType(rec.text || rec.recommendation || '')
             }
@@ -81,13 +90,13 @@ export class DataMagnetGraphService {
                 r.timestamp = datetime()
             `,
             {
-              viewedUrl: person.url || person.public_identifier,
+              viewedUrl: person.url || `https://linkedin.com/in/${person.public_identifier}`,
               name: `${person.first_name} ${person.last_name}`,
               firstName: person.first_name,
               lastName: person.last_name,
               headline: person.headline,
               followers: person.follower_count || 0,
-              profileUrl: profileData.linkedin_url || profileData.url
+              profileUrl: linkedinUrl
             }
           )
         }
@@ -190,6 +199,25 @@ export class DataMagnetGraphService {
     const session = this.driver.session()
     
     try {
+      console.log('Querying person graph for:', linkedinUrl)
+      
+      // First check if person exists
+      const checkResult = await session.run(
+        'MATCH (p:Person) WHERE p.linkedinUrl = $linkedinUrl OR p.linkedinUrl CONTAINS $profileId RETURN p LIMIT 1',
+        { 
+          linkedinUrl,
+          profileId: linkedinUrl.split('/').pop() || ''
+        }
+      )
+      
+      if (checkResult.records.length === 0) {
+        console.log('Person not found in Neo4j')
+        return null
+      }
+      
+      const actualUrl = checkResult.records[0].get('p').properties.linkedinUrl
+      console.log('Found person with URL:', actualUrl)
+      
       const result = await session.run(
         `
         MATCH (p:Person {linkedinUrl: $linkedinUrl})
@@ -209,7 +237,7 @@ export class DataMagnetGraphService {
                }) as networkClusters,
                company
         `,
-        { linkedinUrl }
+        { linkedinUrl: actualUrl }
       )
 
       if (result.records.length === 0) {
@@ -221,6 +249,13 @@ export class DataMagnetGraphService {
       const company = record.get('company')?.properties
       const recommendations = record.get('recommendations')
       const networkClusters = record.get('networkClusters')
+      
+      console.log('Query results:', {
+        person: person.name,
+        recommendationsCount: recommendations.filter((r: any) => r.node).length,
+        networkClustersCount: networkClusters.filter((n: any) => n.node).length,
+        hasCompany: !!company
+      })
 
       return {
         person,

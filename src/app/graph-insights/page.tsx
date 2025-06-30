@@ -49,7 +49,9 @@ export default function GraphInsightsPage() {
       if (!storeResponse.ok) throw new Error('Failed to store in Neo4j')
       
       // Fetch graph data from Neo4j
-      const graphResponse = await fetch(`/api/datamagnet-to-neo4j?type=person&url=${encodeURIComponent(profileData.linkedin_url || profileUrl)}`)
+      const storedUrl = profileData.linkedin_url || profileData.url || `https://linkedin.com/in/${profileData.public_identifier}`
+      console.log('Fetching graph for URL:', storedUrl)
+      const graphResponse = await fetch(`/api/datamagnet-to-neo4j?type=person&url=${encodeURIComponent(storedUrl)}`)
       
       if (!graphResponse.ok) throw new Error('Failed to fetch graph data')
       
