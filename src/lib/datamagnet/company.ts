@@ -158,7 +158,7 @@ class DataMagnetCompanyService {
       console.error('❌ DataMagnet Company API connection error:', error)
       return {
         connected: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       }
     }
   }
@@ -222,7 +222,8 @@ class DataMagnetCompanyService {
       console.error(`❌ DataMagnet company extraction failed for ${companyUrl}:`, error)
       
       // Check if error indicates upgrade required
-      if (error.message.includes('403') || error.message.includes('upgrade') || error.message.includes('plan')) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      if (errorMessage.includes('403') || errorMessage.includes('upgrade') || errorMessage.includes('plan')) {
         return {
           success: false,
           upgradeRequired: true,
@@ -232,7 +233,7 @@ class DataMagnetCompanyService {
       
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       }
     }
   }
@@ -265,7 +266,7 @@ class DataMagnetCompanyService {
       console.error(`❌ DataMagnet employee extraction failed:`, error)
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       }
     }
   }
@@ -286,7 +287,7 @@ class DataMagnetCompanyService {
       console.error(`❌ DataMagnet company search failed for "${companyName}":`, error)
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       }
     }
   }

@@ -203,7 +203,7 @@ class DataMagnetPeopleService {
       console.error(`❌ DataMagnet profile extraction failed for ${linkedinUrl}:`, error)
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       }
     }
   }
@@ -339,7 +339,7 @@ class DataMagnetPeopleService {
       // Inferred data for synthetic intelligence
       inferredDepartment: this.inferDepartment(currentPosition?.title, rawData.headline),
       inferredLevel: this.inferLevel(currentPosition?.title, rawData.headline),
-      inferredManager: null // Will be determined by relationship analysis
+      inferredManager: undefined // Will be determined by relationship analysis
     }
   }
 

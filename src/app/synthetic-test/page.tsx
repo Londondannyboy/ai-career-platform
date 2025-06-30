@@ -62,7 +62,7 @@ export default function SyntheticTestPage() {
         addLog('❌ Apify connection failed')
       }
     } catch (error) {
-      addLog(`❌ Connection test error: ${error.message}`)
+      addLog(`❌ Connection test error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`)
       setConnectionStatus({ apifyConnected: false })
     } finally {
       setLoading(false)
@@ -97,8 +97,8 @@ export default function SyntheticTestPage() {
         addLog(`❌ Failed to create synthetic view: ${data.error}`)
       }
     } catch (error) {
-      addLog(`❌ API Error: ${error.message}`)
-      setResult({ success: false, error: error.message })
+      addLog(`❌ API Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`)
+      setResult({ success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' })
     } finally {
       setLoading(false)
     }
@@ -213,12 +213,12 @@ export default function SyntheticTestPage() {
                     )}
                     
                     <div className={`text-sm p-2 rounded ${
-                      result.verificationRate > 0
+                      (result.verificationRate || 0) > 0
                         ? 'bg-green-100 text-green-800'
                         : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      Verification Rate: {result.verificationRate}%
-                      {result.verificationRate === 0 && ' (No verified employees yet)'}
+                      Verification Rate: {result.verificationRate || 0}%
+                      {(result.verificationRate || 0) === 0 && ' (No verified employees yet)'}
                     </div>
                   </div>
                 ) : (

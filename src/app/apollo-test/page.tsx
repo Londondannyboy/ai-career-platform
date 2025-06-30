@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
+// import { Badge } from '@/components/ui/badge'
 import Navigation from '@/components/Navigation'
 
 interface ApolloEmployee {
@@ -84,8 +84,8 @@ export default function ApolloTestPage() {
       addLog(`📊 Health data: ${JSON.stringify(result.health)}`)
 
     } catch (error) {
-      addLog(`❌ Health check error: ${error.message}`)
-      setHealthStatus({ success: false, error: error.message })
+      addLog(`❌ Health check error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`)
+      setHealthStatus({ success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' })
     } finally {
       setLoading(false)
     }
@@ -131,8 +131,8 @@ export default function ApolloTestPage() {
       }
 
     } catch (error) {
-      addLog(`❌ Search error: ${error.message}`)
-      setResult({ success: false, error: error.message })
+      addLog(`❌ Search error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`)
+      setResult({ success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' })
     } finally {
       setLoading(false)
     }
@@ -172,8 +172,8 @@ export default function ApolloTestPage() {
       addLog(`📊 Total in Apollo database: ${result.totalFound || 0}`)
 
     } catch (error) {
-      addLog(`❌ Search error: ${error.message}`)
-      setResult({ success: false, error: error.message })
+      addLog(`❌ Search error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`)
+      setResult({ success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' })
     } finally {
       setLoading(false)
     }
@@ -309,9 +309,9 @@ export default function ApolloTestPage() {
                         <div className="font-medium text-gray-700 mb-2">Seniority Levels</div>
                         <div className="flex flex-wrap gap-1">
                           {Object.entries(result.seniorities).map(([level, count]) => (
-                            <Badge key={level} variant="secondary" className="text-xs">
+                            <span key={level} className="inline-block bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded">
                               {level}: {count}
-                            </Badge>
+                            </span>
                           ))}
                         </div>
                       </div>
@@ -353,7 +353,7 @@ export default function ApolloTestPage() {
                         <div className="text-sm text-gray-600">{emp.title}</div>
                       </div>
                       <div className="text-right text-xs text-gray-500">
-                        {emp.seniority && <Badge variant="outline">{emp.seniority}</Badge>}
+                        {emp.seniority && <span className="inline-block border border-gray-300 text-gray-700 text-xs px-2 py-1 rounded">{emp.seniority}</span>}
                       </div>
                     </div>
                     <div className="text-sm text-gray-600">

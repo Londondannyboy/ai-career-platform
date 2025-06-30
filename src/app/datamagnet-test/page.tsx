@@ -75,8 +75,8 @@ export default function DataMagnetTestPage() {
       }
 
     } catch (error) {
-      addLog(`❌ Network Error: ${error.message}`)
-      setResult({ error: error.message })
+      addLog(`❌ Network Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`)
+      setResult({ error: error instanceof Error ? error.message : 'Unknown error occurred' })
     } finally {
       setLoading(false)
     }
@@ -113,7 +113,7 @@ export default function DataMagnetTestPage() {
       addLog(`💰 Credits data: ${JSON.stringify(result.credits)}`)
       
     } catch (error) {
-      addLog(`❌ Credits Error: ${error.message}`)
+      addLog(`❌ Credits Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`)
     } finally {
       setLoading(false)
     }

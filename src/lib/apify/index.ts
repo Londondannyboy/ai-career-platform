@@ -1,4 +1,4 @@
-import { ApifyApi } from 'apify-client'
+const ApifyClient = require('apify-client')
 
 export interface ApifyConfig {
   apiToken: string
@@ -53,12 +53,12 @@ export interface CompanyEmployeeData {
 }
 
 class ApifyService {
-  private client: ApifyApi
+  private client: any
   private config: ApifyConfig
 
   constructor(config: ApifyConfig) {
     this.config = config
-    this.client = new ApifyApi({
+    this.client = new ApifyClient({
       token: config.apiToken,
       baseUrl: config.apiUrl
     })
@@ -131,7 +131,7 @@ class ApifyService {
 
     } catch (error) {
       console.error(`❌ Error scraping ${companyName} employees:`, error)
-      throw new Error(`Failed to scrape company employees: ${error.message}`)
+      throw new Error(`Failed to scrape company employees: ${error instanceof Error ? error.message : 'Unknown error occurred'}`)
     }
   }
 
@@ -166,7 +166,7 @@ class ApifyService {
       // Inferred organizational data (synthetic intelligence)
       inferredDepartment: this.inferDepartment(currentExperience.title, rawProfile.headline),
       inferredLevel: this.inferLevel(currentExperience.title, rawProfile.headline),
-      inferredManager: null // Will be determined by relationship analysis
+      inferredManager: undefined // Will be determined by relationship analysis
     }
   }
 
@@ -243,7 +243,7 @@ class ApifyService {
   /**
    * Infer potential manager based on department and seniority
    */
-  private inferManager(employee: LinkedInProfileData, allEmployees: LinkedInProfileData[]): string | null {
+  private inferManager(employee: LinkedInProfileData, allEmployees: LinkedInProfileData[]): string | undefined {
     const sameDepartment = allEmployees.filter(e => 
       e.inferredDepartment === employee.inferredDepartment && 
       e.name !== employee.name
@@ -266,7 +266,7 @@ class ApifyService {
       return mostSenior.name
     }
     
-    return null
+    return undefined
   }
 
   /**

@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { 
         error: 'Internal server error',
-        details: error.message 
+        details: error instanceof Error ? error.message : 'Unknown error occurred' 
       },
       { status: 500 }
     )
@@ -116,7 +116,7 @@ async function handleCreateSyntheticView(company: string, maxEmployees: number) 
     return NextResponse.json({
       success: false,
       error: 'Failed to create synthetic view',
-      details: error.message,
+      details: error instanceof Error ? error.message : 'Unknown error occurred',
       company
     }, { status: 500 })
   }
@@ -139,7 +139,7 @@ async function handleTestConnection() {
     return NextResponse.json({
       success: false,
       apifyConnected: false,
-      error: error.message
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
     }, { status: 500 })
   }
 }
@@ -170,7 +170,7 @@ async function handleValidateDomain(company: string) {
   } catch (error) {
     return NextResponse.json({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
     }, { status: 500 })
   }
 }
@@ -218,7 +218,7 @@ export async function GET() {
   } catch (error) {
     return NextResponse.json({
       status: 'error',
-      error: error.message
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
     }, { status: 500 })
   }
 }

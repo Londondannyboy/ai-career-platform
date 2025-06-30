@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { 
         error: 'Internal server error',
-        details: error.message 
+        details: error instanceof Error ? error.message : 'Unknown error occurred'
       },
       { status: 500 }
     )
@@ -52,10 +52,11 @@ async function handleCompareCompanyData(company: string, companyUrl?: string) {
   const results = {
     company,
     companyUrl,
-    dataMagnet: null,
-    apify: null,
-    comparison: null,
-    startTime: new Date().toISOString()
+    dataMagnet: null as any,
+    apify: null as any,
+    comparison: null as any,
+    startTime: new Date().toISOString(),
+    endTime: null as any
   }
 
   try {
@@ -81,7 +82,7 @@ async function handleCompareCompanyData(company: string, companyUrl?: string) {
     } catch (error) {
       results.dataMagnet = {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
         dataRichness: 0
       }
     }
@@ -97,17 +98,17 @@ async function handleCompareCompanyData(company: string, companyUrl?: string) {
       )
       
       results.apify = {
-        success: apifyResult.success,
-        data: apifyResult.companyData,
+        success: true,
+        data: apifyResult,
         employeeCount: apifyResult.employees?.length || 0,
-        totalEmployeesFound: apifyResult.totalEmployees,
-        error: apifyResult.error,
-        dataRichness: apifyResult.companyData ? calculateDataRichness(apifyResult.companyData, 'apify') : 0
+        totalEmployeesFound: apifyResult.totalFound,
+        confidence: apifyResult.confidence,
+        dataRichness: apifyResult ? calculateDataRichness(apifyResult, 'apify') : 0
       }
     } catch (error) {
       results.apify = {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
         dataRichness: 0
       }
     }
@@ -126,7 +127,7 @@ async function handleCompareCompanyData(company: string, companyUrl?: string) {
     console.error(`❌ Company comparison failed:`, error)
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
       results
     }, { status: 500 })
   }
@@ -137,8 +138,8 @@ async function handleCompareCompanyData(company: string, companyUrl?: string) {
  */
 async function handleTestConnections() {
   const results = {
-    dataMagnet: null,
-    apify: null,
+    dataMagnet: null as any,
+    apify: null as any,
     timestamp: new Date().toISOString()
   }
 
@@ -160,7 +161,7 @@ async function handleTestConnections() {
   } catch (error) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
       results
     }, { status: 500 })
   }
@@ -172,8 +173,8 @@ async function handleTestConnections() {
 async function handleCompareProfileData(profileUrl: string) {
   const results = {
     profileUrl,
-    dataMagnet: null,
-    comparison: null
+    dataMagnet: null as any,
+    comparison: null as any
   }
 
   try {
@@ -200,7 +201,7 @@ async function handleCompareProfileData(profileUrl: string) {
   } catch (error) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
       results
     }, { status: 500 })
   }
@@ -251,16 +252,16 @@ function calculateDataRichness(data: any, type: 'company' | 'profile' | 'apify')
  */
 function generateComparisonAnalysis(dataMagnet: any, apify: any) {
   const analysis = {
-    winner: null,
+    winner: null as any,
     strengths: {
-      dataMagnet: [],
-      apify: []
+      dataMagnet: [] as string[],
+      apify: [] as string[]
     },
     weaknesses: {
-      dataMagnet: [],
-      apify: []
+      dataMagnet: [] as string[],
+      apify: [] as string[]
     },
-    recommendations: []
+    recommendations: [] as string[]
   }
 
   // DataMagnet Analysis

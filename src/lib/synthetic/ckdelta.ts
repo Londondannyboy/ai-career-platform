@@ -105,7 +105,7 @@ class CKDeltaSyntheticIntelligence {
       
     } catch (error) {
       console.error('❌ Error creating CK Delta synthetic view:', error)
-      throw new Error(`Failed to create synthetic view: ${error.message}`)
+      throw new Error(`Failed to create synthetic view: ${error instanceof Error ? error.message : 'Unknown error occurred'}`)
     }
   }
 

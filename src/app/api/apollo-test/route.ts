@@ -213,9 +213,11 @@ async function searchCKDeltaEmployees(apiKey: string) {
         apiKey
       )
       
-      if (result.success && result.employees?.length > 0) {
+      // Extract the JSON data from the NextResponse
+      const resultData = await result.json()
+      if (resultData.success && resultData.employees?.length > 0) {
         console.log(`✅ Found CK Delta employees using company name: ${companyName}`)
-        return result
+        return NextResponse.json(resultData)
       }
     } catch (error) {
       console.log(`⚠️ Failed to find employees for company variation: ${companyName}`)

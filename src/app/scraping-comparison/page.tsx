@@ -81,7 +81,7 @@ export default function ScrapingComparisonPage() {
         addLog('❌ Apify API failed')
       }
     } catch (error) {
-      addLog(`❌ Connection test error: ${error.message}`)
+      addLog(`❌ Connection test error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`)
     } finally {
       setLoading(false)
     }
@@ -115,7 +115,7 @@ export default function ScrapingComparisonPage() {
         addLog(`❌ Comparison failed: ${data.error}`)
       }
     } catch (error) {
-      addLog(`❌ API Error: ${error.message}`)
+      addLog(`❌ API Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`)
     } finally {
       setLoading(false)
     }

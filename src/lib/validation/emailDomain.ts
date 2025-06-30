@@ -4,7 +4,7 @@
  * Validates that user's email domain matches company domain
  */
 
-import { WebSearch } from '@/lib/search'
+// import { WebSearch } from '@/lib/search' // TODO: Fix missing search module
 
 export interface CompanyDomainInfo {
   companyName: string

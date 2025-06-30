@@ -270,7 +270,7 @@ class DataMagnetPeopleService {
       console.error(`❌ DataMagnet profile extraction failed for ${linkedinUrl}:`, error)
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       }
     }
   }
@@ -543,9 +543,9 @@ class DataMagnetPeopleService {
   /**
    * Infer manager from verified relationships
    */
-  private inferManager(relationships: any[]): string | null {
+  private inferManager(relationships: any[]): string | undefined {
     const manager = relationships.find(rel => rel.relationship === 'manager')
-    return manager ? manager.name : null
+    return manager ? manager.name : undefined
   }
 
   /**
