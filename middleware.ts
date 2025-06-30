@@ -10,7 +10,8 @@ const isPublicRoute = createRouteMatcher([
   '/datamagnet-vanilla',
   '/datamagnet-company-vanilla',
   '/synthetic-hybrid-test',
-  '/api-status'
+  '/api-status',
+  '/datamagnet-insights'
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
