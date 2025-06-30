@@ -72,12 +72,15 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
       if (data.relationships?.networkClusters) {
         data.relationships.networkClusters.forEach((cluster: any, idx: number) => {
           const nodeId = `cluster-${idx}`
+          const hasImage = cluster.node.properties.profilePicture && cluster.node.properties.profilePicture !== ''
           nodes.add({
             id: nodeId,
             label: cluster.node.properties.firstName || cluster.node.properties.name,
             title: cluster.node.properties.headline || 'No headline',
-            group: 'network',
-            size: 15
+            group: hasImage ? 'networkWithImage' : 'network',
+            size: 20,
+            image: hasImage ? cluster.node.properties.profilePicture : undefined,
+            shape: hasImage ? 'circularImage' : 'dot'
           })
           edges.add({
             from: 'main',
@@ -186,6 +189,14 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
             background: '#60a5fa',
             border: '#3b82f6'
           }
+        },
+        networkWithImage: {
+          color: {
+            background: '#60a5fa',
+            border: '#3b82f6'
+          },
+          shape: 'circularImage',
+          borderWidth: 2
         },
         location: {
           color: {

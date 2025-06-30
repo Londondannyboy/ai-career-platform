@@ -16,7 +16,7 @@ export class DataMagnetGraphService {
     
     try {
       // Create or update the main person node
-      const linkedinUrl = profileData.linkedin_url || profileData.url || `https://linkedin.com/in/${profileData.public_identifier}`
+      const linkedinUrl = profileData.linkedin_url || profileData.profile_link || profileData.url || `https://linkedin.com/in/${profileData.public_identifier || profileData.username}`
       
       console.log('Storing person profile:', {
         linkedinUrl,
@@ -51,23 +51,31 @@ export class DataMagnetGraphService {
 
       // Store recommendations as relationships
       if (profileData.recommendations && profileData.recommendations.length > 0) {
+        console.log(`Storing ${profileData.recommendations.length} recommendations`)
         for (const rec of profileData.recommendations) {
+          const recText = rec.description || rec.text || rec.recommendation || ''
           await session.run(
             `
             MERGE (recommender:Person {name: $recommenderName})
-            SET recommender.title = $recommenderTitle
+            SET recommender.title = $recommenderTitle,
+                recommender.linkedinUrl = $recommenderUrl
             MERGE (p:Person {linkedinUrl: $profileUrl})
             MERGE (recommender)-[r:RECOMMENDS]->(p)
             SET r.text = $text,
                 r.relationshipType = $relationshipType,
+                r.context = $context,
+                r.date = $date,
                 r.timestamp = datetime()
             `,
             {
-              recommenderName: rec.recommender_name || 'Anonymous',
-              recommenderTitle: rec.recommender_title || '',
+              recommenderName: rec.name || 'Anonymous',
+              recommenderTitle: rec.subtitle || '',
+              recommenderUrl: rec.url || '',
               profileUrl: linkedinUrl,
-              text: rec.text || rec.recommendation || '',
-              relationshipType: this.extractRelationshipType(rec.text || rec.recommendation || '')
+              text: recText,
+              relationshipType: this.extractRelationshipType(recText),
+              context: rec.context || '',
+              date: rec.date || ''
             }
           )
         }
@@ -75,6 +83,7 @@ export class DataMagnetGraphService {
 
       // Store "Also Viewed" as network relationships
       if (profileData.also_viewed && profileData.also_viewed.length > 0) {
+        console.log(`Storing ${profileData.also_viewed.length} also viewed profiles`)
         for (const person of profileData.also_viewed) {
           await session.run(
             `
@@ -83,7 +92,9 @@ export class DataMagnetGraphService {
                 viewed.firstName = $firstName,
                 viewed.lastName = $lastName,
                 viewed.headline = $headline,
-                viewed.followers = $followers
+                viewed.followers = $followers,
+                viewed.profilePicture = $profilePicture,
+                viewed.premium = $premium
             MERGE (p:Person {linkedinUrl: $profileUrl})
             MERGE (p)-[r:NETWORK_CLUSTER]->(viewed)
             SET r.source = 'also_viewed',
@@ -96,6 +107,8 @@ export class DataMagnetGraphService {
               lastName: person.last_name,
               headline: person.headline,
               followers: person.follower_count || 0,
+              profilePicture: person.profile_picture || '',
+              premium: person.premium || false,
               profileUrl: linkedinUrl
             }
           )
@@ -313,11 +326,14 @@ export class DataMagnetGraphService {
    */
   private extractRelationshipType(text: string): string {
     const lower = text?.toLowerCase() || ''
-    if (lower.includes('managed directly') || lower.includes('direct report')) return 'Manager'
+    if (lower.includes('managed') && lower.includes('directly')) return 'Manager'
+    if (lower.includes('senior to') && lower.includes("didn't manage")) return 'Senior Colleague'
     if (lower.includes('reported to') || lower.includes('my manager')) return 'Subordinate'
-    if (lower.includes('worked with') || lower.includes('collaborated')) return 'Peer'
+    if (lower.includes('worked with') && lower.includes('same team')) return 'Team Member'
+    if (lower.includes('worked with') && lower.includes('different teams')) return 'Cross-Team Colleague'
+    if (lower.includes('worked with') && lower.includes('different companies')) return 'External Partner'
+    if (lower.includes('was') && lower.includes('client')) return 'Client'
     if (lower.includes('mentored') || lower.includes('coached')) return 'Mentor'
-    if (lower.includes('client') || lower.includes('customer')) return 'Client'
     return 'Colleague'
   }
 }
