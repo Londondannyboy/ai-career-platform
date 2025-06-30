@@ -41,17 +41,15 @@ export async function GET() {
       const data = await response.json()
       console.log('DataMagnet Company Response:', JSON.stringify(data))
       
-      // Try different field paths for company data
-      const companyName = data.message?.company_name || 
-                         data.company_name || 
-                         data.name ||
-                         data.display_name ||
-                         'Unknown'
+      // Navigate through nested message structure
+      let currentMessage = data.message
+      while (currentMessage?.message) {
+        currentMessage = currentMessage.message
+      }
       
-      const employees = data.message?.employees || 
-                       data.employees ||
-                       data.employee_count ||
-                       0
+      // Extract company data from the innermost message
+      const companyName = currentMessage?.company_name || 'Unknown'
+      const employees = currentMessage?.employees || 0
       
       results.tests.datamagnetCompany = {
         status: 'success',
@@ -91,17 +89,17 @@ export async function GET() {
       const data = await response.json()
       console.log('DataMagnet People Response:', JSON.stringify(data))
       
-      // Try different field paths for person data
-      const name = data.display_name || 
-                   data.name ||
-                   data.full_name ||
-                   data.profile?.name ||
+      // Extract person data directly from message
+      const profileData = data.message || data
+      
+      const name = profileData.display_name || 
+                   profileData.name ||
+                   profileData.full_name ||
                    'Unknown'
       
-      const title = data.job_title || 
-                    data.headline ||
-                    data.current_position ||
-                    data.title ||
+      const title = profileData.job_title || 
+                    profileData.profile_headline ||
+                    profileData.headline ||
                     'Unknown'
       
       results.tests.datamagnetPeople = {
