@@ -288,10 +288,20 @@ class GraphService {
   }
 
   private async getHybridVisualizationData() {
-    // For now, prefer RushDB if available, fallback to Neo4j
+    // Try RushDB first, but fallback to Neo4j if RushDB fails
     if (this.isRushDBConnected) {
-      return await rushDBService.getVisualizationData()
+      try {
+        console.log('🔄 Trying RushDB for visualization data...')
+        return await rushDBService.getVisualizationData()
+      } catch (error) {
+        console.log('⚠️ RushDB failed, falling back to Neo4j:', error)
+        if (this.isNeo4jConnected) {
+          return await this.getNeo4jVisualizationData()
+        }
+        throw error
+      }
     } else if (this.isNeo4jConnected) {
+      console.log('📊 Using Neo4j for visualization data...')
       return await this.getNeo4jVisualizationData()
     } else {
       throw new Error('No graph database connected')

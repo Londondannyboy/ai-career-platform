@@ -179,13 +179,18 @@ class RushDBService {
     }
 
     try {
+      console.log('🔍 Querying RushDB for employees and relationships...')
+      
       // Query employees with their relationships
       const employees = await this.client.records.find({
         labels: ['EMPLOYEE']
       })
+      console.log('👥 RushDB employees result:', JSON.stringify(employees, null, 2))
+      
       const relationships = await this.client.records.find({
         labels: ['RELATIONSHIP']
       })
+      console.log('🔗 RushDB relationships result:', JSON.stringify(relationships, null, 2))
       
       return {
         employees,
@@ -205,9 +210,17 @@ class RushDBService {
     try {
       const orgData = await this.getOrgChartData()
       
+      console.log('🔍 RushDB orgData structure:', JSON.stringify(orgData, null, 2))
+      
+      // Ensure we have arrays to work with
+      const employees = Array.isArray(orgData.employees) ? orgData.employees : []
+      const relationships = Array.isArray(orgData.relationships) ? orgData.relationships : []
+      
+      console.log(`📊 Found ${employees.length} employees, ${relationships.length} relationships`)
+      
       // Transform data for 3D visualization (RushDB returns records with data property)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const nodes = orgData.employees.map((record: any) => {
+      const nodes = employees.map((record: any) => {
         const emp = record.data || record
         return {
           id: emp.id,
@@ -222,7 +235,7 @@ class RushDBService {
       })
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const links = orgData.relationships.map((record: any) => {
+      const links = relationships.map((record: any) => {
         const rel = record.data || record
         return {
           source: rel.from_employee,
