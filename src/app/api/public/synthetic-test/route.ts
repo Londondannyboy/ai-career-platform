@@ -12,6 +12,8 @@ export async function GET() {
     environment: {
       hasDataMagnetToken: !!process.env.DATAMAGNET_API_TOKEN,
       hasApifyToken: !!process.env.APIFY_API_TOKEN,
+      usingFallbackToken: !process.env.DATAMAGNET_API_TOKEN,
+      nodeEnv: process.env.NODE_ENV,
     },
     tests: {
       datamagnetCompany: { status: 'pending' } as any,
@@ -37,10 +39,25 @@ export async function GET() {
     
     if (response.ok) {
       const data = await response.json()
+      console.log('DataMagnet Company Response:', JSON.stringify(data))
+      
+      // Try different field paths for company data
+      const companyName = data.message?.company_name || 
+                         data.company_name || 
+                         data.name ||
+                         data.display_name ||
+                         'Unknown'
+      
+      const employees = data.message?.employees || 
+                       data.employees ||
+                       data.employee_count ||
+                       0
+      
       results.tests.datamagnetCompany = {
         status: 'success',
-        companyName: data.message?.company_name || 'Unknown',
-        employees: data.message?.employees || 0
+        companyName,
+        employees,
+        rawDataKeys: Object.keys(data).join(', ')
       }
     } else {
       results.tests.datamagnetCompany = {
@@ -72,11 +89,27 @@ export async function GET() {
     
     if (response.ok) {
       const data = await response.json()
+      console.log('DataMagnet People Response:', JSON.stringify(data))
+      
+      // Try different field paths for person data
+      const name = data.display_name || 
+                   data.name ||
+                   data.full_name ||
+                   data.profile?.name ||
+                   'Unknown'
+      
+      const title = data.job_title || 
+                    data.headline ||
+                    data.current_position ||
+                    data.title ||
+                    'Unknown'
+      
       results.tests.datamagnetPeople = {
         status: 'success',
-        name: data.display_name || data.name || 'Unknown',
-        title: data.job_title || data.headline || 'Unknown',
-        hasRecommendations: !!data.recommendations?.length
+        name,
+        title,
+        hasRecommendations: !!data.recommendations?.length,
+        rawDataKeys: Object.keys(data).join(', ')
       }
     } else {
       results.tests.datamagnetPeople = {
