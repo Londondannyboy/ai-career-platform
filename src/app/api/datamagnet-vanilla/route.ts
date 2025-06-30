@@ -31,7 +31,8 @@ export async function POST(request: NextRequest) {
     console.log('🧪 DataMagnet Vanilla API Test')
     console.log('📍 Endpoint: https://api.datamagnet.co/api/v1/linkedin/person')
     console.log('🌐 URL:', url)
-    console.log('🔑 Token:', token.substring(0, 10) + '...')
+    console.log('🔑 Token configured:', !!token)
+    console.log('🔑 Token preview:', token ? token.substring(0, 10) + '...' : 'NOT_SET')
 
     // Exact implementation from DataMagnet documentation
     const response = await fetch('https://api.datamagnet.co/api/v1/linkedin/person', {
