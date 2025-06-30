@@ -21,10 +21,24 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const token = process.env.DATAMAGNET_API_TOKEN
+    // Try multiple possible environment variable names
+    const token = process.env.DATAMAGNET_API_TOKEN || 
+                  process.env.NEXT_PUBLIC_DATAMAGNET_TOKEN ||
+                  process.env.datamagnet_api_token
+    
+    console.log('🔍 Environment check:')
+    console.log('- DATAMAGNET_API_TOKEN:', !!process.env.DATAMAGNET_API_TOKEN)
+    console.log('- NEXT_PUBLIC_DATAMAGNET_TOKEN:', !!process.env.NEXT_PUBLIC_DATAMAGNET_TOKEN)
+    console.log('- Final token found:', !!token)
+    
     if (!token) {
       return NextResponse.json({
-        error: 'DataMagnet API token not configured'
+        error: 'DataMagnet API token not configured in any environment variable',
+        debug: {
+          DATAMAGNET_API_TOKEN: !!process.env.DATAMAGNET_API_TOKEN,
+          NEXT_PUBLIC_DATAMAGNET_TOKEN: !!process.env.NEXT_PUBLIC_DATAMAGNET_TOKEN,
+          NODE_ENV: process.env.NODE_ENV
+        }
       }, { status: 500 })
     }
 
