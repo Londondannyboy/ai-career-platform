@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     console.error('❌ DataMagnet vanilla test error:', error)
     return NextResponse.json({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
     }, { status: 500 })
   }
 }
@@ -109,7 +109,7 @@ async function testPersonExtraction(profileUrl: string, apiToken: string) {
     console.error(`❌ DataMagnet person extraction failed:`, error)
     return NextResponse.json({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
     }, { status: 500 })
   }
 }
@@ -155,7 +155,7 @@ async function testCreditsEndpoint(apiToken: string) {
     console.error(`❌ Credits test failed:`, error)
     return NextResponse.json({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
     }, { status: 500 })
   }
 }
