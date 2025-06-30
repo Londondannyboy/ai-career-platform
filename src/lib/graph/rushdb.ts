@@ -250,6 +250,20 @@ class RushDBService {
       console.log(`📊 Found ${employees.length} employees, ${relationships.length} relationships`)
       
       // Transform data for 3D visualization (RushDB returns records with data property)
+      console.log(`🔧 About to transform employees (${employees.length} items)`)
+      console.log(`🔧 About to transform relationships (${relationships.length} items)`)
+      
+      // Double-check arrays before mapping
+      if (!Array.isArray(employees)) {
+        console.error('❌ Employees is not an array:', typeof employees, employees)
+        return { nodes: [], links: [] }
+      }
+      
+      if (!Array.isArray(relationships)) {
+        console.error('❌ Relationships is not an array:', typeof relationships, relationships)
+        return { nodes: [], links: [] }
+      }
+      
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const nodes = employees.map((record: any) => {
         const emp = record.data || record

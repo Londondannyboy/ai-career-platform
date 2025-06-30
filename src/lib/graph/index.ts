@@ -27,9 +27,15 @@ class GraphService {
 
       // Initialize RushDB if config provided
       if (config.rushdb) {
-        await rushDBService.connect(config.rushdb)
-        this.isRushDBConnected = true
-        console.log('✅ RushDB initialized')
+        try {
+          await rushDBService.connect(config.rushdb)
+          this.isRushDBConnected = true
+          console.log('✅ RushDB initialized')
+        } catch (error) {
+          console.error('⚠️ RushDB connection failed:', error)
+          this.isRushDBConnected = false
+          // Continue with Neo4j if available
+        }
       }
 
       console.log('🎉 All graph services initialized successfully!')
@@ -204,9 +210,16 @@ class GraphService {
 
       // Setup in RushDB
       if (this.isRushDBConnected) {
-        console.log('🔄 Setting up RushDB test data...')
-        await rushDBService.insertTechFlowData()
-        await rushDBService.insertEmployees(testData.employees)
+        try {
+          console.log('🔄 Setting up RushDB test data...')
+          await rushDBService.insertTechFlowData()
+          await rushDBService.insertEmployees(testData.employees)
+          console.log('✅ RushDB setup completed successfully')
+        } catch (error) {
+          console.error('⚠️ RushDB setup failed, but continuing:', error)
+          // Don't let RushDB failure break the entire setup
+          this.isRushDBConnected = false
+        }
       }
 
       console.log('✅ TechFlow test data setup complete!')
