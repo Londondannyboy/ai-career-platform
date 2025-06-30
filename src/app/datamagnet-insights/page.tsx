@@ -8,8 +8,9 @@ import Navigation from '@/components/Navigation'
 import { Badge } from '@/components/ui/badge'
 import dynamic from 'next/dynamic'
 
-const NetworkVisualization = dynamic(() => import('@/components/NetworkVisualization'), {
-  ssr: false
+const NetworkVisualization = dynamic(() => import('@/components/NetworkVisualizationSimple'), {
+  ssr: false,
+  loading: () => <div className="h-96 flex items-center justify-center text-gray-500">Loading visualization...</div>
 })
 
 export default function DataMagnetInsightsPage() {
@@ -33,7 +34,8 @@ export default function DataMagnetInsightsPage() {
       const data = await response.json()
       setProfileData(data)
     } catch (err) {
-      setError('Failed to fetch profile data')
+      console.error('Error fetching profile:', err)
+      setError('Failed to fetch profile data. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -189,8 +191,8 @@ export default function DataMagnetInsightsPage() {
                 <CardTitle className="text-lg">🔗 Relationship Network Map</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-96 bg-gray-50 rounded-lg overflow-hidden">
-                  <NetworkVisualization profileData={profileData} />
+                <div className="bg-gray-50 rounded-lg overflow-hidden">
+                  {profileData && <NetworkVisualization profileData={profileData} />}
                 </div>
               </CardContent>
             </Card>
