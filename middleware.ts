@@ -6,6 +6,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/datamagnet-vanilla',
   '/api/datamagnet-company-vanilla',
   '/api/synthetic-hybrid-test',
+  '/api/raw-test',
   '/datamagnet-vanilla',
   '/datamagnet-company-vanilla',
   '/synthetic-hybrid-test',
