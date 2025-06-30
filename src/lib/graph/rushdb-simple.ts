@@ -69,7 +69,34 @@ class SimpleRushDBService {
         labels: ["EMPLOYEE"]
       })
       
-      console.log('📊 RushDB results:', results)
+      console.log('📊 RushDB results type:', typeof results)
+      console.log('📊 RushDB results constructor:', results?.constructor?.name)
+      console.log('📊 RushDB results keys:', Object.keys(results || {}))
+      console.log('📊 RushDB results:', JSON.stringify(results, null, 2))
+      
+      // Try to extract actual array data
+      if (results && typeof results === 'object') {
+        // Check various possible properties
+        if ('data' in results && Array.isArray(results.data)) {
+          console.log('✅ Found data property with array')
+          return results.data
+        }
+        if ('records' in results && Array.isArray(results.records)) {
+          console.log('✅ Found records property with array')
+          return results.records
+        }
+        if ('items' in results && Array.isArray(results.items)) {
+          console.log('✅ Found items property with array')
+          return results.items
+        }
+        // Try to convert the object itself to array
+        if (results[Symbol.iterator]) {
+          console.log('✅ Found iterable, converting to array')
+          return Array.from(results as any)
+        }
+      }
+      
+      console.log('⚠️ Returning results as-is')
       return results
     } catch (error) {
       console.error('❌ Error querying employees:', error)
@@ -81,25 +108,35 @@ class SimpleRushDBService {
     try {
       const employeesResult = await this.getEmployees()
       
-      // Convert RushDB result to regular array
       console.log('🔍 Raw employees result type:', typeof employeesResult)
-      console.log('🔍 Raw employees result:', employeesResult)
+      console.log('🔍 Raw employees result is array:', Array.isArray(employeesResult))
       
-      // RushDB returns a special DBRecordsArrayInstance, cast as any to access array methods
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const employees = employeesResult as any
-      console.log('🔍 Using as any to access array methods')
+      // Ensure we have an array to work with
+      let employees: any[] = []
+      
+      if (Array.isArray(employeesResult)) {
+        employees = employeesResult
+        console.log('✅ Already an array')
+      } else {
+        console.log('❌ Not an array, returning empty data')
+        return { nodes: [], links: [] }
+      }
+      
+      console.log(`🔍 Working with ${employees.length} employees`)
       
       // Simple transformation - exactly what the results give us
-      const nodes = employees.map((emp: any) => ({
-        id: emp.id,
-        name: emp.name,
-        role: emp.role,
-        department: emp.department,
-        level: emp.level,
-        color: emp.department === 'Engineering' ? '#3B82F6' : '#10B981',
-        size: emp.level === 'VP' ? 20 : emp.level === 'Director' ? 15 : 12
-      }))
+      const nodes = employees.map((emp: any) => {
+        console.log('🔍 Processing employee:', emp)
+        return {
+          id: emp.id || 'unknown',
+          name: emp.name || 'Unknown',
+          role: emp.role || 'Unknown Role',
+          department: emp.department || 'Unknown',
+          level: emp.level || 'Unknown',
+          color: emp.department === 'Engineering' ? '#3B82F6' : '#10B981',
+          size: emp.level === 'VP' ? 20 : emp.level === 'Director' ? 15 : 12
+        }
+      })
 
       const links = employees
         .filter((emp: any) => emp.manager)
@@ -114,7 +151,8 @@ class SimpleRushDBService {
       return { nodes, links }
     } catch (error) {
       console.error('❌ Error getting visualization data:', error)
-      throw error
+      // Return empty data instead of throwing
+      return { nodes: [], links: [] }
     }
   }
 }
