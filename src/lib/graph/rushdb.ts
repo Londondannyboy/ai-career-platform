@@ -211,10 +211,39 @@ class RushDBService {
       const orgData = await this.getOrgChartData()
       
       console.log('🔍 RushDB orgData structure:', JSON.stringify(orgData, null, 2))
+      console.log('🔍 RushDB orgData type:', typeof orgData)
+      console.log('🔍 RushDB orgData keys:', orgData ? Object.keys(orgData) : 'null')
       
-      // Ensure we have arrays to work with
-      const employees = Array.isArray(orgData.employees) ? orgData.employees : []
-      const relationships = Array.isArray(orgData.relationships) ? orgData.relationships : []
+      // Handle different possible response structures
+      let employees: any[] = []
+      let relationships: any[] = []
+      
+      if (orgData && typeof orgData === 'object') {
+        // Check if orgData.employees exists and is an array
+        if (Array.isArray(orgData.employees)) {
+          employees = orgData.employees
+        } else if (orgData.employees && typeof orgData.employees === 'object') {
+          // Maybe it's wrapped in another structure
+          console.log('🔍 Employees structure:', JSON.stringify(orgData.employees, null, 2))
+          if (Array.isArray(orgData.employees.data)) {
+            employees = orgData.employees.data
+          } else if (Array.isArray(orgData.employees.records)) {
+            employees = orgData.employees.records
+          }
+        }
+        
+        // Check if orgData.relationships exists and is an array
+        if (Array.isArray(orgData.relationships)) {
+          relationships = orgData.relationships
+        } else if (orgData.relationships && typeof orgData.relationships === 'object') {
+          console.log('🔍 Relationships structure:', JSON.stringify(orgData.relationships, null, 2))
+          if (Array.isArray(orgData.relationships.data)) {
+            relationships = orgData.relationships.data
+          } else if (Array.isArray(orgData.relationships.records)) {
+            relationships = orgData.relationships.records
+          }
+        }
+      }
       
       console.log(`📊 Found ${employees.length} employees, ${relationships.length} relationships`)
       
@@ -245,6 +274,7 @@ class RushDBService {
         }
       })
 
+      console.log(`✅ Generated ${nodes.length} nodes and ${links.length} links`)
       return { nodes, links }
     } catch (error) {
       console.error('❌ Error getting visualization data from RushDB:', error)
