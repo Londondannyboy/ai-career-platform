@@ -44,6 +44,7 @@
     "react-hook-form": "^7.58.1",
     "tailwind-merge": "^3.3.1",
     "three": "^0.177.0",
+    "vis-network": "^9.1.13",
     "zod": "^3.25.67",
     "zustand": "^5.0.5"
   },
