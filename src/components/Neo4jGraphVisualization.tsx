@@ -142,7 +142,7 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
     }
 
     // Network options
-    const options = {
+    const options: any = {
       nodes: {
         shape: 'dot',
         font: {
@@ -156,6 +156,7 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
           color: '#6b7280'
         },
         smooth: {
+          enabled: true,
           type: 'curvedCW',
           roundness: 0.2
         }
