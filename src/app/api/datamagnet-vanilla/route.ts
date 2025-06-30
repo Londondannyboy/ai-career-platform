@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     console.log('- Using hardcoded fallback:', !process.env.DATAMAGNET_API_TOKEN)
     console.log('- Final token found:', !!token)
 
-    console.log('🧪 DataMagnet Vanilla API Test')
+    console.log('🧪 DataMagnet Vanilla API Test - v2 with hardcoded fallback')
     console.log('📍 Endpoint: https://api.datamagnet.co/api/v1/linkedin/person')
     console.log('🌐 URL:', url)
     console.log('🔑 Token configured:', !!token)
