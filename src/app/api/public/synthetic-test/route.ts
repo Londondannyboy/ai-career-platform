@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
  * GET /api/public/synthetic-test
  * 
  * This is a public endpoint that bypasses Clerk authentication
+ * Updated to test Apify integration with environment variable
  */
 export async function GET() {
   const results = {

@@ -58,6 +58,9 @@ export default function ApiStatusPage() {
           <p className="text-gray-600">
             Monitor the status of DataMagnet and Apify APIs for hybrid intelligence
           </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Environment variables updated - Apify integration ready
+          </p>
         </div>
 
         <Card>
