@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
- * Test endpoint to verify hybrid intelligence APIs are working
- * GET /api/synthetic-hybrid-test
+ * Public test endpoint to verify hybrid intelligence APIs are working
+ * GET /api/public/synthetic-test
+ * 
+ * This is a public endpoint that bypasses Clerk authentication
  */
 export async function GET() {
   const results = {

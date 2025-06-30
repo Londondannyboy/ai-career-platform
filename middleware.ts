@@ -1,6 +1,25 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-export default clerkMiddleware();
+// Define public routes that don't require authentication
+const isPublicRoute = createRouteMatcher([
+  '/api/public/(.*)',
+  '/api/datamagnet-vanilla',
+  '/api/datamagnet-company-vanilla',
+  '/api/synthetic-hybrid-test',
+  '/datamagnet-vanilla',
+  '/datamagnet-company-vanilla',
+  '/synthetic-hybrid-test',
+  '/api-status'
+]);
+
+export default clerkMiddleware(async (auth, req) => {
+  // Skip authentication for public routes
+  if (isPublicRoute(req)) {
+    return;
+  }
+  // Protect all other routes
+  await auth.protect();
+});
 
 export const config = {
   matcher: [
