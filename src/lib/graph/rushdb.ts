@@ -215,7 +215,9 @@ class RushDBService {
       console.log('🔍 RushDB orgData keys:', orgData ? Object.keys(orgData) : 'null')
       
       // Handle different possible response structures
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let employees: any[] = []
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let relationships: any[] = []
       
       if (orgData && typeof orgData === 'object') {
