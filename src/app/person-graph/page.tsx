@@ -20,7 +20,54 @@ export default function PersonGraphPage() {
   const [error, setError] = useState('')
   const [stats, setStats] = useState<any>(null)
 
-  const cleanupAndFetch = async () => {
+  const refreshFromDataMagnet = async () => {
+    setLoading(true)
+    setError('')
+    
+    try {
+      let username = identifier
+      if (identifier.includes('linkedin.com')) {
+        const match = identifier.match(/\/in\/([^\/\?]+)/i)
+        if (match) username = match[1]
+      }
+      
+      // Fetch fresh data from DataMagnet
+      const dmResponse = await fetch('/api/datamagnet-vanilla', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: `https://linkedin.com/in/${username}` })
+      })
+      
+      if (!dmResponse.ok) {
+        throw new Error('Failed to fetch from DataMagnet - check API token in Vercel environment variables')
+      }
+      
+      const profileData = await dmResponse.json()
+      
+      // Store in Neo4j
+      const storeResponse = await fetch('/api/datamagnet-to-neo4j', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'person',
+          data: profileData
+        })
+      })
+      
+      if (!storeResponse.ok) throw new Error('Failed to store in Neo4j')
+      
+      // Now visualize
+      await visualizeFromNeo4j()
+      
+    } catch (err) {
+      console.error('Error:', err)
+      setError(err instanceof Error ? err.message : 'Failed to refresh from DataMagnet')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const visualizeFromNeo4j = async () => {
     setLoading(true)
     setError('')
     
@@ -45,30 +92,8 @@ export default function PersonGraphPage() {
       const cleanupResult = await cleanupResponse.json()
       console.log('Cleanup result:', cleanupResult)
       
-      // Step 2: Fetch fresh data from DataMagnet
-      const dmResponse = await fetch('/api/datamagnet-vanilla', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: `https://linkedin.com/in/${username}` })
-      })
-      
-      if (!dmResponse.ok) throw new Error('Failed to fetch from DataMagnet')
-      
-      const profileData = await dmResponse.json()
-      
-      // Step 3: Store in Neo4j with standardized format
-      const storeResponse = await fetch('/api/datamagnet-to-neo4j', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'person',
-          data: profileData
-        })
-      })
-      
-      if (!storeResponse.ok) throw new Error('Failed to store in Neo4j')
-      
-      // Step 4: Fetch graph data
+      // Step 2: Fetch graph data directly from Neo4j (data already stored)
+      // Skip DataMagnet API call since we already have the data
       const graphResponse = await fetch(`/api/datamagnet-to-neo4j?type=person&url=${encodeURIComponent(username)}`)
       
       if (!graphResponse.ok) throw new Error('Failed to fetch graph data')
@@ -119,16 +144,24 @@ export default function PersonGraphPage() {
                   className="flex-1"
                 />
                 <Button 
-                  onClick={cleanupAndFetch} 
+                  onClick={visualizeFromNeo4j} 
                   disabled={loading}
                   variant="default"
                 >
-                  {loading ? 'Processing...' : 'Fetch & Visualize'}
+                  {loading ? 'Processing...' : 'Visualize from Neo4j'}
+                </Button>
+                <Button 
+                  onClick={refreshFromDataMagnet} 
+                  disabled={loading}
+                  variant="outline"
+                  title="Requires DataMagnet API token in Vercel environment"
+                >
+                  Refresh from API
                 </Button>
               </div>
               
               <div className="text-sm text-gray-500">
-                ℹ️ This will automatically clean up any duplicate profiles and fetch the latest data
+                ℹ️ Visualizes existing data from Neo4j database. Use "Refresh from API" only if you need updated data.
               </div>
             </div>
           </CardContent>
@@ -227,8 +260,8 @@ export default function PersonGraphPage() {
                 any duplicate profiles, keeping the one with the most connections.
               </div>
               <div>
-                <strong>3. Fresh Data:</strong> We fetch the latest profile data from DataMagnet 
-                and store it with standardized URLs.
+                <strong>3. Neo4j Query:</strong> We query existing data from Neo4j database - 
+                no need to call external APIs.
               </div>
               <div>
                 <strong>4. Rich Visualization:</strong> The graph shows verified recommendations 
