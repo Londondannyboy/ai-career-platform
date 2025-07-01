@@ -26,9 +26,9 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        query: query.trim(),
+        q: query.trim(),
         depth: depth,
-        output_type: 'sourcedAnswer'
+        outputType: 'sourcedAnswer'
       })
     })
 

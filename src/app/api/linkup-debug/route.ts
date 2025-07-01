@@ -19,9 +19,9 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        query: query,
+        q: query,
         depth: 'standard',
-        output_type: 'sourcedAnswer'
+        outputType: 'sourcedAnswer'
       })
     })
 
@@ -45,9 +45,9 @@ export async function POST(request: NextRequest) {
       headers: Object.fromEntries(response.headers.entries()),
       data: responseData,
       requestSent: {
-        query: query,
+        q: query,
         depth: 'standard',
-        output_type: 'sourcedAnswer'
+        outputType: 'sourcedAnswer'
       }
     })
 
