@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         duplicatesFound: duplicates.length,
         duplicates: duplicates.map(group => ({
           canonicalName: group[0].name,
-          variants: group.map(c => ({ id: c.id, name: c.name, similarity: c.similarity })),
+          variants: group.map((c: any) => ({ id: c.id, name: c.name, similarity: c.similarity })),
           recommended: group.length > 1 ? 'merge' : 'keep'
         }))
       })
