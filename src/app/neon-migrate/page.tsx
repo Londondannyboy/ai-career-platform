@@ -255,6 +255,37 @@ export default function NeonMigratePage() {
           </Card>
         )}
 
+        {/* Seed Test Data */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-lg">Seed Test Data</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600 mb-4">
+              Add sample companies and people for testing semantic search capabilities.
+            </p>
+            <Button 
+              onClick={async () => {
+                setLoading(true)
+                try {
+                  const res = await fetch('/api/seed-test-data', { method: 'POST' })
+                  const data = await res.json()
+                  alert(data.success ? 'Test data added successfully!' : 'Failed to add test data')
+                  if (data.success) await checkStatus()
+                } catch (error) {
+                  alert('Error adding test data')
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              disabled={loading}
+              variant="secondary"
+            >
+              Add Test Companies & People
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Info */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
           <h3 className="font-medium text-blue-900 mb-2">About Vector Embeddings</h3>
