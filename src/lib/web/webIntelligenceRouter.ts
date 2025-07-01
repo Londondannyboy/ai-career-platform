@@ -152,7 +152,7 @@ export class WebIntelligenceRouter {
     }
 
     return {
-      results: response.results.map(result => ({
+      results: (response.results || []).map(result => ({
         title: result.title,
         url: result.url,
         content: result.content,
@@ -248,7 +248,7 @@ export class WebIntelligenceRouter {
     const seenUrls = new Set<string>()
 
     // Add Linkup results first (higher quality)
-    if (linkupData) {
+    if (linkupData && linkupData.results) {
       linkupData.results.forEach(result => {
         if (!seenUrls.has(result.url)) {
           combinedResults.push(result)
@@ -258,7 +258,7 @@ export class WebIntelligenceRouter {
     }
 
     // Add Serper results for additional coverage
-    if (serperData) {
+    if (serperData && serperData.results) {
       serperData.results.forEach(result => {
         if (!seenUrls.has(result.url) && combinedResults.length < (request.maxResults || 12)) {
           combinedResults.push(result)
