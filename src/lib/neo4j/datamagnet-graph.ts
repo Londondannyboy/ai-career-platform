@@ -346,6 +346,42 @@ export class DataMagnetGraphService {
   }
 
   /**
+   * Get all companies for migration
+   */
+  async getCompanies(limit: number = 100): Promise<any[]> {
+    const session = this.driver.session()
+    try {
+      const result = await session.run(
+        `MATCH (c:Company) 
+         RETURN c 
+         LIMIT $limit`,
+        { limit }
+      )
+      return result.records.map(record => record.get('c').properties)
+    } finally {
+      await session.close()
+    }
+  }
+
+  /**
+   * Get all people for migration
+   */
+  async getPeople(limit: number = 100): Promise<any[]> {
+    const session = this.driver.session()
+    try {
+      const result = await session.run(
+        `MATCH (p:Person) 
+         RETURN p 
+         LIMIT $limit`,
+        { limit }
+      )
+      return result.records.map(record => record.get('p').properties)
+    } finally {
+      await session.close()
+    }
+  }
+
+  /**
    * Extract relationship type from recommendation text
    */
   private extractRelationshipType(text: string): string {
