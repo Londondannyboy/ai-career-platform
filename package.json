@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test:quick": "node tests/quick-check.js",
     "test:full": "node tests/app-review.js",
-    "test:health": "npm run test:quick"
+    "test:health": "npm run test:quick",
+    "db:init": "curl -X POST http://localhost:3000/api/agent/init"
   },
   "dependencies": {
     "@ai-sdk/hume": "^0.0.2",
@@ -28,6 +29,7 @@
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.2",
+    "@types/pg": "^8.15.4",
     "@types/three": "^0.177.0",
     "ai": "^4.3.16",
     "apify-client": "^2.12.6",
@@ -38,6 +40,7 @@
     "neo4j-driver": "^5.28.1",
     "next": "15.3.4",
     "openai": "^5.7.0",
+    "pg": "^8.16.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-force-graph-3d": "^1.27.0",
