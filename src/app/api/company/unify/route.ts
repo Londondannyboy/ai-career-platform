@@ -3,7 +3,7 @@
  * Basic duplicate detection and merging for company records
  */
 
-import { neonClient } from '@/lib/vector/neonClient'
+import { Pool } from 'pg'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -52,7 +52,11 @@ export async function POST(request: NextRequest) {
 }
 
 async function findDuplicateCompanies() {
-  const client = await neonClient.getClient()
+  const pool = new Pool({
+    connectionString: process.env.NEON_DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  })
+  const client = await pool.connect()
   
   // Get all companies
   const result = await client.query(`
@@ -89,6 +93,8 @@ async function findDuplicateCompanies() {
     processed.add(companies[i].id)
   }
   
+  client.release()
+  await pool.end()
   return duplicateGroups
 }
 
@@ -140,7 +146,11 @@ function levenshteinDistance(str1: string, str2: string): number {
 }
 
 async function mergeCompanyGroup(group: any[]) {
-  const client = await neonClient.getClient()
+  const pool = new Pool({
+    connectionString: process.env.NEON_DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  })
+  const client = await pool.connect()
   
   // Use first company as canonical
   const canonical = group[0]
@@ -164,6 +174,9 @@ async function mergeCompanyGroup(group: any[]) {
   `, [duplicateIds])
   
   console.log(`Merged ${duplicateIds.length} companies into ${canonical.name}`)
+  
+  client.release()
+  await pool.end()
 }
 
 export async function GET() {
