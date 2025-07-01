@@ -20,7 +20,12 @@ export async function POST(request: NextRequest) {
     
     switch (type) {
       case 'person':
-        result = await datamagnetGraph.storePersonProfile(data)
+        // Handle nested message structure from DataMagnet
+        let personData = data
+        if (data.message) {
+          personData = data.message
+        }
+        result = await datamagnetGraph.storePersonProfile(personData)
         break
       
       case 'company':

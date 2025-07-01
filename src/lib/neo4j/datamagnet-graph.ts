@@ -233,24 +233,26 @@ export class DataMagnetGraphService {
       
       const result = await session.run(
         `
-        MATCH (p:Person {linkedinUrl: $linkedinUrl})
+        MATCH (p:Person {linkedinUrl: $actualUrl})
         OPTIONAL MATCH (p)<-[r1:RECOMMENDS]-(recommender:Person)
+        WITH p, collect(DISTINCT CASE WHEN recommender IS NOT NULL THEN {
+          node: recommender,
+          relationship: r1,
+          type: 'recommendation'
+        } END) as recommendations
         OPTIONAL MATCH (p)-[r2:NETWORK_CLUSTER]->(networked:Person)
+        WITH p, recommendations, collect(DISTINCT CASE WHEN networked IS NOT NULL THEN {
+          node: networked,
+          relationship: r2,
+          type: 'network'
+        } END) as networkClusters
         OPTIONAL MATCH (p)-[r3:WORKS_AT]->(company:Company)
-        RETURN p,
-               collect(DISTINCT {
-                 node: recommender,
-                 relationship: r1,
-                 type: 'recommendation'
-               }) as recommendations,
-               collect(DISTINCT {
-                 node: networked,
-                 relationship: r2,
-                 type: 'network'
-               }) as networkClusters,
+        RETURN p, 
+               [x IN recommendations WHERE x IS NOT NULL] as recommendations,
+               [x IN networkClusters WHERE x IS NOT NULL] as networkClusters,
                company
         `,
-        { linkedinUrl: actualUrl }
+        { actualUrl }
       )
 
       if (result.records.length === 0) {
@@ -265,17 +267,21 @@ export class DataMagnetGraphService {
       
       console.log('Query results:', {
         person: person.name,
+        recommendationsRaw: recommendations.length,
         recommendationsCount: recommendations.filter((r: any) => r.node).length,
+        networkClustersRaw: networkClusters.length,
         networkClustersCount: networkClusters.filter((n: any) => n.node).length,
-        hasCompany: !!company
+        hasCompany: !!company,
+        firstRec: recommendations[0],
+        firstNet: networkClusters[0]
       })
 
       return {
         person,
         company,
         relationships: {
-          recommendations: recommendations.filter((r: any) => r.node),
-          networkClusters: networkClusters.filter((n: any) => n.node)
+          recommendations: recommendations,
+          networkClusters: networkClusters
         }
       }
     } finally {

@@ -50,12 +50,32 @@ export default function GraphInsightsPage() {
       
       // Fetch graph data from Neo4j
       const storedUrl = profileData.linkedin_url || profileData.url || `https://linkedin.com/in/${profileData.public_identifier}`
-      console.log('Fetching graph for URL:', storedUrl)
+      console.log('Profile data URLs:', {
+        linkedin_url: profileData.linkedin_url,
+        url: profileData.url,
+        public_identifier: profileData.public_identifier,
+        computed: storedUrl
+      })
       const graphResponse = await fetch(`/api/datamagnet-to-neo4j?type=person&url=${encodeURIComponent(storedUrl)}`)
       
       if (!graphResponse.ok) throw new Error('Failed to fetch graph data')
       
       const graphResult = await graphResponse.json()
+      console.log('Graph result:', graphResult)
+      
+      if (!graphResult.data) {
+        throw new Error('No graph data returned from Neo4j')
+      }
+      
+      // Check if we have actual relationships
+      const hasRelationships = graphResult.data.relationships && 
+        (graphResult.data.relationships.recommendations?.length > 0 || 
+         graphResult.data.relationships.networkClusters?.length > 0)
+      
+      if (!hasRelationships) {
+        console.warn('No relationships found in graph data')
+      }
+      
       setGraphData(graphResult.data)
       setDataSource('neo4j')
       
