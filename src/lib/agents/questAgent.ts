@@ -214,7 +214,7 @@ Based on these search results, provide a comprehensive answer. Include specific 
   /**
    * Extract entities from query for graph search
    */
-  private async extractQueryEntities(query: string): Promise<any> {
+  protected async extractQueryEntities(query: string): Promise<any> {
     const { text } = await generateText({
       model: openai('gpt-3.5-turbo'),
       prompt: `Extract entities from this query:
@@ -294,7 +294,7 @@ Return JSON with:
   /**
    * Prepare context from search results for LLM
    */
-  private prepareContext(results: SearchResults): string {
+  protected prepareContext(results: SearchResults): string {
     const contextParts: string[] = []
     
     if (results.vectorResults && results.vectorResults.length > 0) {
