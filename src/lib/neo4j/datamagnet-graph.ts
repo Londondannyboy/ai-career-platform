@@ -15,10 +15,19 @@ export class DataMagnetGraphService {
     const session = this.driver.session()
     
     try {
-      // Create or update the main person node
-      const linkedinUrl = profileData.linkedin_url || profileData.profile_link || profileData.url || `https://linkedin.com/in/${profileData.public_identifier || profileData.username}`
+      // Extract username from various possible sources
+      let username = profileData.public_identifier || profileData.username
+      if (!username && profileData.profile_link) {
+        // Extract from URL like https://linkedin.com/in/philipaga
+        const match = profileData.profile_link.match(/\/in\/([^\/\?]+)/i)
+        if (match) username = match[1]
+      }
+      
+      // Use standardized URL format
+      const linkedinUrl = `https://linkedin.com/in/${username}`
       
       console.log('Storing person profile:', {
+        username,
         linkedinUrl,
         name: profileData.display_name,
         recommendations: profileData.recommendations?.length || 0,
@@ -27,8 +36,9 @@ export class DataMagnetGraphService {
       
       await session.run(
         `
-        MERGE (p:Person {linkedinUrl: $linkedinUrl})
-        SET p.name = $name,
+        MERGE (p:Person {username: $username})
+        SET p.linkedinUrl = $linkedinUrl,
+            p.name = $name,
             p.displayName = $displayName,
             p.jobTitle = $jobTitle,
             p.profileHeadline = $profileHeadline,
@@ -38,6 +48,7 @@ export class DataMagnetGraphService {
             p.lastUpdated = datetime()
         `,
         {
+          username,
           linkedinUrl,
           name: profileData.display_name,
           displayName: profileData.display_name,
@@ -59,7 +70,7 @@ export class DataMagnetGraphService {
             MERGE (recommender:Person {name: $recommenderName})
             SET recommender.title = $recommenderTitle,
                 recommender.linkedinUrl = $recommenderUrl
-            MERGE (p:Person {linkedinUrl: $profileUrl})
+            MERGE (p:Person {username: $username})
             MERGE (recommender)-[r:RECOMMENDS]->(p)
             SET r.text = $text,
                 r.relationshipType = $relationshipType,
@@ -71,7 +82,7 @@ export class DataMagnetGraphService {
               recommenderName: rec.name || 'Anonymous',
               recommenderTitle: rec.subtitle || '',
               recommenderUrl: rec.url || '',
-              profileUrl: linkedinUrl,
+              username,
               text: recText,
               relationshipType: this.extractRelationshipType(recText),
               context: rec.context || '',
@@ -95,7 +106,7 @@ export class DataMagnetGraphService {
                 viewed.followers = $followers,
                 viewed.profilePicture = $profilePicture,
                 viewed.premium = $premium
-            MERGE (p:Person {linkedinUrl: $profileUrl})
+            MERGE (p:Person {username: $username})
             MERGE (p)-[r:NETWORK_CLUSTER]->(viewed)
             SET r.source = 'also_viewed',
                 r.timestamp = datetime()
@@ -109,7 +120,7 @@ export class DataMagnetGraphService {
               followers: person.follower_count || 0,
               profilePicture: person.profile_picture || '',
               premium: person.premium || false,
-              profileUrl: linkedinUrl
+              username
             }
           )
         }
@@ -208,18 +219,25 @@ export class DataMagnetGraphService {
   /**
    * Get relationship graph for a person
    */
-  async getPersonGraph(linkedinUrl: string) {
+  async getPersonGraph(identifier: string) {
     const session = this.driver.session()
     
     try {
-      console.log('Querying person graph for:', linkedinUrl)
+      // Extract username from URL if full URL provided
+      let username = identifier
+      if (identifier.includes('linkedin.com')) {
+        const match = identifier.match(/\/in\/([^\/\?]+)/i)
+        if (match) username = match[1]
+      }
       
-      // First check if person exists
+      console.log('Querying person graph for:', { identifier, username })
+      
+      // First check if person exists by username or URL
       const checkResult = await session.run(
-        'MATCH (p:Person) WHERE p.linkedinUrl = $linkedinUrl OR p.linkedinUrl CONTAINS $profileId RETURN p LIMIT 1',
+        'MATCH (p:Person) WHERE p.username = $username OR p.linkedinUrl = $linkedinUrl OR p.linkedinUrl CONTAINS $username RETURN p ORDER BY p.lastUpdated DESC LIMIT 1',
         { 
-          linkedinUrl,
-          profileId: linkedinUrl.split('/').pop() || ''
+          username,
+          linkedinUrl: identifier
         }
       )
       
