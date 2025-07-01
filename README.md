@@ -12,16 +12,17 @@
 - **⏰ Temporal Layer** - Graphiti-inspired temporal knowledge graph for time-aware intelligence
 - **🤖 Agent Orchestration** - Quest Agent with intelligent search strategy selection
 - **🧠 Episodic Memory** - Search history and user context tracking for continuous learning
+- **🌐 Web Intelligence** - Multi-tier web search with Serper, Linkup, and Tavily integration
 
 ### **Quest Intelligence Flow**
 ```
-User Query → Quest Temporal Agent → Strategy Selection
-     ↓              ↓                    ↓
-Temporal Context ← Entity Analysis ← Query Intent Detection
-     ↓              ↓                    ↓  
-Search Execution ← Confidence Scoring ← Fact Validation
-     ↓              ↓                    ↓
-Intelligent Response ← Episode Storage ← Learning Loop
+User Query → Quest Web Agent → Intent Analysis → Provider Selection
+     ↓              ↓                ↓               ↓
+Temporal Context ← Entity Analysis ← Query Classification ← Web Intelligence
+     ↓              ↓                ↓               ↓  
+Search Execution ← Confidence Scoring ← Fact Validation ← Multi-Provider Routing
+     ↓              ↓                ↓               ↓
+Intelligent Response ← Episode Storage ← Learning Loop ← Unified Results
 ```
 
 ## 🚀 Quick Start
@@ -49,6 +50,11 @@ NEO4J_PASSWORD=your-password
 
 # AI services
 OPENAI_API_KEY=sk-your-openai-key
+
+# Web Intelligence APIs
+SERPER_API_KEY=your-serper-key
+LINKUP_API_KEY=your-linkup-key  
+TAVILY_API_KEY=your-tavily-key
 
 # Authentication
 CLERK_SECRET_KEY=your-clerk-secret
@@ -88,8 +94,12 @@ curl -X POST http://localhost:3000/api/seed-test-data    # Test data
 | Page | Purpose | Features |
 |------|---------|----------|
 | `/quest` | Main search interface | Voice/text input, intelligent responses |
+| `/quest-search` | **Unified web intelligence** | **Multi-provider routing, AI synthesis** |
 | `/agent-search` | Advanced search testing | Strategy visualization, result analysis |
 | `/graphiti-test` | Temporal features | Time-aware queries, episodic memory |
+| `/serper-test` | Fast Google search | Lightning-fast web results |
+| `/linkup-test` | AI-synthesized answers | 91% SOTA accuracy with sources |
+| `/tavily-test` | Research-grade search | Real-time news and analysis |
 | `/neon-migrate` | Data management | Migration tools, test data seeding |
 | `/person-graph` | Network visualization | 3D relationship mapping |
 
