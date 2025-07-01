@@ -139,13 +139,21 @@ export class NeonVectorClient {
           updated_at = NOW()
         RETURNING id
       `
+      // Clean metadata to ensure integers are stored as integers
+      const cleanMetadata = { ...company }
+      Object.keys(cleanMetadata).forEach(key => {
+        if (typeof cleanMetadata[key] === 'number' && cleanMetadata[key] % 1 === 0) {
+          cleanMetadata[key] = Math.floor(cleanMetadata[key])
+        }
+      })
+      
       const result = await client.query(query, [
         company.company_name || company.name,
         company.linkedin_url || company.url,
         company.description,
         company.industry,
         company.employee_count || company.employees,
-        company,
+        cleanMetadata,
         embedding ? `[${embedding.join(',')}]` : null
       ])
       return result.rows[0].id
@@ -185,6 +193,14 @@ export class NeonVectorClient {
         if (match) username = match[1]
       }
       
+      // Clean metadata to ensure integers are stored as integers
+      const cleanMetadata = { ...person }
+      Object.keys(cleanMetadata).forEach(key => {
+        if (typeof cleanMetadata[key] === 'number' && cleanMetadata[key] % 1 === 0) {
+          cleanMetadata[key] = Math.floor(cleanMetadata[key])
+        }
+      })
+      
       const result = await client.query(query, [
         person.name || person.display_name,
         person.linkedin_url || person.url,
@@ -192,7 +208,7 @@ export class NeonVectorClient {
         person.headline || person.profile_headline,
         person.summary,
         person.skills || [],
-        person,
+        cleanMetadata,
         embedding ? `[${embedding.join(',')}]` : null
       ])
       return result.rows[0].id
