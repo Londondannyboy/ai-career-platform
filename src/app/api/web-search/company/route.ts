@@ -72,15 +72,15 @@ export async function POST(request: NextRequest) {
 
 function extractCompanyInsights(results: any[], focus: string) {
   const insights = {
-    keyPoints: [],
-    recentNews: [],
+    keyPoints: [] as string[],
+    recentNews: [] as any[],
     businessModel: '',
     industry: '',
     size: '',
-    locations: [],
-    keyPeople: [],
-    competitors: [],
-    financials: {},
+    locations: [] as string[],
+    keyPeople: [] as string[],
+    competitors: [] as string[],
+    financials: {} as Record<string, any>,
     jobOpenings: 0
   }
 
@@ -99,7 +99,7 @@ function extractCompanyInsights(results: any[], focus: string) {
 
 function extractOverviewInsights(results: any[]) {
   const insights = {
-    keyPoints: [],
+    keyPoints: [] as string[],
     businessModel: '',
     industry: '',
     founded: '',
