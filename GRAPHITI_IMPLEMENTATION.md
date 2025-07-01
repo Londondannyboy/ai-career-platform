@@ -1,4 +1,4 @@
-# Graphiti Implementation for Quest Platform
+# Quest - Graphiti Implementation for Temporal Knowledge Graphs
 
 ## Overview
 Graphiti is a temporal knowledge graph library that adds time-aware intelligence to our RAG system. It tracks how facts change over time and maintains episodic memory.
