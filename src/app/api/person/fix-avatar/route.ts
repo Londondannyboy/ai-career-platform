@@ -3,7 +3,7 @@
  * Ensure avatar images are properly set in Neo4j person nodes
  */
 
-import { neo4jClient } from '@/lib/neo4j/client'
+import { getDriver } from '@/lib/neo4j/client'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -40,7 +40,8 @@ export async function POST(request: NextRequest) {
 }
 
 async function fixPhilAvatar() {
-  const session = neo4jClient.session()
+  const driver = getDriver()
+  const session = driver.session()
   
   try {
     // Find Phil in Neo4j
@@ -84,7 +85,8 @@ async function fixPhilAvatar() {
 }
 
 async function updatePersonAvatar(personId: string, avatarUrl: string) {
-  const session = neo4jClient.session()
+  const driver = getDriver()
+  const session = driver.session()
   
   try {
     const query = `
@@ -101,7 +103,8 @@ async function updatePersonAvatar(personId: string, avatarUrl: string) {
 }
 
 export async function GET() {
-  const session = neo4jClient.session()
+  const driver = getDriver()
+  const session = driver.session()
   
   try {
     // Check current avatar status

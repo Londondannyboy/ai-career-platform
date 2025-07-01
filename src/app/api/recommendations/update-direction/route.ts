@@ -3,7 +3,7 @@
  * Add direction field to distinguish given vs received recommendations
  */
 
-import { neo4jClient } from '@/lib/neo4j/client'
+import { getDriver } from '@/lib/neo4j/client'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -39,7 +39,8 @@ export async function POST(request: NextRequest) {
 }
 
 async function analyzeRecommendations() {
-  const session = neo4jClient.session()
+  const driver = getDriver()
+  const session = driver.session()
   
   try {
     // Get all recommendation relationships
@@ -81,7 +82,8 @@ async function analyzeRecommendations() {
 }
 
 async function updateRecommendationDirections() {
-  const session = neo4jClient.session()
+  const driver = getDriver()
+  const session = driver.session()
   
   try {
     // Update all RECOMMENDED relationships to have direction
@@ -129,7 +131,8 @@ async function updateRecommendationDirections() {
 }
 
 export async function GET() {
-  const session = neo4jClient.session()
+  const driver = getDriver()
+  const session = driver.session()
   
   try {
     // Show current recommendation statistics

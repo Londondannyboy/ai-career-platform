@@ -3,7 +3,7 @@
  * Create and manage parent/subsidiary company relationships
  */
 
-import { neo4jClient } from '@/lib/neo4j/client'
+import { getDriver } from '@/lib/neo4j/client'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -39,7 +39,8 @@ export async function POST(request: NextRequest) {
 }
 
 async function createHierarchyRelationship(parentName: string, subsidiaryName: string, relationshipType: string = 'PARENT_OF') {
-  const session = neo4jClient.session()
+  const driver = getDriver()
+  const session = driver.session()
   
   try {
     // Create the hierarchy relationship
@@ -80,7 +81,8 @@ async function createHierarchyRelationship(parentName: string, subsidiaryName: s
 }
 
 async function setupCKDeltaHierarchy() {
-  const session = neo4jClient.session()
+  const driver = getDriver()
+  const session = driver.session()
   
   try {
     // Create CK Delta corporate hierarchy as example
@@ -154,7 +156,8 @@ async function setupCKDeltaHierarchy() {
 }
 
 async function analyzeCurrentHierarchy() {
-  const session = neo4jClient.session()
+  const driver = getDriver()
+  const session = driver.session()
   
   try {
     // Analyze existing hierarchy relationships
