@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { questAgent } from '@/lib/agents/questAgent'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 /**
  * Intelligent search endpoint using Quest Agent

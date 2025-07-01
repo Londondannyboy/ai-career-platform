@@ -4,9 +4,6 @@
  */
 
 import { Pool } from 'pg'
-import { config } from 'dotenv'
-
-config()
 
 // Neon.tech connection pool
 const pool = new Pool({

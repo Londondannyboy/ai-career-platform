@@ -40,7 +40,8 @@ export async function POST(request: NextRequest) {
     console.error('Database initialization error:', error)
     
     // Provide helpful error messages
-    if (error.message?.includes('connect')) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    if (errorMessage.includes('connect')) {
       return NextResponse.json({
         error: 'Failed to connect to Neon.tech',
         details: 'Please check your NEON_DATABASE_URL in .env.local',
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
     
-    if (error.message?.includes('permission')) {
+    if (errorMessage.includes('permission')) {
       return NextResponse.json({
         error: 'Permission denied',
         details: 'Your database user may not have permission to create extensions',

@@ -3,11 +3,8 @@
  * Generates vector embeddings for semantic search
  */
 
-import OpenAI from 'openai'
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+import { openai } from '@ai-sdk/openai'
+import { embed } from 'ai'
 
 export interface EmbeddingResult {
   embedding: number[]
@@ -27,19 +24,20 @@ export class EmbeddingsService {
       // Clean and truncate text if needed
       const cleanedText = this.cleanText(text)
       
-      const response = await openai.embeddings.create({
-        model: this.model,
-        input: cleanedText,
+      const { embedding, usage } = await embed({
+        model: openai.embedding('text-embedding-ada-002'),
+        value: cleanedText,
       })
       
       return {
-        embedding: response.data[0].embedding,
-        tokens: response.usage.total_tokens,
+        embedding,
+        tokens: usage?.tokens || 0,
         model: this.model
       }
     } catch (error) {
       console.error('Error generating embedding:', error)
-      throw new Error(`Failed to generate embedding: ${error.message}`)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      throw new Error(`Failed to generate embedding: ${errorMessage}`)
     }
   }
   
@@ -48,32 +46,30 @@ export class EmbeddingsService {
    */
   async generateEmbeddings(texts: string[]): Promise<EmbeddingResult[]> {
     try {
-      // OpenAI allows up to 2048 embedding inputs per request
-      const batchSize = 100
+      // Process in smaller batches to avoid rate limits
+      const batchSize = 10
       const results: EmbeddingResult[] = []
       
       for (let i = 0; i < texts.length; i += batchSize) {
         const batch = texts.slice(i, i + batchSize)
-        const cleanedBatch = batch.map(text => this.cleanText(text))
         
-        const response = await openai.embeddings.create({
-          model: this.model,
-          input: cleanedBatch,
-        })
-        
-        const batchResults = response.data.map(item => ({
-          embedding: item.embedding,
-          tokens: Math.floor(response.usage.total_tokens / batch.length), // Approximate
-          model: this.model
-        }))
+        // Process batch in parallel
+        const batchPromises = batch.map(text => this.generateEmbedding(text))
+        const batchResults = await Promise.all(batchPromises)
         
         results.push(...batchResults)
+        
+        // Small delay to respect rate limits
+        if (i + batchSize < texts.length) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+        }
       }
       
       return results
     } catch (error) {
       console.error('Error generating embeddings:', error)
-      throw new Error(`Failed to generate embeddings: ${error.message}`)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      throw new Error(`Failed to generate embeddings: ${errorMessage}`)
     }
   }
   
