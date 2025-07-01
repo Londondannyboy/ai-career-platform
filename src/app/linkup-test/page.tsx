@@ -58,6 +58,38 @@ export default function LinkupTestPage() {
     }
   }
 
+  const handleDebug = async () => {
+    setLoading(true)
+    setError('')
+    setResults([])
+    setAnswer('')
+    setMetadata(null)
+
+    try {
+      const response = await fetch('/api/linkup-debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: query.trim() || 'test query'
+        })
+      })
+
+      const data = await response.json()
+      
+      // Show debug info in the answer section
+      setAnswer(JSON.stringify(data, null, 2))
+      setMetadata({ 
+        provider: 'debug', 
+        query: query.trim() || 'test query',
+        debugResponse: data 
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Debug failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
@@ -94,6 +126,13 @@ export default function LinkupTestPage() {
                 className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
                 {loading ? 'Searching...' : 'Search'}
+              </button>
+              <button
+                onClick={handleDebug}
+                disabled={loading}
+                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50"
+              >
+                Debug
               </button>
             </div>
           </div>
