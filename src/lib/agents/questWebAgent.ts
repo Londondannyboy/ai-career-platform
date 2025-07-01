@@ -152,16 +152,35 @@ export class QuestWebAgent {
    * Search using Serper (fast)
    */
   private async searchWithSerper(request: QuestSearchRequest, strategy: any): Promise<QuestSearchResponse> {
-    const response = await fetch('/api/serper-search', {
+    // Direct Serper API call
+    const response = await fetch('https://google.serper.dev/search', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        query: request.query,
-        type: 'search'
+      headers: {
+        'X-API-KEY': process.env.SERPER_API_KEY || '283930ae73689a0190bec03233e3178be7ce3c82',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        q: request.query,
+        num: 10
       })
     })
 
+    if (!response.ok) {
+      throw new Error(`Serper API failed: ${response.status}`)
+    }
+
     const data = await response.json()
+    
+    // Transform to Quest format
+    const results = data.organic?.map((result: any, index: number) => ({
+      title: result.title,
+      url: result.link,
+      snippet: result.snippet,
+      domain: new URL(result.link).hostname,
+      score: (data.organic.length - index) / data.organic.length,
+      provider: 'serper',
+      position: result.position
+    })) || []
     
     return {
       query: request.query,
@@ -169,8 +188,8 @@ export class QuestWebAgent {
       strategy: strategy.reasoning,
       confidence: strategy.confidence,
       answer: data.answerBox?.answer || data.knowledgeGraph?.description,
-      results: data.results || [],
-      processingTime: data.processingTime || 0,
+      results,
+      processingTime: 0,
       reasoning: strategy.reasoning
     }
   }
@@ -179,16 +198,35 @@ export class QuestWebAgent {
    * Search using Linkup (deep AI)
    */
   private async searchWithLinkup(request: QuestSearchRequest, strategy: any): Promise<QuestSearchResponse> {
-    const response = await fetch('/api/linkup-search', {
+    // Direct Linkup API call
+    const response = await fetch('https://api.linkup.so/v1/search', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        query: request.query,
-        depth: request.urgency === 'comprehensive' ? 'deep' : 'standard'
+      headers: {
+        'Authorization': `Bearer ${process.env.LINKUP_API_KEY || '55ae9876-ffe4-4ee3-92b0-cb3c43ba280f'}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        q: request.query,
+        depth: request.urgency === 'comprehensive' ? 'deep' : 'standard',
+        outputType: 'sourcedAnswer'
       })
     })
 
+    if (!response.ok) {
+      throw new Error(`Linkup API failed: ${response.status}`)
+    }
+
     const data = await response.json()
+    
+    // Transform sources to results format
+    const results = data.sources?.map((source: any, index: number) => ({
+      title: source.name,
+      url: source.url,
+      snippet: source.snippet,
+      domain: new URL(source.url).hostname,
+      score: (data.sources.length - index) / data.sources.length,
+      provider: 'linkup'
+    })) || []
     
     return {
       query: request.query,
@@ -196,7 +234,7 @@ export class QuestWebAgent {
       strategy: strategy.reasoning,
       confidence: strategy.confidence,
       answer: data.answer,
-      results: data.results || [],
+      results,
       processingTime: 0,
       reasoning: strategy.reasoning
     }
@@ -206,16 +244,38 @@ export class QuestWebAgent {
    * Search using Tavily (research)
    */
   private async searchWithTavily(request: QuestSearchRequest, strategy: any): Promise<QuestSearchResponse> {
-    const response = await fetch('/api/tavily-search', {
+    // Direct Tavily API call
+    const response = await fetch('https://api.tavily.com/search', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        api_key: process.env.TAVILY_API_KEY || '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',
         query: request.query,
-        search_depth: request.urgency === 'comprehensive' ? 'advanced' : 'basic'
+        search_depth: request.urgency === 'comprehensive' ? 'advanced' : 'basic',
+        include_answer: true,
+        include_raw_content: false,
+        max_results: 10
       })
     })
 
+    if (!response.ok) {
+      throw new Error(`Tavily API failed: ${response.status}`)
+    }
+
     const data = await response.json()
+    
+    // Transform to Quest format
+    const results = data.results?.map((result: any, index: number) => ({
+      title: result.title,
+      url: result.url,
+      snippet: result.content || result.snippet,
+      domain: new URL(result.url).hostname,
+      score: result.score || (data.results.length - index) / data.results.length,
+      provider: 'tavily',
+      publishedDate: result.published_date
+    })) || []
     
     return {
       query: request.query,
@@ -223,8 +283,8 @@ export class QuestWebAgent {
       strategy: strategy.reasoning,
       confidence: strategy.confidence,
       answer: data.answer,
-      results: data.results || [],
-      followUpQuestions: data.followUpQuestions,
+      results,
+      followUpQuestions: data.follow_up_questions,
       processingTime: 0,
       reasoning: strategy.reasoning
     }
