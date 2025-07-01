@@ -25,10 +25,7 @@ export async function POST(request: NextRequest) {
     // Fix Phil's avatar specifically
     const philResult = await fixPhilAvatar()
     
-    return NextResponse.json({
-      message: 'Avatar fix completed',
-      ...philResult
-    })
+    return NextResponse.json(philResult)
 
   } catch (error) {
     console.error('Avatar fix error:', error)
