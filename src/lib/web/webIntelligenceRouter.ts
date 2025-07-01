@@ -131,8 +131,7 @@ export class WebIntelligenceRouter {
     const linkupRequest: LinkupSearchRequest = {
       query: request.query,
       depth: request.urgency === 'comprehensive' ? 'deep' : 'standard',
-      maxResults: request.maxResults || 10,
-      includeMetadata: true
+      outputType: 'sourcedAnswer'
     }
 
     let response: LinkupResponse
