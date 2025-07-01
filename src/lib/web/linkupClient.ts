@@ -172,7 +172,7 @@ export class LinkupClient {
         query: 'test query',
         depth: 'standard'
       })
-      return result.results?.length >= 0 // Even 0 results means API is working
+      return (result.results?.length ?? 0) >= 0 // Even 0 results means API is working
     } catch (error) {
       console.error('Linkup connection test failed:', error)
       return false
