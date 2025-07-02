@@ -193,7 +193,7 @@ export default function WorkspacePage() {
       } else {
         const errorText = await response.text()
         console.error('Upload failed:', response.status, errorText)
-        let errorData = {}
+        let errorData: any = {}
         try {
           errorData = JSON.parse(errorText)
         } catch (parseError) {
