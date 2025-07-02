@@ -54,6 +54,18 @@ export async function POST(request: Request) {
         { status: 409 } // Conflict
       )
     }
+
+    // Check for unique workspace names (across all users to prevent confusion)
+    const nameCheckResult = await workspaceService.checkWorkspaceNameExists(displayName)
+    if (nameCheckResult.exists) {
+      return NextResponse.json(
+        { 
+          error: `Workspace name "${displayName}" is already taken. Please choose a different name.`,
+          suggestion: `${displayName}_${Math.random().toString(36).substr(2, 4)}`
+        },
+        { status: 409 } // Conflict
+      )
+    }
     
     const workspace = await workspaceService.createWorkspace({
       companyName,

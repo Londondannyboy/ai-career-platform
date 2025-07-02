@@ -33,6 +33,7 @@ export async function GET() {
       <div>
         <button class="safe" onclick="checkStatus()">Check Status</button>
         <button onclick="cleanupWorkspaces()">Delete Duplicate Workspaces</button>
+        <button onclick="nuclearDelete()" style="background: #dc2626; font-weight: bold;">🚨 DELETE ALL WORKSPACES</button>
         <button class="safe" onclick="checkConstraints()">Check Database Constraints</button>
       </div>
       
@@ -70,6 +71,25 @@ export async function GET() {
           }
         }
         
+        async function nuclearDelete() {
+          const confirmText = prompt('This will DELETE ALL WORKSPACES and DOCUMENTS permanently! Type "DELETE ALL" to confirm:');
+          if (confirmText !== 'DELETE ALL') {
+            alert('Cancelled - exact text "DELETE ALL" required');
+            return;
+          }
+          
+          try {
+            const response = await fetch('/api/debug/delete-all-workspaces', { method: 'DELETE' });
+            const data = await response.json();
+            document.getElementById('results').innerHTML = 
+              '<h3>🚨 NUCLEAR DELETE RESULTS:</h3>' +
+              '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            checkStatus(); // Refresh status
+          } catch (error) {
+            document.getElementById('results').innerHTML = '<p>Error: ' + error.message + '</p>';
+          }
+        }
+
         async function checkConstraints() {
           try {
             const response = await fetch('/api/debug/check-constraints');

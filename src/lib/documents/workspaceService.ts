@@ -174,6 +174,37 @@ class WorkspaceService {
   }
 
   /**
+   * Check if workspace name already exists
+   */
+  async checkWorkspaceNameExists(displayName: string): Promise<{ exists: boolean; existingWorkspace?: any }> {
+    try {
+      const query = `
+        SELECT id, display_name, owner_id 
+        FROM company_workspaces 
+        WHERE LOWER(display_name) = LOWER($1)
+        LIMIT 1
+      `
+      
+      const client = await pool.connect()
+      let result
+      try {
+        result = await client.query(query, [displayName])
+      } finally {
+        client.release()
+      }
+      
+      return {
+        exists: result.rows.length > 0,
+        existingWorkspace: result.rows.length > 0 ? result.rows[0] : null
+      }
+      
+    } catch (error) {
+      console.error('❌ Failed to check workspace name:', error)
+      throw error
+    }
+  }
+
+  /**
    * Get all workspaces for a user
    */
   async getUserWorkspaces(userId: string): Promise<CompanyWorkspace[]> {
