@@ -43,6 +43,8 @@ export default function WorkspacePage() {
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [showDocumentViewer, setShowDocumentViewer] = useState(false)
+  const [selectedDocument, setSelectedDocument] = useState<any>(null)
 
   // Load workspace data
   useEffect(() => {
@@ -155,22 +157,83 @@ export default function WorkspacePage() {
       })
 
       if (response.ok) {
-        // Refresh workspace data to show new document
-        const workspaceResponse = await fetch(`/api/workspace/${workspaceId}`)
-        if (workspaceResponse.ok) {
-          const data = await workspaceResponse.json()
-          setDocuments(data.documents || [])
-        }
+        console.log('✅ Upload successful, refreshing workspace data...')
         
+        // Close dialog first
         setShowUploadDialog(false)
         setUploadFile(null)
+        
+        // Then refresh workspace data
+        try {
+          const workspaceResponse = await fetch(`/api/workspace/${workspaceId}`)
+          if (workspaceResponse.ok) {
+            const data = await workspaceResponse.json()
+            console.log('✅ Refreshed workspace data:', data.documents?.length, 'documents')
+            setDocuments(data.documents || [])
+          } else {
+            console.error('Failed to refresh workspace data:', workspaceResponse.status)
+          }
+        } catch (refreshError) {
+          console.error('Error refreshing workspace:', refreshError)
+        }
       } else {
-        console.error('Upload failed:', response.status)
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Upload failed:', response.status, errorData)
+        alert(`Upload failed: ${errorData.error || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Error uploading file:', error)
     } finally {
       setIsUploading(false)
+    }
+  }
+
+  const handleViewDocument = async (documentId: string) => {
+    try {
+      const response = await fetch(`/api/workspace/${workspaceId}/document/${documentId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setSelectedDocument(data.document)
+        setShowDocumentViewer(true)
+      } else {
+        console.error('Failed to load document:', response.status)
+        alert('Failed to load document')
+      }
+    } catch (error) {
+      console.error('Error loading document:', error)
+      alert('Error loading document')
+    }
+  }
+
+  const handleDownloadDocument = async (documentId: string, title: string) => {
+    try {
+      const response = await fetch(`/api/workspace/${workspaceId}/document/${documentId}`)
+      if (response.ok) {
+        const data = await response.json()
+        const document = data.document
+        
+        // Create a downloadable file with the document content
+        const content = document.content || document.contentPreview || 'No content available'
+        const blob = new Blob([content], { type: 'text/plain' })
+        const url = window.URL.createObjectURL(blob)
+        
+        // Create download link
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${title || 'document'}.txt`
+        document.body.appendChild(a)
+        a.click()
+        
+        // Cleanup
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        console.error('Failed to download document:', response.status)
+        alert('Failed to download document')
+      }
+    } catch (error) {
+      console.error('Error downloading document:', error)
+      alert('Error downloading document')
     }
   }
 
@@ -341,10 +404,20 @@ export default function WorkspacePage() {
                               </div>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleDownloadDocument(doc.id, doc.title)}
+                                title="Download document"
+                              >
                                 <Download className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleViewDocument(doc.id)}
+                                title="View document"
+                              >
                                 <ExternalLink className="h-4 w-4" />
                               </Button>
                             </div>
@@ -597,6 +670,92 @@ export default function WorkspacePage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Document Viewer Dialog */}
+      {showDocumentViewer && selectedDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[80vh] mx-4 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="rounded-full bg-blue-100 p-2">
+                  <FileText className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{selectedDocument.title}</h3>
+                  <p className="text-sm text-gray-600">
+                    {selectedDocument.documentType?.replace('_', ' ')} • {selectedDocument.fileType}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDocumentViewer(false)
+                  setSelectedDocument(null)
+                }}
+              >
+                ✕ Close
+              </Button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Document Content:</h4>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto">
+                  {selectedDocument.content || selectedDocument.contentPreview || 'No content available'}
+                </div>
+              </div>
+
+              {selectedDocument.tags && selectedDocument.tags.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Tags:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDocument.tags.map((tag: string, index: number) => (
+                      <Badge key={index} variant="outline">{tag}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedDocument.autoTags && selectedDocument.autoTags.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Auto Tags:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDocument.autoTags.map((tag: string, index: number) => (
+                      <Badge key={index} className="bg-blue-100 text-blue-800">{tag}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4 text-xs text-gray-500">
+                <p>Uploaded: {formatTimeAgo(selectedDocument.createdAt)}</p>
+                <p>Size: {selectedDocument.fileSize ? `${Math.round(selectedDocument.fileSize / 1024)} KB` : 'Unknown'}</p>
+              </div>
+            </div>
+
+            <div className="flex space-x-3 mt-4">
+              <Button
+                onClick={() => handleDownloadDocument(selectedDocument.id, selectedDocument.title)}
+                className="flex-1"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDocumentViewer(false)
+                  setSelectedDocument(null)
+                }}
+                className="flex-1"
+              >
+                Close
+              </Button>
+            </div>
           </div>
         </div>
       )}
