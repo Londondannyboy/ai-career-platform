@@ -246,14 +246,13 @@ class WorkspaceService {
           cd.document_type,
           cd.file_type,
           cd.uploaded_by,
-          u.name as uploader_name,
+          cd.uploaded_by as uploader_name,
           cd.tags,
           cd.auto_tags,
           cd.access_level,
           cd.created_at,
           cd.content_preview
         FROM company_documents cd
-        LEFT JOIN users u ON cd.uploaded_by = u.id
         WHERE cd.workspace_id = $1
         ORDER BY cd.created_at DESC
       `
@@ -538,7 +537,7 @@ Return as JSON array: ["question1", "question2", "question3"]`,
         SELECT 
           wc.id,
           wc.user_id,
-          u.name as user_name,
+          wc.user_id as user_name,
           wc.query,
           wc.response,
           wc.documents_used,
@@ -546,7 +545,6 @@ Return as JSON array: ["question1", "question2", "question3"]`,
           wc.processing_time_ms,
           wc.created_at
         FROM workspace_chats wc
-        LEFT JOIN users u ON wc.user_id = u.id
         WHERE wc.workspace_id = $1
         ORDER BY wc.created_at DESC
         LIMIT $2
