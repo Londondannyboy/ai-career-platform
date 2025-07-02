@@ -55,6 +55,29 @@ export async function POST(
 
     console.log(`📤 Simple upload: ${file.name} (${file.size} bytes) to workspace ${workspaceId}`)
 
+    // Check if workspace exists and how many documents it has
+    const client = await pool.connect()
+    try {
+      const workspaceCheckQuery = `SELECT id FROM company_workspaces WHERE id = $1`
+      const workspaceResult = await client.query(workspaceCheckQuery, [workspaceId])
+      
+      if (workspaceResult.rows.length === 0) {
+        return NextResponse.json(
+          { error: `Workspace ${workspaceId} not found` },
+          { status: 404 }
+        )
+      }
+
+      const docCountQuery = `SELECT COUNT(*) as count FROM company_documents WHERE workspace_id = $1`
+      const docCountResult = await client.query(docCountQuery, [workspaceId])
+      const existingDocCount = parseInt(docCountResult.rows[0].count)
+      
+      console.log(`📊 Workspace ${workspaceId} currently has ${existingDocCount} documents`)
+      
+    } finally {
+      client.release()
+    }
+
     // Validate file type
     const allowedTypes = ['application/pdf', 'text/plain', 
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -89,6 +112,7 @@ export async function POST(
 
     // Generate simple document ID
     const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    console.log(`📄 Generated document ID: ${documentId}`)
 
     // Store in database WITHOUT embeddings (for testing)  
     const query = `
@@ -115,12 +139,25 @@ export async function POST(
       file.name
     ]
     
-    const client = await pool.connect()
+    console.log(`💾 Attempting to insert document with values:`, {
+      id: documentId,
+      workspace_id: workspaceId,
+      title: title || file.name,
+      document_type: documentType,
+      file_type: file.type,
+      uploaded_by: userId
+    })
+    
+    const dbClient = await pool.connect()
     let result
     try {
-      result = await client.query(query, values)
+      result = await dbClient.query(query, values)
+      console.log(`✅ Document inserted successfully:`, result.rows[0])
+    } catch (dbError) {
+      console.error(`❌ Database insert failed:`, dbError)
+      throw dbError
     } finally {
-      client.release()
+      dbClient.release()
     }
 
     const document = result.rows[0]
