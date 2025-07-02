@@ -267,7 +267,7 @@ export class ApifyService {
    * Transform HarvestAPI data to our LinkedIn profile format
    */
   private transformHarvestAPIData(harvestData: any): LinkedInProfile | null {
-    console.log('🔧 Transform input:', harvestData);
+    console.log('🔧 Transform input:', JSON.stringify(harvestData, null, 2));
     
     if (!harvestData) {
       console.warn('⚠️ No harvest data provided');
@@ -300,7 +300,7 @@ export class ApifyService {
         years: edu.period || edu.years || ''
       })),
       skills: (harvestData.skills || []).map((skill: any) => 
-        typeof skill === 'string' ? skill : skill.name
+        typeof skill === 'string' ? skill : (skill.name || skill)
       ).filter(Boolean),
       recommendations: (harvestData.receivedRecommendations || []).map((rec: any) => ({
         recommenderName: rec.givenBy || rec.name || '',
@@ -319,7 +319,7 @@ export class ApifyService {
       recentActivity: [] // HarvestAPI doesn't provide activity data
     };
 
-    console.log('✅ Transformed profile:', transformed);
+    console.log('✅ Transformed profile:', JSON.stringify(transformed, null, 2));
     return transformed;
   }
 
