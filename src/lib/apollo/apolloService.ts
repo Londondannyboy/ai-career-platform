@@ -76,6 +76,12 @@ export class ApolloService {
         page: options.page || 1
       };
 
+      console.log(`🔍 Apollo API request for ${companyName}:`, {
+        endpoint: `${this.baseUrl}/mixed_people/search`,
+        params,
+        apiKeyLength: this.apiKey.length
+      });
+
       const response = await fetch(`${this.baseUrl}/mixed_people/search`, {
         method: 'POST',
         headers: {
