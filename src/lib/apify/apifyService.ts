@@ -114,10 +114,13 @@ export class ApifyService {
       throw new Error('No employee data returned from HarvestAPI scraper');
     }
 
+    console.log('🔍 Raw HarvestAPI results:', JSON.stringify(harvestResults, null, 2));
+
     // Transform all employee results
-    const enrichedProfiles = harvestResults.map(result => 
-      this.transformHarvestAPIData(result)
-    );
+    const enrichedProfiles = harvestResults.map((result, index) => {
+      console.log(`🔄 Transforming result ${index}:`, JSON.stringify(result, null, 2));
+      return this.transformHarvestAPIData(result);
+    }).filter(Boolean); // Remove any null/undefined results
 
     console.log(`✅ HarvestAPI returned ${enrichedProfiles.length} employee profiles`);
 
@@ -259,43 +262,61 @@ export class ApifyService {
   /**
    * Transform HarvestAPI data to our LinkedIn profile format
    */
-  private transformHarvestAPIData(harvestData: any): LinkedInProfile {
-    const fullName = `${harvestData.firstName || ''} ${harvestData.lastName || ''}`.trim();
+  private transformHarvestAPIData(harvestData: any): LinkedInProfile | null {
+    console.log('🔧 Transform input:', harvestData);
     
-    return {
-      profileUrl: harvestData.linkedinUrl || '',
-      name: fullName || harvestData.name || '',
+    if (!harvestData) {
+      console.warn('⚠️ No harvest data provided');
+      return null;
+    }
+
+    const fullName = `${harvestData.firstName || ''} ${harvestData.lastName || ''}`.trim();
+    const profileUrl = harvestData.linkedinUrl || harvestData.profileUrl || '';
+    
+    if (!profileUrl) {
+      console.warn('⚠️ No LinkedIn URL found in harvest data');
+      return null;
+    }
+
+    const transformed = {
+      profileUrl,
+      name: fullName || harvestData.name || 'Unknown',
       headline: harvestData.headline || '',
-      summary: harvestData.about || '',
+      summary: harvestData.about || harvestData.summary || '',
       experience: (harvestData.experience || []).map((exp: any) => ({
-        title: exp.position || '',
-        company: exp.companyName || '',
+        title: exp.position || exp.title || '',
+        company: exp.companyName || exp.company || '',
         duration: exp.duration || '',
         description: exp.description || ''
       })),
       education: (harvestData.education || []).map((edu: any) => ({
-        school: edu.schoolName || '',
+        school: edu.schoolName || edu.school || '',
         degree: edu.degree || '',
-        field: edu.fieldOfStudy || '',
-        years: edu.period || ''
+        field: edu.fieldOfStudy || edu.field || '',
+        years: edu.period || edu.years || ''
       })),
-      skills: (harvestData.skills || []).map((skill: any) => skill.name).filter(Boolean),
+      skills: (harvestData.skills || []).map((skill: any) => 
+        typeof skill === 'string' ? skill : skill.name
+      ).filter(Boolean),
       recommendations: (harvestData.receivedRecommendations || []).map((rec: any) => ({
-        recommenderName: rec.givenBy || '',
-        recommenderProfile: rec.givenByLink || '',
+        recommenderName: rec.givenBy || rec.name || '',
+        recommenderProfile: rec.givenByLink || rec.profileUrl || '',
         relationshipType: this.extractRelationshipType(rec.givenAt || ''),
-        recommendationText: rec.description || '',
+        recommendationText: rec.description || rec.text || '',
         date: this.parseRecommendationDate(rec.givenAt || '')
       })),
       connections: (harvestData.moreProfiles || []).map((profile: any) => ({
-        name: `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
-        profileUrl: profile.linkedinUrl || '',
+        name: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.name || '',
+        profileUrl: profile.linkedinUrl || profile.profileUrl || '',
         mutualConnections: 0, // HarvestAPI doesn't provide this
         currentCompany: this.extractCompanyFromPosition(profile.position),
-        title: profile.position || ''
+        title: profile.position || profile.title || ''
       })),
       recentActivity: [] // HarvestAPI doesn't provide activity data
     };
+
+    console.log('✅ Transformed profile:', transformed);
+    return transformed;
   }
 
   /**
