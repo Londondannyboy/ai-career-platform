@@ -4,11 +4,11 @@
  */
 
 interface ApolloSearchParams {
-  organizationNames?: string[];
-  titles?: string[];
-  seniorityLevels?: string[];
-  departments?: string[];
-  perPage?: number;
+  organization_names?: string[];
+  person_titles?: string[];
+  person_seniorities?: string[];
+  person_departments?: string[];
+  per_page?: number;
   page?: number;
 }
 
@@ -46,7 +46,7 @@ interface ApolloResponse {
 
 export class ApolloService {
   private apiKey: string;
-  private baseUrl: string = 'https://api.apollo.io/v1';
+  private baseUrl: string = 'https://api.apollo.io/api/v1';
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -68,15 +68,15 @@ export class ApolloService {
   ): Promise<ApolloResponse> {
     try {
       const params: ApolloSearchParams = {
-        organizationNames: [companyName],
-        titles: options.titles,
-        seniorityLevels: options.seniorityLevels,
-        departments: options.departments,
-        perPage: options.perPage || 25,
+        organization_names: [companyName],
+        person_titles: options.titles,
+        person_seniorities: options.seniorityLevels,
+        person_departments: options.departments,
+        per_page: options.perPage || 25,
         page: options.page || 1
       };
 
-      const response = await fetch(`${this.baseUrl}/people/search`, {
+      const response = await fetch(`${this.baseUrl}/mixed_people/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,6 +93,11 @@ export class ApolloService {
       }
 
       const data = await response.json();
+      console.log(`Apollo API response for ${companyName}:`, {
+        totalFound: data.total_entries || data.total_people || 0,
+        peopleReturned: data.people?.length || 0,
+        samplePerson: data.people?.[0]
+      });
       return data;
     } catch (error) {
       console.error('Error searching people by company:', error);
