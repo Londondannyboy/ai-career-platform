@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
         console.log(`🔄 Transforming employee ${index}:`, JSON.stringify(emp, null, 2));
         return {
           name: emp.name || 'Unknown',
-          title: emp.headline || emp.title || '',
+          title: emp.headline || '', // LinkedInProfile only has headline, not title
           linkedin_url: emp.profileUrl || '',
           profileImage: null, // HarvestAPI doesn't provide profile images
           summary: emp.summary || '',
