@@ -12,7 +12,7 @@ const pool = new Pool({
 })
 
 /**
- * GET /api/workspace/inspect-db
+ * GET /api/debug/inspect-db
  * Inspect database structure to debug column issues
  */
 export async function GET() {
