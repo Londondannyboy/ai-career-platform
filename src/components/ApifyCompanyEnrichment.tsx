@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Building2, Users, TrendingUp, Brain, Network } from 'lucide-react';
-import { CompanyGraphVisualization } from './CompanyGraphVisualization';
+import CompanyGraphVisualization from './CompanyGraphVisualization';
 
 interface EnrichmentResult {
   companyName: string;
