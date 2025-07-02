@@ -90,13 +90,13 @@ export async function POST(
     // Generate simple document ID
     const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    // Store in database WITHOUT embeddings (for testing)
+    // Store in database WITHOUT embeddings (for testing)  
     const query = `
       INSERT INTO company_documents (
         id, workspace_id, title, full_content, content_preview, 
-        document_type, file_type, file_size, uploaded_by,
-        tags, auto_tags, access_level
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        document_type, file_type, uploaded_by,
+        tags, auto_tags, access_level, file_name
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING id, title, document_type, created_at
     `
     
@@ -108,11 +108,11 @@ export async function POST(
       contentPreview,
       documentType,
       file.type,
-      file.size,
       userId,
       JSON.stringify([]), // Empty tags
       JSON.stringify(['uploaded']), // Simple auto-tag
-      'team'
+      'team',
+      file.name
     ]
     
     const client = await pool.connect()
