@@ -67,6 +67,27 @@ export async function POST(
 
     console.log(`📤 Uploading document: ${file.name} to workspace ${workspaceId}`)
 
+    // Check for duplicate document names in the workspace
+    const documentTitle = title || file.name
+    const existingDocs = await workspaceService.getWorkspaceDocuments(workspaceId, userId)
+    const duplicateDoc = existingDocs.find(doc => 
+      doc.title.toLowerCase() === documentTitle.toLowerCase()
+    )
+    
+    if (duplicateDoc) {
+      return NextResponse.json(
+        { 
+          error: `A document named "${documentTitle}" already exists in this workspace. Please choose a different name or delete the existing document first.`,
+          existingDocument: {
+            id: duplicateDoc.id,
+            title: duplicateDoc.title,
+            createdAt: duplicateDoc.createdAt
+          }
+        },
+        { status: 409 } // Conflict
+      )
+    }
+
     // Validate file type
     const allowedTypes = ['application/pdf', 'text/plain', 
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

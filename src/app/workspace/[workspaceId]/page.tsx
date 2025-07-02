@@ -41,9 +41,6 @@ export default function WorkspacePage() {
   const [chatQuery, setChatQuery] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [showUploadDialog, setShowUploadDialog] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [showDocumentViewer, setShowDocumentViewer] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<any>(null)
 
@@ -138,77 +135,6 @@ export default function WorkspacePage() {
     }
   }
 
-  const handleFileUpload = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!uploadFile || !workspace || isUploading) return
-
-    console.log('📤 Starting upload process...', {
-      fileName: uploadFile.name,
-      fileSize: uploadFile.size,
-      fileType: uploadFile.type,
-      workspaceId
-    })
-
-    setIsUploading(true)
-    try {
-      const formData = new FormData()
-      formData.append('file', uploadFile)
-      formData.append('title', uploadFile.name)
-      formData.append('documentType', 'whitepaper') // Default type
-      formData.append('accessLevel', 'team')
-      formData.append('companyId', workspace.companyName)
-      formData.append('tags', '')
-
-      console.log('📤 Sending upload request...')
-      const response = await fetch(`/api/workspace/${workspaceId}/upload-simple`, {
-        method: 'POST',
-        body: formData,
-      })
-
-      console.log('📤 Upload response status:', response.status)
-
-      if (response.ok) {
-        const responseData = await response.json()
-        console.log('✅ Upload successful:', responseData)
-        
-        // Close dialog first
-        setShowUploadDialog(false)
-        setUploadFile(null)
-        
-        // Then refresh workspace data
-        try {
-          console.log('🔄 Refreshing workspace data...')
-          const workspaceResponse = await fetch(`/api/workspace/${workspaceId}`)
-          if (workspaceResponse.ok) {
-            const data = await workspaceResponse.json()
-            console.log('✅ Refreshed workspace data:', data.documents?.length, 'documents')
-            setDocuments(data.documents || [])
-          } else {
-            console.error('Failed to refresh workspace data:', workspaceResponse.status)
-            const errorText = await workspaceResponse.text()
-            console.error('Refresh error details:', errorText)
-          }
-        } catch (refreshError) {
-          console.error('Error refreshing workspace:', refreshError)
-        }
-      } else {
-        const errorText = await response.text()
-        console.error('Upload failed:', response.status, errorText)
-        let errorData: any = {}
-        try {
-          errorData = JSON.parse(errorText)
-        } catch (parseError) {
-          console.error('Could not parse error response:', parseError)
-        }
-        alert(`Upload failed: ${errorData.error || errorText || 'Unknown error'}`)
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error)
-      alert(`Upload error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    } finally {
-      setIsUploading(false)
-    }
-  }
 
   const handleViewDocument = async (documentId: string) => {
     try {
@@ -427,7 +353,7 @@ export default function WorkspacePage() {
                   <span>Document Management</span>
                   <Button 
                     className="bg-blue-600 hover:bg-blue-700"
-                    onClick={() => setShowUploadDialog(true)}
+                    onClick={() => router.push(`/workspace/${workspaceId}/upload`)}
                   >
                     <Upload className="mr-2 h-4 w-4" />
                     Upload Document
@@ -682,72 +608,6 @@ export default function WorkspacePage() {
         </div>
       )}
 
-      {/* Upload Dialog */}
-      {showUploadDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="rounded-full bg-blue-100 p-2">
-                <Upload className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Upload Document</h3>
-                <p className="text-sm text-gray-600">Add a document to your workspace</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleFileUpload} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select File
-                </label>
-                <input
-                  type="file"
-                  accept=".pdf,.txt,.docx,.pptx"
-                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Supported formats: PDF, TXT, DOCX, PPTX (max 50MB)
-                </p>
-              </div>
-
-              <div className="flex space-x-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowUploadDialog(false)
-                    setUploadFile(null)
-                  }}
-                  disabled={isUploading}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={!uploadFile || isUploading}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Upload
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Document Viewer Dialog */}
       {showDocumentViewer && selectedDocument && (
