@@ -250,7 +250,7 @@ export default function CompanyGraphVisualization({
                       {stats.total} Nodes
                     </Badge>
                     <Badge variant="secondary" className="text-xs">
-                      {graphData?.edges.length} Edges
+                      {stats.people + stats.departments} Edges
                     </Badge>
                     <Badge variant="secondary" className="text-xs">
                       Company Hierarchy
