@@ -405,20 +405,26 @@ export class UnifiedIntelligenceService {
    * Get search suggestions with all known companies
    */
   async getSearchSuggestions(query: string): Promise<string[]> {
-    // Get known companies from Apollo cache
+    // Get known companies from Apollo cache (actual enriched data)
     const { companies } = await this.apolloStorage.getEnrichedCompanies();
     const knownCompanies = companies.map(c => c.company_name);
     
-    // Use fuzzy search to find suggestions
-    const searchResult = CompanySearchService.searchCompany(query, knownCompanies);
+    console.log(`🔍 Known companies in database: ${knownCompanies.length}`);
+    console.log('Known companies:', knownCompanies);
     
-    // Add autocomplete suggestions
-    const autocomplete = CompanySearchService.getAutocompleteSuggestions(query);
+    // If we have actual companies, use only those
+    if (knownCompanies.length > 0) {
+      const searchResult = CompanySearchService.searchCompany(query, knownCompanies);
+      return searchResult.suggestions.slice(0, 8);
+    }
     
-    // Combine and deduplicate
-    const suggestions = [...new Set([...searchResult.suggestions, ...autocomplete])];
+    // Fallback: Only show CK Delta specific suggestions if no companies in DB
+    const fallbackSuggestions = [];
+    if (query.toLowerCase().includes('ck') || query.toLowerCase().includes('delta')) {
+      fallbackSuggestions.push('ckdelta', 'ck delta', 'ck-delta');
+    }
     
-    return suggestions.slice(0, 8);
+    return fallbackSuggestions.slice(0, 8);
   }
 }
 

@@ -84,7 +84,10 @@ export default function CompanyGraphVisualization({
           
           // Ensure profile image is a valid URL or null
           let profileImage = emp.photo_url || emp.profileImage;
+          console.log(`Employee ${emp.name}: photo_url="${emp.photo_url}", profileImage="${emp.profileImage}"`);
+          
           if (profileImage && !profileImage.startsWith('http')) {
+            console.log(`Invalid image URL for ${emp.name}: ${profileImage}`);
             profileImage = null; // Invalid URL format
           }
           

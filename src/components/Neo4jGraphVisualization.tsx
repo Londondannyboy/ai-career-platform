@@ -245,6 +245,41 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
     const net = new Network(containerRef.current, { nodes, edges }, options)
     setNetwork(net)
 
+    // Add click handlers for individual profiles
+    net.on('click', async (params) => {
+      if (params.nodes.length > 0) {
+        const nodeId = params.nodes[0];
+        console.log('Clicked node:', nodeId);
+        
+        // If it's an employee node, try to drill down
+        if (nodeId.startsWith('emp-')) {
+          const employeeIndex = parseInt(nodeId.replace('emp-', ''));
+          const employee = data.employees?.[employeeIndex];
+          
+          if (employee && employee.linkedinUrl) {
+            console.log('Drilling down into employee profile:', employee.name);
+            // Here we would expand to show this person's network
+            // For now, just highlight the node
+            net.selectNodes([nodeId]);
+            
+            // TODO: Implement profile drill-down
+            // - Fetch employee's network from DataMagnet/LinkedIn
+            // - Show recommendations and connections
+            // - Add new nodes and edges for their network
+            
+            alert(`Profile drill-down for ${employee.name}\nLinkedIn: ${employee.linkedinUrl}\n\nThis will show their professional network with recommendations like Phil Agathangelou's connections.`);
+          }
+        }
+      }
+    });
+
+    // Add hover effects
+    net.on('hoverNode', (params) => {
+      const nodeId = params.node;
+      console.log('Hovering node:', nodeId);
+      // Could add tooltip or highlight connections
+    });
+
     // Stabilize and fit
     net.once('stabilizationIterationsDone', () => {
       net.fit({ animation: true })
