@@ -28,6 +28,8 @@ const isPublicRoute = createRouteMatcher([
   '/api/test/apollo-debug',
   '/api/test/apollo-simple',
   '/api/enrich/company',
+  '/api/enrich/company-smart',
+  '/api/enrich/companies',
   '/api/demo/(.*)'
 ]);
 
