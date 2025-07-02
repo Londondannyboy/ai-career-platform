@@ -116,7 +116,7 @@ class WorkspaceService {
         data.displayName,
         data.description || `Intelligence workspace for ${data.companyName}`,
         data.ownerId,
-        JSON.stringify([]), // Empty collaborators array
+        '[]', // Empty collaborators array  
         data.accessLevel || 'private',
         JSON.stringify(defaultSettings)
       ]
@@ -657,17 +657,22 @@ Return as JSON array: ["question1", "question2", "question3"]`,
   }
 
   private mapRowToWorkspace(row: any): CompanyWorkspace {
-    return {
-      id: row.id,
-      companyName: row.company_name,
-      displayName: row.display_name,
-      description: row.description,
-      ownerId: row.owner_id,
-      collaborators: JSON.parse(row.collaborators || '[]'),
-      accessLevel: row.access_level,
-      settings: JSON.parse(row.settings || '{}'),
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at)
+    try {
+      return {
+        id: row.id,
+        companyName: row.company_name,
+        displayName: row.display_name,
+        description: row.description,
+        ownerId: row.owner_id,
+        collaborators: Array.isArray(row.collaborators) ? row.collaborators : JSON.parse(row.collaborators || '[]'),
+        accessLevel: row.access_level,
+        settings: typeof row.settings === 'object' ? row.settings : JSON.parse(row.settings || '{}'),
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at)
+      }
+    } catch (error) {
+      console.error('❌ Error mapping workspace row:', error, 'Row data:', row)
+      throw new Error(`Failed to parse workspace data: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 }
