@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +35,8 @@ export default function CompanyGraphVisualization({
   const [isLoading, setIsLoading] = useState(false);
   const [showGraph, setShowGraph] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const networkRef = useRef<HTMLDivElement>(null);
+  const networkInstance = useRef<any>(null);
 
   useEffect(() => {
     if (employees.length > 0) {
@@ -42,6 +44,95 @@ export default function CompanyGraphVisualization({
       generateGraphData();
     }
   }, [employees]);
+
+  useEffect(() => {
+    if (graphData && networkRef.current && showGraph) {
+      renderNetwork();
+    }
+  }, [graphData, showGraph]);
+
+  // Cleanup network instance on unmount
+  useEffect(() => {
+    return () => {
+      if (networkInstance.current) {
+        networkInstance.current.destroy();
+      }
+    };
+  }, []);
+
+  const renderNetwork = async () => {
+    if (!networkRef.current || !graphData) return;
+
+    try {
+      // Dynamically import vis-network to avoid SSR issues
+      const { Network } = await import('vis-network/standalone');
+      const { DataSet } = await import('vis-data/standalone');
+
+      // Convert graph data to vis.js format
+      const nodes = new DataSet(graphData.nodes.map(node => ({
+        id: node.id,
+        label: node.label,
+        color: node.properties.color,
+        size: node.properties.size || 20,
+        font: { size: 12, color: '#333' },
+        borderWidth: 2,
+        shadow: true
+      })));
+
+      const edges = new DataSet(graphData.edges.map(edge => ({
+        from: edge.from,
+        to: edge.to,
+        label: edge.label,
+        arrows: 'to',
+        color: { color: '#848484' },
+        font: { size: 10 }
+      })));
+
+      const data = { nodes, edges };
+      const options = {
+        layout: {
+          improvedLayout: true,
+          hierarchical: {
+            direction: 'UD',
+            sortMethod: 'directed',
+            levelSeparation: 100,
+            nodeSpacing: 150
+          }
+        },
+        physics: {
+          enabled: true,
+          stabilization: { iterations: 100 }
+        },
+        nodes: {
+          shape: 'dot',
+          borderWidth: 2,
+          shadow: true,
+          font: { size: 12 }
+        },
+        edges: {
+          width: 2,
+          shadow: true,
+          smooth: { type: 'continuous' }
+        },
+        interaction: {
+          hover: true,
+          tooltipDelay: 200
+        }
+      };
+
+      // Destroy existing network
+      if (networkInstance.current) {
+        networkInstance.current.destroy();
+      }
+
+      // Create new network
+      networkInstance.current = new Network(networkRef.current, data, options);
+
+    } catch (error) {
+      console.error('Error rendering network:', error);
+      setError('Failed to render graph visualization');
+    }
+  };
 
   const generateGraphData = async () => {
     setIsLoading(true);
@@ -263,30 +354,39 @@ export default function CompanyGraphVisualization({
               </div>
             </div>
 
-            {/* Graph Visualization Preview */}
-            <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center bg-gray-50">
-              <Network className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Neo4j Graph Visualization
-              </h3>
-              <p className="text-gray-600 mb-4">
-                {stats.total} nodes and {graphData?.edges.length} relationships ready for visualization
-              </p>
-              
-              {/* Show sample data structure */}
-              <div className="text-left bg-white p-4 rounded border max-w-md mx-auto">
-                <p className="font-medium text-sm mb-2">Sample Relationships:</p>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <p>• {companyName} → HAS_DEPARTMENT → {stats.departments} departments</p>
-                  <p>• {stats.people} people → WORKS_AT → {companyName}</p>
-                  <p>• {stats.linkedInProfiles} LinkedIn profiles for outreach</p>
-                </div>
+            {/* Interactive Graph Visualization */}
+            <div className="border rounded-lg bg-white">
+              <div className="p-4 border-b bg-gray-50">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Interactive Company Network
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {stats.total} nodes and {graphData?.edges.length} relationships • Hover nodes for details
+                </p>
               </div>
-
-              <div className="mt-4 flex gap-2 justify-center">
-                <Badge variant="outline">Ready for Neo4j</Badge>
-                <Badge variant="outline">LinkedIn URLs Available</Badge>
-                <Badge variant="outline">Hierarchy Mapped</Badge>
+              
+              {/* Vis.js Network Container */}
+              <div 
+                ref={networkRef}
+                className="w-full"
+                style={{ height: '500px' }}
+              />
+              
+              {/* Sample relationships info */}
+              <div className="p-4 border-t bg-gray-50">
+                <div className="text-left">
+                  <p className="font-medium text-sm mb-2">Network Structure:</p>
+                  <div className="space-y-1 text-xs text-gray-600">
+                    <p>• {companyName} → HAS_DEPARTMENT → {stats.departments} departments</p>
+                    <p>• {stats.people} people → WORKS_AT → {companyName}</p>
+                    <p>• {stats.linkedInProfiles} LinkedIn profiles for outreach</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <Badge variant="outline">Interactive Graph</Badge>
+                  <Badge variant="outline">LinkedIn URLs Available</Badge>
+                  <Badge variant="outline">Hierarchy Mapped</Badge>
+                </div>
               </div>
             </div>
 
