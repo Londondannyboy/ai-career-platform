@@ -22,7 +22,8 @@ import {
   Loader2,
   Download,
   ExternalLink,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react'
 import { CompanyWorkspace, WorkspaceDocument, WorkspaceChat } from '@/lib/documents/workspaceService'
 
@@ -276,6 +277,32 @@ export default function WorkspacePage() {
     }
   }
 
+  const handleDeleteDocument = async (documentId: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      console.log('🗑️ Deleting document:', documentId)
+      const response = await fetch(`/api/workspace/${workspaceId}/document/${documentId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        console.log('✅ Document deleted successfully')
+        // Refresh documents list
+        setDocuments(prev => prev.filter(doc => doc.id !== documentId))
+      } else {
+        const errorText = await response.text()
+        console.error('Failed to delete document:', response.status, errorText)
+        alert(`Failed to delete document: ${response.status}`)
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error)
+      alert(`Error deleting document: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
   const getDocumentTypeColor = (type: string) => {
     const colors = {
       'product_spec': 'bg-blue-100 text-blue-800',
@@ -458,6 +485,15 @@ export default function WorkspacePage() {
                                 title="View document"
                               >
                                 <ExternalLink className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleDeleteDocument(doc.id, doc.title)}
+                                title="Delete document"
+                                className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                              >
+                                <X className="h-4 w-4" />
                               </Button>
                             </div>
                           </div>
@@ -772,7 +808,7 @@ export default function WorkspacePage() {
 
               <div className="mt-4 text-xs text-gray-500">
                 <p>Uploaded: {formatTimeAgo(selectedDocument.createdAt)}</p>
-                <p>Size: {selectedDocument.fileSize ? `${Math.round(selectedDocument.fileSize / 1024)} KB` : 'Unknown'}</p>
+                <p>Type: {selectedDocument.fileType}</p>
               </div>
             </div>
 

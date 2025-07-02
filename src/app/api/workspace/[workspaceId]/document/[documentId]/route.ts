@@ -58,7 +58,7 @@ export async function GET(
       const documentQuery = `
         SELECT 
           id, title, full_content, content_preview, document_type, 
-          file_type, file_size, uploaded_by, tags, auto_tags,
+          file_type, uploaded_by, tags, auto_tags,
           access_level, created_at
         FROM company_documents 
         WHERE id = $1 AND workspace_id = $2
@@ -83,7 +83,6 @@ export async function GET(
           contentPreview: doc.content_preview,
           documentType: doc.document_type,
           fileType: doc.file_type,
-          fileSize: doc.file_size,
           uploadedBy: doc.uploaded_by,
           tags: Array.isArray(doc.tags) ? doc.tags : (doc.tags ? JSON.parse(doc.tags) : []),
           autoTags: Array.isArray(doc.auto_tags) ? doc.auto_tags : (doc.auto_tags ? JSON.parse(doc.auto_tags) : []),
