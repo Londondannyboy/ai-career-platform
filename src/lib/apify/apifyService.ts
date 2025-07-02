@@ -327,7 +327,11 @@ export class ApifyService {
    * Legacy method - kept for backward compatibility
    */
   private transformApifyProfileData(apifyData: any): LinkedInProfile {
-    return this.transformHarvestAPIData(apifyData);
+    const transformed = this.transformHarvestAPIData(apifyData);
+    if (!transformed) {
+      throw new Error('Failed to transform Apify profile data');
+    }
+    return transformed;
   }
 
   /**
