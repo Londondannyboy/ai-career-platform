@@ -187,15 +187,21 @@ export default function WorkspacePage() {
     return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800'
   }
 
-  const formatTimeAgo = (date: Date) => {
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`
-    return `${Math.floor(diffMins / 1440)}d ago`
+  const formatTimeAgo = (date: Date | string) => {
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date
+      const now = new Date()
+      const diffMs = now.getTime() - dateObj.getTime()
+      const diffMins = Math.floor(diffMs / 60000)
+      
+      if (diffMins < 1) return 'Just now'
+      if (diffMins < 60) return `${diffMins}m ago`
+      if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`
+      return `${Math.floor(diffMins / 1440)}d ago`
+    } catch (error) {
+      console.error('Error formatting date:', error)
+      return 'Unknown time'
+    }
   }
 
   if (isLoading) {
@@ -315,33 +321,44 @@ export default function WorkspacePage() {
               <CardContent>
                 {documents.length > 0 ? (
                   <div className="space-y-3">
-                    {documents.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                        <div className="flex items-center space-x-3">
-                          <FileText className="h-5 w-5 text-gray-500" />
-                          <div>
-                            <h4 className="font-medium text-gray-900">{doc.title}</h4>
-                            <div className="flex items-center space-x-2 text-sm text-gray-600">
-                              <Badge className={getDocumentTypeColor(doc.documentType)}>
-                                {doc.documentType.replace('_', ' ')}
-                              </Badge>
-                              <span>•</span>
-                              <span>{formatTimeAgo(doc.createdAt)}</span>
-                              <span>•</span>
-                              <span>by {doc.uploaderName || 'Unknown'}</span>
+                    {documents.map((doc, index) => {
+                      try {
+                        return (
+                          <div key={doc.id || `doc-${index}`} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                            <div className="flex items-center space-x-3">
+                              <FileText className="h-5 w-5 text-gray-500" />
+                              <div>
+                                <h4 className="font-medium text-gray-900">{doc.title || 'Untitled Document'}</h4>
+                                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                                  <Badge className={getDocumentTypeColor(doc.documentType || 'unknown')}>
+                                    {(doc.documentType || 'unknown').replace('_', ' ')}
+                                  </Badge>
+                                  <span>•</span>
+                                  <span>{formatTimeAgo(doc.createdAt)}</span>
+                                  <span>•</span>
+                                  <span>by {doc.uploaderName || 'Unknown'}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Button variant="ghost" size="sm">
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                        )
+                      } catch (renderError) {
+                        console.error('Error rendering document:', renderError, doc)
+                        return (
+                          <div key={`error-${index}`} className="p-3 border rounded-lg bg-red-50">
+                            <p className="text-red-600 text-sm">Error loading document {index + 1}</p>
+                          </div>
+                        )
+                      }
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">

@@ -265,19 +265,38 @@ class WorkspaceService {
         client.release()
       }
       
-      return result.rows.map(row => ({
-        id: row.id,
-        title: row.title,
-        documentType: row.document_type,
-        fileType: row.file_type,
-        uploadedBy: row.uploaded_by,
-        uploaderName: row.uploader_name,
-        tags: row.tags || [],
-        autoTags: row.auto_tags || [],
-        accessLevel: row.access_level,
-        createdAt: new Date(row.created_at),
-        contentPreview: row.content_preview
-      }))
+      return result.rows.map((row, index) => {
+        try {
+          return {
+            id: row.id,
+            title: row.title || 'Untitled',
+            documentType: row.document_type || 'unknown',
+            fileType: row.file_type || 'unknown',
+            uploadedBy: row.uploaded_by || 'unknown',
+            uploaderName: row.uploader_name || row.uploaded_by || 'Unknown User',
+            tags: Array.isArray(row.tags) ? row.tags : (row.tags ? JSON.parse(row.tags) : []),
+            autoTags: Array.isArray(row.auto_tags) ? row.auto_tags : (row.auto_tags ? JSON.parse(row.auto_tags) : []),
+            accessLevel: row.access_level || 'team',
+            createdAt: new Date(row.created_at),
+            contentPreview: (row.content_preview || '').substring(0, 200)
+          }
+        } catch (parseError) {
+          console.error(`❌ Error parsing document ${index}:`, parseError, 'Row data:', row)
+          return {
+            id: row.id || `error-${index}`,
+            title: `Document ${index + 1}`,
+            documentType: 'unknown',
+            fileType: 'unknown',
+            uploadedBy: 'unknown',
+            uploaderName: 'Unknown User',
+            tags: [],
+            autoTags: [],
+            accessLevel: 'team',
+            createdAt: new Date(),
+            contentPreview: 'Error loading document data'
+          }
+        }
+      })
       
     } catch (error) {
       console.error('❌ Failed to get workspace documents:', error)
