@@ -1,10 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Network, Users, Building2, Eye, EyeOff, Loader2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const Neo4jGraphVisualization = dynamic(() => import('@/components/Neo4jGraphVisualization'), {
+  ssr: false,
+  loading: () => <div className="h-96 flex items-center justify-center text-gray-500">Loading Neo4j graph...</div>
+});
 
 interface GraphNode {
   id: string;
@@ -31,243 +37,80 @@ export default function CompanyGraphVisualization({
   employees = [],
   className = "" 
 }: GraphVisualizationProps) {
-  const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] } | null>(null);
+  const [neo4jData, setNeo4jData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showGraph, setShowGraph] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const networkRef = useRef<HTMLDivElement>(null);
-  const networkInstance = useRef<any>(null);
 
   useEffect(() => {
     if (employees.length > 0) {
       setShowGraph(true);
-      generateGraphData();
+      convertToNeo4jFormat();
     }
   }, [employees]);
 
-  useEffect(() => {
-    if (graphData && networkRef.current && showGraph) {
-      renderNetwork();
-    }
-  }, [graphData, showGraph]);
-
-  // Cleanup network instance on unmount
-  useEffect(() => {
-    return () => {
-      if (networkInstance.current) {
-        networkInstance.current.destroy();
-      }
-    };
-  }, []);
-
-  const renderNetwork = async () => {
-    if (!networkRef.current || !graphData) return;
-
-    try {
-      // Dynamically import vis-network to avoid SSR issues
-      const { Network } = await import('vis-network/standalone');
-      const { DataSet } = await import('vis-data/standalone');
-
-      // Convert graph data to vis.js format
-      const nodes = new DataSet(graphData.nodes.map(node => ({
-        id: node.id,
-        label: node.label,
-        color: node.properties.color,
-        size: node.properties.size || 20,
-        font: { size: 12, color: '#333' },
-        borderWidth: 2,
-        shadow: true
-      })));
-
-      const edges = new DataSet(graphData.edges.map(edge => ({
-        from: edge.from,
-        to: edge.to,
-        label: edge.label,
-        arrows: 'to',
-        color: { color: '#848484' },
-        font: { size: 10 }
-      })));
-
-      const data = { nodes, edges };
-      const options = {
-        layout: {
-          improvedLayout: true,
-          hierarchical: {
-            direction: 'UD',
-            sortMethod: 'directed',
-            levelSeparation: 100,
-            nodeSpacing: 150
-          }
-        },
-        physics: {
-          enabled: true,
-          stabilization: { iterations: 100 }
-        },
-        nodes: {
-          shape: 'dot',
-          borderWidth: 2,
-          shadow: true,
-          font: { size: 12 }
-        },
-        edges: {
-          width: 2,
-          shadow: true,
-          smooth: { type: 'continuous' }
-        },
-        interaction: {
-          hover: true,
-          tooltipDelay: 200
-        }
-      };
-
-      // Destroy existing network
-      if (networkInstance.current) {
-        networkInstance.current.destroy();
-      }
-
-      // Create new network
-      networkInstance.current = new Network(networkRef.current, data, options);
-
-    } catch (error) {
-      console.error('Error rendering network:', error);
-      setError('Failed to render graph visualization');
-    }
-  };
-
-  const generateGraphData = async () => {
+  const convertToNeo4jFormat = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Generate nodes and edges from employee data
-      const nodes: GraphNode[] = [];
-      const edges: GraphEdge[] = [];
-
-      // Add company node
-      nodes.push({
-        id: `company_${companyName.toLowerCase().replace(/\s+/g, '_')}`,
-        label: companyName,
-        type: 'company',
-        properties: {
-          employeeCount: employees.length,
-          color: '#2563eb',
-          size: 30
+      // Convert Apollo employee data to Neo4j format
+      const neo4jFormat = {
+        company: {
+          name: companyName,
+          industry: 'Technology', // Could be extracted from Apollo data
+          employees: employees.length
+        },
+        employees: employees.map(emp => ({
+          name: emp.name || emp.full_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim(),
+          title: emp.title || emp.currentPosition || emp.headline,
+          department: emp.departments?.[0] || emp.department,
+          seniority: emp.seniority,
+          profileImage: emp.photo_url,
+          linkedinUrl: emp.linkedin_url || emp.linkedinUrl
+        })).filter(emp => emp.name && emp.name !== ''),
+        relationships: {
+          // Group employees by department for clustering
+          departments: employees.reduce((depts: any, emp: any) => {
+            const dept = emp.departments?.[0] || emp.department || 'Other';
+            if (!depts[dept]) depts[dept] = [];
+            depts[dept].push({
+              name: emp.name || emp.full_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim(),
+              title: emp.title || emp.currentPosition,
+              seniority: emp.seniority
+            });
+            return depts;
+          }, {})
         }
-      });
+      };
 
-      // Add department nodes
-      const departments = new Map<string, number>();
-      employees.forEach(emp => {
-        const depts = emp.departments || emp.department || [];
-        const deptArray = Array.isArray(depts) ? depts : [depts].filter(Boolean);
-        deptArray.forEach((dept: string) => {
-          if (dept && dept !== '') {
-            departments.set(dept, (departments.get(dept) || 0) + 1);
-          }
-        });
-      });
+      setNeo4jData(neo4jFormat);
 
-      // Create department nodes
-      departments.forEach((count, deptName) => {
-        const deptId = `dept_${deptName.toLowerCase().replace(/\s+/g, '_')}`;
-        nodes.push({
-          id: deptId,
-          label: deptName.replace('master_', '').replace(/_/g, ' '),
-          type: 'department',
-          properties: {
-            employeeCount: count,
-            color: '#7c3aed',
-            size: Math.min(20 + count * 2, 40)
-          }
-        });
-
-        // Connect department to company
-        edges.push({
-          from: `company_${companyName.toLowerCase().replace(/\s+/g, '_')}`,
-          to: deptId,
-          type: 'HAS_DEPARTMENT',
-          label: `${count} employees`
-        });
-      });
-
-      // Add key people (decision makers and notable profiles)
-      const keyPeople = employees
-        .filter(emp => 
-          ['c_suite', 'vp', 'director'].includes(emp.seniority) || 
-          emp.linkedinUrl || emp.linkedin_url
-        )
-        .slice(0, 15); // Limit to avoid overcrowding
-
-      keyPeople.forEach(person => {
-        const personName = person.name || person.full_name || person.first_name + ' ' + person.last_name || 'Unknown';
-        const personId = `person_${person.id || personName.toLowerCase().replace(/\s+/g, '_')}`;
-        
-        nodes.push({
-          id: personId,
-          label: personName,
-          type: 'person',
-          properties: {
-            title: person.title || person.currentPosition,
-            seniority: person.seniority,
-            hasLinkedIn: !!(person.linkedin_url || person.linkedinUrl),
-            color: person.seniority === 'c_suite' ? '#dc2626' : 
-                   person.seniority === 'vp' ? '#ea580c' :
-                   person.seniority === 'director' ? '#ca8a04' : '#059669',
-            size: person.seniority === 'c_suite' ? 25 : 
-                  person.seniority === 'vp' ? 20 : 15
-          }
-        });
-
-        // Connect person to company
-        edges.push({
-          from: `company_${companyName.toLowerCase().replace(/\s+/g, '_')}`,
-          to: personId,
-          type: 'WORKS_AT',
-          label: person.title || person.currentPosition
-        });
-
-        // Connect person to departments
-        const personDepts = person.departments || person.department || [];
-        const personDeptArray = Array.isArray(personDepts) ? personDepts : [personDepts].filter(Boolean);
-        personDeptArray.forEach((dept: string) => {
-          if (dept && dept !== '') {
-            const deptId = `dept_${dept.toLowerCase().replace(/\s+/g, '_')}`;
-            if (departments.has(dept)) {
-              edges.push({
-                from: personId,
-                to: deptId,
-                type: 'MEMBER_OF'
-              });
-            }
-          }
-        });
-      });
-
-      setGraphData({ nodes, edges });
-
-      // If we have actual Neo4j integration, we could send data there
-      // await sendToNeo4j({ nodes, edges });
-
-    } catch (err) {
-      console.error('Error generating graph data:', err);
-      setError('Failed to generate graph visualization');
+    } catch (error) {
+      console.error('Error converting to Neo4j format:', error);
+      setError('Failed to convert graph data');
     } finally {
       setIsLoading(false);
     }
   };
 
   const getGraphStats = () => {
-    if (!graphData) return null;
+    if (!neo4jData) return null;
 
-    const companies = graphData.nodes.filter(n => n.type === 'company').length;
-    const people = graphData.nodes.filter(n => n.type === 'person').length;
-    const departments = graphData.nodes.filter(n => n.type === 'department').length;
-    const linkedInProfiles = graphData.nodes.filter(n => 
-      n.type === 'person' && n.properties.hasLinkedIn
-    ).length;
+    const companies = 1; // Always 1 company
+    const people = neo4jData.employees?.length || 0;
+    const departments = Object.keys(neo4jData.relationships?.departments || {}).length;
+    const linkedInProfiles = neo4jData.employees?.filter((emp: any) => emp.linkedinUrl).length || 0;
 
-    return { companies, people, departments, linkedInProfiles, total: graphData.nodes.length };
+    return { 
+      companies, 
+      people, 
+      departments, 
+      linkedInProfiles, 
+      total: 1 + people + departments // Company + people + departments
+    };
   };
+
 
   const stats = getGraphStats();
 
@@ -354,38 +197,40 @@ export default function CompanyGraphVisualization({
               </div>
             </div>
 
-            {/* Interactive Graph Visualization */}
+            {/* Neo4j Graph Visualization */}
             <div className="border rounded-lg bg-white">
               <div className="p-4 border-b bg-gray-50">
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Interactive Company Network
+                  🕸️ Neo4j Company Network
                 </h3>
                 <p className="text-sm text-gray-600">
-                  {stats.total} nodes and {graphData?.edges.length} relationships • Hover nodes for details
+                  Interactive graph visualization • {stats.total} nodes • Drag and explore relationships
                 </p>
               </div>
               
-              {/* Vis.js Network Container */}
-              <div 
-                ref={networkRef}
-                className="w-full"
-                style={{ height: '500px' }}
-              />
+              {/* Neo4j Network Component */}
+              {neo4jData && (
+                <Neo4jGraphVisualization 
+                  data={neo4jData} 
+                  height="500px"
+                />
+              )}
               
-              {/* Sample relationships info */}
+              {/* Network structure info */}
               <div className="p-4 border-t bg-gray-50">
                 <div className="text-left">
                   <p className="font-medium text-sm mb-2">Network Structure:</p>
                   <div className="space-y-1 text-xs text-gray-600">
-                    <p>• {companyName} → HAS_DEPARTMENT → {stats.departments} departments</p>
-                    <p>• {stats.people} people → WORKS_AT → {companyName}</p>
+                    <p>• {companyName} → EMPLOYS → {stats.people} people</p>
+                    <p>• {stats.departments} departments with team clusters</p>
                     <p>• {stats.linkedInProfiles} LinkedIn profiles for outreach</p>
                   </div>
                 </div>
                 <div className="mt-3 flex gap-2">
-                  <Badge variant="outline">Interactive Graph</Badge>
+                  <Badge variant="outline">Neo4j Powered</Badge>
                   <Badge variant="outline">LinkedIn URLs Available</Badge>
-                  <Badge variant="outline">Hierarchy Mapped</Badge>
+                  <Badge variant="outline">Company Hierarchy</Badge>
+                  <Badge variant="outline">Interactive Physics</Badge>
                 </div>
               </div>
             </div>
