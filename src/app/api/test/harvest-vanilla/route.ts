@@ -34,12 +34,12 @@ export async function GET(request: NextRequest) {
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
     
     // Return minimal processed data
-    const simpleResults = items.map(item => ({
+    const simpleResults = items.map((item: any) => ({
       name: `${item.firstName || ''} ${item.lastName || ''}`.trim(),
       title: item.headline || 'No title',
       url: item.linkedinUrl || '#',
-      hasRecommendations: item.receivedRecommendations?.length > 0,
-      recommendationCount: item.receivedRecommendations?.length || 0
+      hasRecommendations: Array.isArray(item.receivedRecommendations) && item.receivedRecommendations.length > 0,
+      recommendationCount: Array.isArray(item.receivedRecommendations) ? item.receivedRecommendations.length : 0
     }));
     
     return NextResponse.json({
