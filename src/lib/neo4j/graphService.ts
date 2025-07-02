@@ -216,7 +216,7 @@ class GraphService {
     graphData: GraphData
   }> {
     // This would get documents from the workspace
-    const documents = [] // Would fetch from workspaceService
+    const documents: any[] = [] // Would fetch from workspaceService
     
     const graphData = await this.convertDocumentsToGraph(workspaceId, documents)
     
