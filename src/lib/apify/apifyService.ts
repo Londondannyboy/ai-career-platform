@@ -696,7 +696,7 @@ export class ApifyService {
 // Configuration and factory - Updated to force redeploy
 export function createApifyService(): ApifyService | null {
   const token = process.env.APIFY_TOKEN;
-  const actorId = process.env.APIFY_HARVEST_ACTOR_ID || 'harvestapi/linkedin-profile-search';
+  const actorId = process.env.APIFY_HARVEST_ACTOR_ID || 'M2FMdjRVeF1HPGFcc';
 
   console.log('🔧 Apify Service Configuration:', {
     hasToken: !!token,
