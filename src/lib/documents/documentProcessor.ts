@@ -100,7 +100,8 @@ class DocumentProcessingService {
       console.log(`🏷️ Generated ${autoTags.length} auto-tags`)
       
       // 5. Generate embedding for the full document
-      const embedding = await embeddingsService.generateEmbedding(textContent)
+      const embeddingResult = await embeddingsService.generateEmbedding(textContent)
+      const embedding = embeddingResult.embedding
       console.log(`🔢 Generated embedding vector`)
       
       // 6. Upload file to storage (simulate with timestamp for now)
@@ -386,7 +387,8 @@ Return as a JSON array: ["tag1", "tag2", "tag3"]`,
   ): Promise<void> {
     for (const chunk of chunks) {
       // Generate embedding for each chunk
-      const embedding = await embeddingsService.generateEmbedding(chunk.content)
+      const embeddingResult = await embeddingsService.generateEmbedding(chunk.content)
+      const embedding = embeddingResult.embedding
       
       const query = `
         INSERT INTO document_embeddings (
