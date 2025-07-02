@@ -73,6 +73,9 @@ export default function CreateCompanyModal({
       return
     }
 
+    console.log('🔍 Debug - User authenticated:', !!user)
+    console.log('🔍 Debug - User ID:', user.id)
+
     // Validation
     if (!formData.companyName.trim()) {
       setError('Company name is required')
@@ -96,6 +99,13 @@ export default function CreateCompanyModal({
       // Use LinkedIn URL as company identifier if provided, otherwise use display name
       const companyIdentifier = formData.linkedinUrl || formData.companyName
 
+      console.log('🔍 Debug - Sending request with data:', {
+        companyName: companyIdentifier,
+        displayName: formData.displayName,
+        description: formData.description,
+        accessLevel: formData.accessLevel
+      })
+
       const response = await fetch('/api/workspace/create', {
         method: 'POST',
         headers: {
@@ -109,8 +119,12 @@ export default function CreateCompanyModal({
         }),
       })
 
+      console.log('🔍 Debug - Response status:', response.status)
+      console.log('🔍 Debug - Response ok:', response.ok)
+
       if (!response.ok) {
         const errorData = await response.json()
+        console.log('🔍 Debug - Error response:', errorData)
         throw new Error(errorData.error || 'Failed to create workspace')
       }
 

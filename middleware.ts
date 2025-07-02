@@ -13,7 +13,9 @@ const isPublicRoute = createRouteMatcher([
   '/api-status',
   '/datamagnet-insights',
   '/company-insights',
-  '/graph-insights'
+  '/graph-insights',
+  '/api/workspace/create',
+  '/api/workspace/list'
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
