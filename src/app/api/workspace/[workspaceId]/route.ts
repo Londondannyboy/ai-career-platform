@@ -10,7 +10,7 @@ export const runtime = 'nodejs'
  */
 export async function GET(
   request: Request,
-  { params }: { params: { workspaceId: string } }
+  context: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     const { userId } = auth()
@@ -22,7 +22,7 @@ export async function GET(
       )
     }
 
-    const { workspaceId } = params
+    const { workspaceId } = await context.params
 
     console.log(`📁 Getting workspace ${workspaceId} for user ${userId}`)
 
@@ -77,7 +77,7 @@ export async function GET(
  */
 export async function PATCH(
   request: Request,
-  { params }: { params: { workspaceId: string } }
+  context: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     const { userId } = auth()
@@ -89,7 +89,7 @@ export async function PATCH(
       )
     }
 
-    const { workspaceId } = params
+    const { workspaceId } = await context.params
     const body = await request.json()
     const { settings } = body
 
@@ -125,7 +125,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: { workspaceId: string } }
+  context: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     const { userId } = auth()
@@ -137,7 +137,7 @@ export async function DELETE(
       )
     }
 
-    const { workspaceId } = params
+    const { workspaceId } = await context.params
 
     console.log(`🗑️ Deleting workspace ${workspaceId}`)
 

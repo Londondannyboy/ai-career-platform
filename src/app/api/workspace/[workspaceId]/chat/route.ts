@@ -10,7 +10,7 @@ export const runtime = 'nodejs'
  */
 export async function POST(
   request: Request,
-  { params }: { params: { workspaceId: string } }
+  context: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     const { userId } = auth()
@@ -22,7 +22,7 @@ export async function POST(
       )
     }
 
-    const { workspaceId } = params
+    const { workspaceId } = await context.params
     const body = await request.json()
     const { query } = body
 
@@ -83,7 +83,7 @@ export async function POST(
  */
 export async function GET(
   request: Request,
-  { params }: { params: { workspaceId: string } }
+  context: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     const { userId } = auth()
@@ -95,7 +95,7 @@ export async function GET(
       )
     }
 
-    const { workspaceId } = params
+    const { workspaceId } = await context.params
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '20')
 

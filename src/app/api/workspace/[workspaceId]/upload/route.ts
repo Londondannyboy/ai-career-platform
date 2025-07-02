@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
  */
 export async function POST(
   request: Request,
-  { params }: { params: { workspaceId: string } }
+  context: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     const { userId } = auth()
@@ -23,7 +23,7 @@ export async function POST(
       )
     }
 
-    const { workspaceId } = params
+    const { workspaceId } = await context.params
 
     // Parse multipart form data
     const formData = await request.formData()
@@ -135,7 +135,7 @@ export async function POST(
  */
 export async function GET(
   request: Request,
-  { params }: { params: { workspaceId: string } }
+  context: { params: Promise<{ workspaceId: string }> }
 ) {
   return NextResponse.json({
     status: 'operational',
