@@ -76,7 +76,7 @@ export default function CompanyGraphVisualization({
 
       console.log('Converting employees to Neo4j format:', employees.length, 'employees');
 
-      // Convert Apollo employee data to Neo4j format
+      // Convert HarvestAPI employee data to Neo4j format with rich relationships
       const validEmployees = employees
         .map(emp => {
           const name = emp.name || emp.full_name || 
@@ -84,10 +84,8 @@ export default function CompanyGraphVisualization({
           
           // Ensure profile image is a valid URL or null
           let profileImage = emp.photo_url || emp.profileImage;
-          console.log(`Employee ${emp.name}: photo_url="${emp.photo_url}", profileImage="${emp.profileImage}"`);
           
           if (profileImage && !profileImage.startsWith('http')) {
-            console.log(`Invalid image URL for ${emp.name}: ${profileImage}`);
             profileImage = null; // Invalid URL format
           }
           
@@ -97,21 +95,83 @@ export default function CompanyGraphVisualization({
             department: emp.departments?.[0] || emp.department || 'Other',
             seniority: emp.seniority || 'entry',
             profileImage,
-            linkedinUrl: emp.linkedin_url || emp.linkedinUrl
+            linkedinUrl: emp.linkedin_url || emp.linkedinUrl,
+            // Add recommendation data for relationship mapping
+            recommendations: emp.recommendations || [],
+            connections: emp.connections || [],
+            // Add relationship data if available
+            relationships: emp.relationships || []
           };
         })
         .filter(emp => emp.name && emp.name !== 'Unknown' && emp.name.length > 1);
 
       console.log('Valid employees after filtering:', validEmployees.length);
 
+      // Build rich relationship network from HarvestAPI data
+      const recommendationEdges: any[] = [];
+      const internalConnections: any[] = [];
+      
+      validEmployees.forEach(emp => {
+        // Process recommendations (internal connections)
+        if (emp.recommendations && emp.recommendations.length > 0) {
+          emp.recommendations.forEach((rec: any) => {
+            // Check if recommender is also in this company
+            const recommender = validEmployees.find(e => 
+              e.name.toLowerCase().includes(rec.recommenderName?.toLowerCase() || '') ||
+              rec.recommenderName?.toLowerCase().includes(e.name.toLowerCase())
+            );
+            
+            if (recommender) {
+              recommendationEdges.push({
+                from: recommender.name,
+                to: emp.name,
+                type: 'recommendation',
+                strength: rec.strength || 0.8,
+                context: rec.recommendationText || 'LinkedIn recommendation'
+              });
+              
+              internalConnections.push({
+                source: recommender.name,
+                target: emp.name,
+                relationship: 'recommended',
+                context: rec.recommendationText || ''
+              });
+            }
+          });
+        }
+        
+        // Process direct relationships if available
+        if (emp.relationships && emp.relationships.length > 0) {
+          emp.relationships.forEach((rel: any) => {
+            const target = validEmployees.find(e => 
+              e.name.toLowerCase().includes(rel.targetName?.toLowerCase() || '')
+            );
+            
+            if (target) {
+              recommendationEdges.push({
+                from: emp.name,
+                to: target.name,
+                type: rel.relationshipType || 'connection',
+                strength: rel.strength || 0.6,
+                context: rel.context || ''
+              });
+            }
+          });
+        }
+      });
+
+      console.log(`🔗 Built ${recommendationEdges.length} recommendation edges and ${internalConnections.length} internal connections`);
+
       const neo4jFormat = {
         company: {
           name: companyName,
           industry: 'Technology',
-          employees: validEmployees.length
+          employees: validEmployees.length,
+          totalRecommendations: recommendationEdges.length
         },
         employees: validEmployees,
         relationships: {
+          // Keep departmental groupings for fallback
           departments: validEmployees.reduce((depts: any, emp: any) => {
             const dept = emp.department || 'Other';
             if (!depts[dept]) depts[dept] = [];
@@ -121,7 +181,24 @@ export default function CompanyGraphVisualization({
               seniority: emp.seniority
             });
             return depts;
-          }, {})
+          }, {}),
+          // Add rich recommendation network
+          recommendations: recommendationEdges,
+          internalConnections: internalConnections,
+          // Add network metrics
+          networkMetrics: {
+            totalNodes: validEmployees.length,
+            totalEdges: recommendationEdges.length,
+            averageConnections: recommendationEdges.length > 0 ? 
+              (recommendationEdges.length * 2) / validEmployees.length : 0,
+            mostConnectedPerson: validEmployees.reduce((mostConnected, emp) => {
+              const connections = recommendationEdges.filter(edge => 
+                edge.from === emp.name || edge.to === emp.name
+              ).length;
+              return connections > (mostConnected.connections || 0) ? 
+                { name: emp.name, connections } : mostConnected;
+            }, { name: '', connections: 0 })
+          }
         }
       };
 
