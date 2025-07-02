@@ -158,7 +158,7 @@ function analyzeQueryIntent(query: string): string {
 }
 
 function extractSearchTerms(query: string): string[] {
-  const terms = [];
+  const terms: string[] = [];
   
   // Technology terms
   const techTerms = ['saas', 'fintech', 'ai', 'machine learning', 'blockchain', 'crypto', 'react', 'python', 'javascript', 'aws', 'azure', 'kubernetes'];
