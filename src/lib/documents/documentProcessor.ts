@@ -6,7 +6,15 @@
 import { openai } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 import { embeddingsService } from '../vector/embeddings'
-import { neonClient } from '../vector/neonClient'
+import { Pool } from 'pg'
+
+// Direct PostgreSQL connection for document storage
+const pool = new Pool({
+  connectionString: process.env.NEON_DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+})
 
 export interface DocumentMetadata {
   title: string
@@ -375,7 +383,12 @@ Return as a JSON array: ["tag1", "tag2", "tag3"]`,
       true
     ]
     
-    await neonClient.query(query, values)
+    const client = await pool.connect()
+    try {
+      await client.query(query, values)
+    } finally {
+      client.release()
+    }
   }
 
   /**
@@ -404,7 +417,12 @@ Return as a JSON array: ["tag1", "tag2", "tag3"]`,
         JSON.stringify(embedding) // Convert to JSON for storage
       ]
       
-      await neonClient.query(query, values)
+      const client = await pool.connect()
+    try {
+      await client.query(query, values)
+    } finally {
+      client.release()
+    }
     }
   }
 
@@ -452,7 +470,13 @@ Return as a JSON array: ["tag1", "tag2", "tag3"]`,
         options.limit || 10
       ]
       
-      const result = await neonClient.query(searchQuery, values)
+      const client = await pool.connect()
+      let result
+      try {
+        result = await client.query(searchQuery, values)
+      } finally {
+        client.release()
+      }
       
       // Group results by document and create search results
       const documentMap = new Map<string, DocumentSearchResult>()

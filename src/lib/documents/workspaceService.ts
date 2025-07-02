@@ -3,7 +3,15 @@
  * Manages document workspaces, access control, and collaboration
  */
 
-import { neonClient } from '../vector/neonClient'
+import { Pool } from 'pg'
+
+// Direct PostgreSQL connection for workspace management
+const pool = new Pool({
+  connectionString: process.env.NEON_DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+})
 import { getDocumentProcessor, DocumentSearchResult } from './documentProcessor'
 import { generateText } from 'ai'
 import { openai } from '@ai-sdk/openai'
@@ -113,7 +121,13 @@ class WorkspaceService {
         JSON.stringify(defaultSettings)
       ]
       
-      const result = await neonClient.query(query, values)
+      const client = await pool.connect()
+      let result
+      try {
+        result = await client.query(query, values)
+      } finally {
+        client.release()
+      }
       const row = result.rows[0]
       
       return this.mapRowToWorkspace(row)
@@ -135,7 +149,13 @@ class WorkspaceService {
         AND (owner_id = $2 OR $2 = ANY(collaborators::uuid[]))
       `
       
-      const result = await neonClient.query(query, [workspaceId, userId])
+      const client = await pool.connect()
+      let result
+      try {
+        result = await client.query(query, [workspaceId, userId])
+      } finally {
+        client.release()
+      }
       
       if (result.rows.length === 0) {
         return null
@@ -160,7 +180,13 @@ class WorkspaceService {
         ORDER BY updated_at DESC
       `
       
-      const result = await neonClient.query(query, [userId])
+      const client = await pool.connect()
+      let result
+      try {
+        result = await client.query(query, [userId])
+      } finally {
+        client.release()
+      }
       
       return result.rows.map(row => this.mapRowToWorkspace(row))
       
@@ -223,7 +249,13 @@ class WorkspaceService {
         ORDER BY cd.created_at DESC
       `
       
-      const result = await neonClient.query(query, [workspaceId])
+      const client = await pool.connect()
+      let result
+      try {
+        result = await client.query(query, [workspaceId])
+      } finally {
+        client.release()
+      }
       
       return result.rows.map(row => ({
         id: row.id,
@@ -469,7 +501,12 @@ Return as JSON array: ["question1", "question2", "question3"]`,
         data.processingTimeMs
       ]
       
-      await neonClient.query(query, values)
+      const client = await pool.connect()
+      try {
+        await client.query(query, values)
+      } finally {
+        client.release()
+      }
       
     } catch (error) {
       console.error('⚠️ Failed to store chat history:', error)
@@ -506,7 +543,13 @@ Return as JSON array: ["question1", "question2", "question3"]`,
         LIMIT $2
       `
       
-      const result = await neonClient.query(query, [workspaceId, limit])
+      const client = await pool.connect()
+      let result
+      try {
+        result = await client.query(query, [workspaceId, limit])
+      } finally {
+        client.release()
+      }
       
       return result.rows.map(row => ({
         id: row.id,
@@ -553,7 +596,12 @@ Return as JSON array: ["question1", "question2", "question3"]`,
         WHERE id = $1 AND owner_id = $2
       `
       
-      await neonClient.query(query, [workspaceId, ownerId, JSON.stringify(updatedSettings)])
+      const client = await pool.connect()
+      try {
+        await client.query(query, [workspaceId, ownerId, JSON.stringify(updatedSettings)])
+      } finally {
+        client.release()
+      }
       
     } catch (error) {
       console.error('❌ Failed to update workspace settings:', error)
@@ -571,7 +619,13 @@ Return as JSON array: ["question1", "question2", "question3"]`,
         WHERE id = $1 AND owner_id = $2
       `
       
-      const result = await neonClient.query(query, [workspaceId, ownerId])
+      const client = await pool.connect()
+      let result
+      try {
+        result = await client.query(query, [workspaceId, ownerId])
+      } finally {
+        client.release()
+      }
       
       if (result.rowCount === 0) {
         throw new Error('Workspace not found or access denied')
