@@ -4,7 +4,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getRelationshipEnrichmentService } from '@/lib/enrichment/relationshipEnrichmentService';
 import { createApifyService } from '@/lib/apify/apifyService';
 
 export async function POST(request: NextRequest) {
@@ -25,19 +24,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔥 Starting Apify-first enrichment for: ${companyIdentifier}`);
 
-    // Step 1: Resolve company identifier to LinkedIn employee URLs
-    const linkedInUrls = await resolveCompanyToLinkedInUrls(companyIdentifier, searchType, options);
-
-    if (!linkedInUrls || linkedInUrls.length === 0) {
-      return NextResponse.json(
-        { error: 'No LinkedIn profiles found for company' },
-        { status: 404 }
-      );
-    }
-
-    console.log(`📊 Found ${linkedInUrls.length} LinkedIn profiles to enrich`);
-
-    // Step 2: Run Apify HarvestAPI enrichment
+    // Step 1: Create Apify service
     const apifyService = createApifyService();
     if (!apifyService) {
       // Debug environment variables
@@ -62,42 +49,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Run HarvestAPI company enrichment directly
+    // Step 2: Run HarvestAPI company enrichment directly (no URL resolution needed)
+    console.log(`📊 Running HarvestAPI enrichment for company: ${companyIdentifier}`);
+    
     const networkData = await apifyService.enrichWithHarvestAPI(companyIdentifier, {
       maxEmployees: options.maxEmployees || 25
     });
 
-    // Step 3: Process with relationship enrichment service
-    const enrichmentService = getRelationshipEnrichmentService();
-    const enrichedNetwork = await enrichmentService.enrichCompanyNetwork(
-      networkData.companyName,
-      {
-        forceRefresh: options.forceRefresh || false,
-        maxEmployeesToEnrich: options.maxEmployees || 25,
-        prioritizeDecisionMakers: options.prioritizeDecisionMakers !== false
-      }
-    );
+    console.log(`✅ HarvestAPI returned ${networkData.employees.length} employees with rich data`);
+
+    // Step 3: Transform to Neo4j format directly from HarvestAPI data
+    const employees = networkData.employees.map(emp => ({
+      name: emp.name,
+      title: emp.headline,
+      linkedin_url: emp.profileUrl,
+      profileImage: null, // HarvestAPI doesn't provide profile images
+      summary: emp.summary,
+      experience: emp.experience,
+      education: emp.education,
+      skills: emp.skills,
+      recommendations: emp.recommendations,
+      connections: emp.connections
+    }));
 
     return NextResponse.json({
       success: true,
       data: {
-        companyName: enrichedNetwork.companyName,
+        companyName: networkData.companyName,
         enrichmentType: 'apify_harvest',
-        profilesEnriched: enrichedNetwork.enrichedEmployees.length,
-        networkAnalysis: enrichedNetwork.networkAnalysis,
-        socialIntelligence: enrichedNetwork.socialIntelligence,
-        lastEnriched: enrichedNetwork.lastEnriched,
+        profilesEnriched: networkData.employees.length,
+        networkAnalysis: {
+          internalConnections: networkData.internalConnections,
+          externalInfluencers: networkData.externalInfluencers,
+          connectionStrength: networkData.internalConnections.length > 0 ? 'strong' : 'weak'
+        },
+        socialIntelligence: networkData.socialIntelligence,
+        lastEnriched: new Date().toISOString(),
         // For Neo4j visualization
-        employees: enrichedNetwork.enrichedEmployees.map(emp => ({
-          name: emp.name,
-          title: emp.title,
-          linkedin_url: emp.linkedin_url,
-          profileImage: emp.linkedInProfile?.profileUrl ? 
-            `https://media.licdn.com/dms/image/v2/placeholder/profile-displayphoto-shrink_100_100/0/default.jpg` : 
-            null,
-          relationships: emp.relationships,
-          socialIntelligence: emp.socialIntelligence
-        }))
+        employees: employees
       }
     });
 

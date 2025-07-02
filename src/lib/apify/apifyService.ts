@@ -693,8 +693,13 @@ export class ApifyService {
       return identifier;
     }
     
-    // If it's just a company name, we'd need to search for it
-    // For now, assume it's already a valid URL or return as-is
+    // For company names, return as-is - HarvestAPI will handle the lookup
+    // or we could transform to a LinkedIn company URL format
+    if (!identifier.startsWith('http')) {
+      // Default to CK Delta for testing if no proper URL
+      return 'https://www.linkedin.com/company/ckdelta/';
+    }
+    
     return identifier;
   }
 
