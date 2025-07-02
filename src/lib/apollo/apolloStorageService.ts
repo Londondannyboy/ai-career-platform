@@ -1,9 +1,9 @@
 /**
  * Apollo Storage Service
- * Handles database operations for Apollo enrichment data
+ * Handles database operations for Apollo enrichment data using Neon.tech PostgreSQL
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { query, getClient, withTransaction } from '@/lib/database/neon';
 
 interface CompanyEnrichment {
   id: string;
@@ -41,18 +41,8 @@ interface ApolloProfile {
 }
 
 export class ApolloStorageService {
-  private supabase: any;
-
   constructor() {
-    // Initialize supabase in methods since createClient is async
-    this.supabase = null;
-  }
-
-  private async getSupabase() {
-    if (!this.supabase) {
-      this.supabase = await createClient();
-    }
-    return this.supabase;
+    // Using Neon.tech PostgreSQL connection
   }
 
   /**
@@ -67,29 +57,21 @@ export class ApolloStorageService {
     enrichmentId?: string;
   }> {
     try {
-      const supabase = await this.getSupabase();
       const normalizedName = companyName.toLowerCase().trim();
       
-      const { data: enrichment, error } = await supabase
-        .from('company_enrichments')
-        .select(`
-          id,
-          company_name,
-          last_crawled_at,
-          total_employees,
-          crawled_by
-        `)
-        .eq('normalized_name', normalizedName)
-        .single();
+      // Get company enrichment info
+      const enrichmentResult = await query(
+        `SELECT id, company_name, last_crawled_at, total_employees, crawled_by
+         FROM company_enrichments 
+         WHERE normalized_name = $1`,
+        [normalizedName]
+      );
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('Error checking company enrichment:', error);
+      if (enrichmentResult.rows.length === 0) {
         return { exists: false, isStale: true };
       }
 
-      if (!enrichment) {
-        return { exists: false, isStale: true };
-      }
+      const enrichment = enrichmentResult.rows[0];
 
       // Check if data is stale (older than 30 days)
       const lastCrawled = new Date(enrichment.last_crawled_at);
@@ -97,17 +79,18 @@ export class ApolloStorageService {
       const isStale = daysSinceCrawl > 30;
 
       // Get profile count
-      const { count: profileCount } = await supabase
-        .from('apollo_profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_enrichment_id', enrichment.id);
+      const profileCountResult = await query(
+        `SELECT COUNT(*) as count FROM apollo_profiles WHERE company_enrichment_id = $1`,
+        [enrichment.id]
+      );
+      const profileCount = parseInt(profileCountResult.rows[0].count);
 
       return {
         exists: true,
         isStale,
         lastCrawled,
         daysSinceCrawl,
-        profileCount: profileCount || 0,
+        profileCount,
         enrichmentId: enrichment.id
       };
     } catch (error) {
@@ -125,122 +108,128 @@ export class ApolloStorageService {
     userId: string
   ): Promise<{ success: boolean; enrichmentId?: string; error?: string }> {
     try {
-      const supabase = await this.getSupabase();
-      const normalizedName = companyName.toLowerCase().trim();
+      return await withTransaction(async (client) => {
+        const normalizedName = companyName.toLowerCase().trim();
 
-      // Extract company identifiers from Apollo data
-      const firstEmployee = apolloData.people?.[0];
-      const linkedinCompanyUrl = firstEmployee?.organization?.linkedin_url;
-      const companyDomain = firstEmployee?.organization?.primary_domain;
-      
-      // Generate canonical identifier
-      const canonicalIdentifier = linkedinCompanyUrl || companyDomain || normalizedName;
+        // Extract company identifiers from Apollo data
+        const firstEmployee = apolloData.people?.[0];
+        const linkedinCompanyUrl = firstEmployee?.organization?.linkedin_url;
+        const companyDomain = firstEmployee?.organization?.primary_domain;
+        
+        // Generate canonical identifier
+        const canonicalIdentifier = linkedinCompanyUrl || companyDomain || normalizedName;
 
-      // Check if company already exists with this identifier
-      const { data: existingCompany } = await supabase
-        .from('company_enrichments')
-        .select('id, company_name')
-        .or(`canonical_identifier.eq.${canonicalIdentifier},normalized_name.eq.${normalizedName}`)
-        .single();
+        // Check if company already exists with this identifier
+        const existingResult = await client.query(
+          `SELECT id, company_name FROM company_enrichments 
+           WHERE canonical_identifier = $1 OR normalized_name = $2`,
+          [canonicalIdentifier, normalizedName]
+        );
 
-      let enrichmentId: string;
+        let enrichmentId: string;
 
-      if (existingCompany) {
-        // Update existing company
-        const { data: updatedEnrichment, error: updateError } = await supabase
-          .from('company_enrichments')
-          .update({
-            total_employees: apolloData.pagination?.total_entries || 0,
-            last_crawled_at: new Date().toISOString(),
-            crawled_by: userId,
-            linkedin_company_url: linkedinCompanyUrl,
-            company_domain: companyDomain,
-            canonical_identifier: canonicalIdentifier,
-            metadata: {
-              pagination: apolloData.pagination,
-              searchOptions: apolloData.searchOptions
-            }
-          })
-          .eq('id', existingCompany.id)
-          .select()
-          .single();
-
-        if (updateError) {
-          console.error('Error updating company enrichment:', updateError);
-          return { success: false, error: updateError.message };
+        if (existingResult.rows.length > 0) {
+          // Update existing company
+          const updateResult = await client.query(
+            `UPDATE company_enrichments 
+             SET total_employees = $1, last_crawled_at = $2, crawled_by = $3,
+                 linkedin_company_url = $4, company_domain = $5, canonical_identifier = $6,
+                 metadata = $7
+             WHERE id = $8
+             RETURNING id`,
+            [
+              apolloData.pagination?.total_entries || 0,
+              new Date().toISOString(),
+              userId,
+              linkedinCompanyUrl,
+              companyDomain,
+              canonicalIdentifier,
+              JSON.stringify({
+                pagination: apolloData.pagination,
+                searchOptions: apolloData.searchOptions
+              }),
+              existingResult.rows[0].id
+            ]
+          );
+          enrichmentId = updateResult.rows[0].id;
+        } else {
+          // Create new company enrichment record
+          const insertResult = await client.query(
+            `INSERT INTO company_enrichments 
+             (company_name, normalized_name, apollo_organization_id, linkedin_company_url, 
+              company_domain, canonical_identifier, total_employees, last_crawled_at, 
+              crawled_by, metadata)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             RETURNING id`,
+            [
+              companyName,
+              normalizedName,
+              apolloData.people?.[0]?.organization_id,
+              linkedinCompanyUrl,
+              companyDomain,
+              canonicalIdentifier,
+              apolloData.pagination?.total_entries || 0,
+              new Date().toISOString(),
+              userId,
+              JSON.stringify({
+                pagination: apolloData.pagination,
+                searchOptions: apolloData.searchOptions
+              })
+            ]
+          );
+          enrichmentId = insertResult.rows[0].id;
         }
-        enrichmentId = updatedEnrichment.id;
-      } else {
-        // Create new company enrichment record
-        const { data: enrichment, error: enrichmentError } = await supabase
-          .from('company_enrichments')
-          .insert({
-            company_name: companyName,
-            normalized_name: normalizedName,
-            apollo_organization_id: apolloData.people?.[0]?.organization_id,
-            linkedin_company_url: linkedinCompanyUrl,
-            company_domain: companyDomain,
-            canonical_identifier: canonicalIdentifier,
-            total_employees: apolloData.pagination?.total_entries || 0,
-            last_crawled_at: new Date().toISOString(),
-            crawled_by: userId,
-            metadata: {
-              pagination: apolloData.pagination,
-              searchOptions: apolloData.searchOptions
-            }
-          })
-          .select()
-          .single();
 
-        if (enrichmentError) {
-          console.error('Error storing company enrichment:', enrichmentError);
-          return { success: false, error: enrichmentError.message };
+        // Delete existing profiles for this company
+        await client.query(
+          `DELETE FROM apollo_profiles WHERE company_enrichment_id = $1`,
+          [enrichmentId]
+        );
+
+        // Store individual profiles
+        if (apolloData.people && apolloData.people.length > 0) {
+          const profileValues = apolloData.people.map((person: any, index: number) => {
+            const paramIndex = index * 18;
+            return `($${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, 
+                     $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, 
+                     $${paramIndex + 9}, $${paramIndex + 10}, $${paramIndex + 11}, $${paramIndex + 12}, 
+                     $${paramIndex + 13}, $${paramIndex + 14}, $${paramIndex + 15}, $${paramIndex + 16}, 
+                     $${paramIndex + 17}, $${paramIndex + 18})`;
+          }).join(', ');
+
+          const profileParams = apolloData.people.flatMap((person: any) => [
+            person.id,
+            enrichmentId,
+            person.name,
+            person.first_name,
+            person.last_name,
+            person.email === 'email_not_unlocked@domain.com' ? null : person.email,
+            person.email_status,
+            person.title,
+            person.headline,
+            person.seniority,
+            JSON.stringify(person.departments || []),
+            person.linkedin_url,
+            person.photo_url,
+            person.city,
+            person.state,
+            person.country,
+            person.organization?.name || person.organization_name,
+            JSON.stringify(person)
+          ]);
+
+          await client.query(
+            `INSERT INTO apollo_profiles 
+             (apollo_id, company_enrichment_id, full_name, first_name, last_name, email, 
+              email_status, title, headline, seniority, departments, linkedin_url, photo_url, 
+              city, state, country, organization_name, raw_data)
+             VALUES ${profileValues}`,
+            profileParams
+          );
         }
-        enrichmentId = enrichment.id;
-      }
 
-      // Delete existing profiles for this company
-      await supabase
-        .from('apollo_profiles')
-        .delete()
-        .eq('company_enrichment_id', enrichmentId);
-
-      // Store individual profiles
-      if (apolloData.people && apolloData.people.length > 0) {
-        const profiles = apolloData.people.map((person: any) => ({
-          apollo_id: person.id,
-          company_enrichment_id: enrichmentId,
-          full_name: person.name,
-          first_name: person.first_name,
-          last_name: person.last_name,
-          email: person.email === 'email_not_unlocked@domain.com' ? null : person.email,
-          email_status: person.email_status,
-          title: person.title,
-          headline: person.headline,
-          seniority: person.seniority,
-          departments: person.departments || [],
-          linkedin_url: person.linkedin_url,
-          photo_url: person.photo_url,
-          city: person.city,
-          state: person.state,
-          country: person.country,
-          organization_name: person.organization?.name || person.organization_name,
-          organization_id: person.organization_id,
-          employment_history: person.employment_history || [],
-          raw_data: person
-        }));
-
-        const { error: profilesError } = await supabase
-          .from('apollo_profiles')
-          .insert(profiles);
-
-        if (profilesError) {
-          console.error('Error storing profiles:', profilesError);
-          return { success: false, error: profilesError.message };
-        }
-      }
-
-      return { success: true, enrichmentId };
+        return { success: true, enrichmentId };
+      });
     } catch (error) {
       console.error('Error in storeEnrichmentData:', error);
       return { 
@@ -267,53 +256,64 @@ export class ApolloStorageService {
     companyInfo?: CompanyEnrichment;
   }> {
     try {
-      const supabase = await this.getSupabase();
       const normalizedName = companyName.toLowerCase().trim();
 
       // Get company enrichment info
-      const { data: enrichment } = await supabase
-        .from('company_enrichments')
-        .select('*')
-        .eq('normalized_name', normalizedName)
-        .single();
+      const enrichmentResult = await query(
+        `SELECT * FROM company_enrichments WHERE normalized_name = $1`,
+        [normalizedName]
+      );
 
-      if (!enrichment) {
+      if (enrichmentResult.rows.length === 0) {
         return { profiles: [], total: 0 };
       }
 
+      const enrichment = enrichmentResult.rows[0];
+
       // Build query for profiles
-      let query = supabase
-        .from('apollo_profiles')
-        .select('*', { count: 'exact' })
-        .eq('company_enrichment_id', enrichment.id);
+      let profileQuery = `
+        SELECT * FROM apollo_profiles 
+        WHERE company_enrichment_id = $1
+      `;
+      const queryParams: any[] = [enrichment.id];
+      let paramIndex = 2;
 
       // Apply filters
       if (options.seniority && options.seniority.length > 0) {
-        query = query.in('seniority', options.seniority);
+        profileQuery += ` AND seniority = ANY($${paramIndex})`;
+        queryParams.push(options.seniority);
+        paramIndex++;
       }
 
       if (options.departments && options.departments.length > 0) {
-        query = query.overlaps('departments', options.departments);
+        profileQuery += ` AND departments && $${paramIndex}`;
+        queryParams.push(JSON.stringify(options.departments));
+        paramIndex++;
       }
 
       // Apply pagination
       if (options.limit) {
-        query = query.limit(options.limit);
+        profileQuery += ` LIMIT $${paramIndex}`;
+        queryParams.push(options.limit);
+        paramIndex++;
       }
       if (options.offset) {
-        query = query.range(options.offset, options.offset + (options.limit || 25) - 1);
+        profileQuery += ` OFFSET $${paramIndex}`;
+        queryParams.push(options.offset);
+        paramIndex++;
       }
 
-      const { data: profiles, error, count } = await query;
+      const profilesResult = await query(profileQuery, queryParams);
 
-      if (error) {
-        console.error('Error fetching profiles:', error);
-        return { profiles: [], total: 0 };
-      }
+      // Get total count
+      const countResult = await query(
+        `SELECT COUNT(*) as count FROM apollo_profiles WHERE company_enrichment_id = $1`,
+        [enrichment.id]
+      );
 
       return {
-        profiles: profiles || [],
-        total: count || 0,
+        profiles: profilesResult.rows || [],
+        total: parseInt(countResult.rows[0].count),
         companyInfo: enrichment
       };
     } catch (error) {
@@ -338,25 +338,21 @@ export class ApolloStorageService {
     }>;
   }> {
     try {
-      const supabase = await this.getSupabase();
-      const { data, error } = await supabase
-        .from('company_enrichments')
-        .select(`
-          id,
-          company_name,
-          total_employees,
-          last_crawled_at,
-          crawled_by,
-          apollo_profiles(count)
-        `)
-        .order('last_crawled_at', { ascending: false });
+      const result = await query(`
+        SELECT 
+          ce.id,
+          ce.company_name,
+          ce.total_employees,
+          ce.last_crawled_at,
+          ce.crawled_by,
+          COUNT(ap.id) as profile_count
+        FROM company_enrichments ce
+        LEFT JOIN apollo_profiles ap ON ce.id = ap.company_enrichment_id
+        GROUP BY ce.id, ce.company_name, ce.total_employees, ce.last_crawled_at, ce.crawled_by
+        ORDER BY ce.last_crawled_at DESC
+      `);
 
-      if (error) {
-        console.error('Error fetching enriched companies:', error);
-        return { companies: [] };
-      }
-
-      const companies = (data || []).map((company: any) => {
+      const companies = result.rows.map((company: any) => {
         const lastCrawled = new Date(company.last_crawled_at);
         const daysSinceCrawl = Math.floor((Date.now() - lastCrawled.getTime()) / (1000 * 60 * 60 * 24));
         
@@ -364,7 +360,7 @@ export class ApolloStorageService {
           id: company.id,
           company_name: company.company_name,
           total_employees: company.total_employees,
-          profile_count: company.apollo_profiles?.[0]?.count || 0,
+          profile_count: parseInt(company.profile_count),
           last_crawled_at: company.last_crawled_at,
           days_since_crawl: daysSinceCrawl,
           is_stale: daysSinceCrawl > 30,
@@ -384,17 +380,12 @@ export class ApolloStorageService {
    */
   async deleteCompanyEnrichment(companyName: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const supabase = await this.getSupabase();
       const normalizedName = companyName.toLowerCase().trim();
       
-      const { error } = await supabase
-        .from('company_enrichments')
-        .delete()
-        .eq('normalized_name', normalizedName);
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
+      await query(
+        `DELETE FROM company_enrichments WHERE normalized_name = $1`,
+        [normalizedName]
+      );
 
       return { success: true };
     } catch (error) {
@@ -404,6 +395,11 @@ export class ApolloStorageService {
         error: error instanceof Error ? error.message : 'Unknown error' 
       };
     }
+  }
+
+  // Expose connection for cleanup API
+  async getConnection() {
+    return { query };
   }
 }
 

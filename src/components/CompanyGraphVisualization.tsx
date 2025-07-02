@@ -33,14 +33,15 @@ export default function CompanyGraphVisualization({
 }: GraphVisualizationProps) {
   const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showGraph, setShowGraph] = useState(false);
+  const [showGraph, setShowGraph] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (employees.length > 0 && showGraph) {
+    if (employees.length > 0) {
+      setShowGraph(true);
       generateGraphData();
     }
-  }, [employees, showGraph]);
+  }, [employees]);
 
   const generateGraphData = async () => {
     setIsLoading(true);
@@ -66,11 +67,13 @@ export default function CompanyGraphVisualization({
       // Add department nodes
       const departments = new Map<string, number>();
       employees.forEach(emp => {
-        if (emp.departments) {
-          emp.departments.forEach((dept: string) => {
+        const depts = emp.departments || emp.department || [];
+        const deptArray = Array.isArray(depts) ? depts : [depts].filter(Boolean);
+        deptArray.forEach((dept: string) => {
+          if (dept && dept !== '') {
             departments.set(dept, (departments.get(dept) || 0) + 1);
-          });
-        }
+          }
+        });
       });
 
       // Create department nodes
@@ -100,21 +103,22 @@ export default function CompanyGraphVisualization({
       const keyPeople = employees
         .filter(emp => 
           ['c_suite', 'vp', 'director'].includes(emp.seniority) || 
-          emp.linkedin_url
+          emp.linkedinUrl || emp.linkedin_url
         )
         .slice(0, 15); // Limit to avoid overcrowding
 
       keyPeople.forEach(person => {
-        const personId = `person_${person.id || person.name.toLowerCase().replace(/\s+/g, '_')}`;
+        const personName = person.name || person.full_name || person.first_name + ' ' + person.last_name || 'Unknown';
+        const personId = `person_${person.id || personName.toLowerCase().replace(/\s+/g, '_')}`;
         
         nodes.push({
           id: personId,
-          label: person.name,
+          label: personName,
           type: 'person',
           properties: {
-            title: person.title,
+            title: person.title || person.currentPosition,
             seniority: person.seniority,
-            hasLinkedIn: !!person.linkedin_url,
+            hasLinkedIn: !!(person.linkedin_url || person.linkedinUrl),
             color: person.seniority === 'c_suite' ? '#dc2626' : 
                    person.seniority === 'vp' ? '#ea580c' :
                    person.seniority === 'director' ? '#ca8a04' : '#059669',
@@ -128,12 +132,14 @@ export default function CompanyGraphVisualization({
           from: `company_${companyName.toLowerCase().replace(/\s+/g, '_')}`,
           to: personId,
           type: 'WORKS_AT',
-          label: person.title
+          label: person.title || person.currentPosition
         });
 
         // Connect person to departments
-        if (person.departments) {
-          person.departments.forEach((dept: string) => {
+        const personDepts = person.departments || person.department || [];
+        const personDeptArray = Array.isArray(personDepts) ? personDepts : [personDepts].filter(Boolean);
+        personDeptArray.forEach((dept: string) => {
+          if (dept && dept !== '') {
             const deptId = `dept_${dept.toLowerCase().replace(/\s+/g, '_')}`;
             if (departments.has(dept)) {
               edges.push({
@@ -142,8 +148,8 @@ export default function CompanyGraphVisualization({
                 type: 'MEMBER_OF'
               });
             }
-          });
-        }
+          }
+        });
       });
 
       setGraphData({ nodes, edges });

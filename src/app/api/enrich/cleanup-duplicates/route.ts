@@ -32,19 +32,13 @@ export async function POST() {
     console.log(`🧹 Cleaning up duplicate companies for admin: ${userId}`);
 
     const apolloStorage = getApolloStorageService();
-    const supabase = await (apolloStorage as any).getSupabase();
+    const { query } = await apolloStorage.getConnection();
 
     // Find duplicate companies by normalized name
-    const { data: duplicates, error: findError } = await supabase
-      .rpc('merge_duplicate_companies');
+    const duplicatesResult = await query('SELECT * FROM merge_duplicate_companies()');
+    const duplicates = duplicatesResult.rows;
 
-    if (findError) {
-      console.error('Error finding duplicates:', findError);
-      return NextResponse.json(
-        { error: 'Failed to find duplicates', details: findError.message },
-        { status: 500 }
-      );
-    }
+    // No error handling needed here since we're using direct query
 
     // Get current company count after cleanup
     const { companies } = await apolloStorage.getEnrichedCompanies();
@@ -82,20 +76,15 @@ export async function POST() {
 export async function GET() {
   try {
     const apolloStorage = getApolloStorageService();
-    const supabase = await (apolloStorage as any).getSupabase();
+    const { query } = await apolloStorage.getConnection();
 
     // Find companies with same normalized name
-    const { data: duplicateGroups, error } = await supabase
-      .from('company_enrichments')
-      .select('normalized_name, company_name, id, created_at')
-      .order('normalized_name', { ascending: true });
-
-    if (error) {
-      return NextResponse.json(
-        { error: 'Failed to check duplicates', details: error.message },
-        { status: 500 }
-      );
-    }
+    const duplicateGroupsResult = await query(`
+      SELECT normalized_name, company_name, id, created_at 
+      FROM company_enrichments 
+      ORDER BY normalized_name ASC
+    `);
+    const duplicateGroups = duplicateGroupsResult.rows;
 
     // Group by normalized name
     const groups = new Map<string, any[]>();
