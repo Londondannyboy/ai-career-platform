@@ -82,12 +82,18 @@ export default function CompanyGraphVisualization({
           const name = emp.name || emp.full_name || 
             `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || 'Unknown';
           
+          // Ensure profile image is a valid URL or null
+          let profileImage = emp.photo_url || emp.profileImage;
+          if (profileImage && !profileImage.startsWith('http')) {
+            profileImage = null; // Invalid URL format
+          }
+          
           return {
             name,
             title: emp.title || emp.currentPosition || emp.headline || 'No Title',
             department: emp.departments?.[0] || emp.department || 'Other',
             seniority: emp.seniority || 'entry',
-            profileImage: emp.photo_url,
+            profileImage,
             linkedinUrl: emp.linkedin_url || emp.linkedinUrl
           };
         })
@@ -250,10 +256,18 @@ export default function CompanyGraphVisualization({
                   </div>
                 </div>
               ) : neo4jData ? (
-                <Neo4jGraphVisualization 
-                  data={neo4jData} 
-                  height="500px"
-                />
+                <div className="relative">
+                  <Neo4jGraphVisualization 
+                    data={neo4jData} 
+                    height="500px"
+                  />
+                  {/* Debug info overlay */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="absolute top-2 right-2 bg-black bg-opacity-75 text-white text-xs p-2 rounded">
+                      {neo4jData.employees?.length || 0} employees
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="h-96 flex items-center justify-center">
                   <div className="text-center">
