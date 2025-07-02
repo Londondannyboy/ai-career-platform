@@ -117,10 +117,10 @@ export class ApifyService {
     console.log('🔍 Raw HarvestAPI results:', JSON.stringify(harvestResults, null, 2));
 
     // Transform all employee results
-    const enrichedProfiles = harvestResults.map((result, index) => {
+    const enrichedProfiles: LinkedInProfile[] = harvestResults.map((result, index) => {
       console.log(`🔄 Transforming result ${index}:`, JSON.stringify(result, null, 2));
       return this.transformHarvestAPIData(result);
-    }).filter(Boolean); // Remove any null/undefined results
+    }).filter((profile): profile is LinkedInProfile => profile !== null); // Remove any null/undefined results
 
     console.log(`✅ HarvestAPI returned ${enrichedProfiles.length} employee profiles`);
 
