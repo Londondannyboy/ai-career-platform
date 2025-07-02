@@ -15,7 +15,7 @@ interface QueryContext {
 
 export async function POST(request: NextRequest) {
   try {
-    const { query } = await request.json();
+    const { query, companyFilter } = await request.json();
 
     if (!query || query.trim().length < 5) {
       return NextResponse.json({
@@ -26,8 +26,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`🧠 Processing intelligent query: "${query}"`);
 
-    // Step 1: Fetch all company data with enrichment details
-    const { rows: companies } = await sql`
+    // Step 1: Fetch company data with optional filtering
+    let companiesQuery = `
       SELECT 
         id,
         company_name,
@@ -37,8 +37,31 @@ export async function POST(request: NextRequest) {
         canonical_identifier
       FROM company_enrichments 
       WHERE enrichment_data IS NOT NULL
-      ORDER BY last_enriched DESC
     `;
+    
+    const queryParams: any[] = [];
+    
+    if (companyFilter) {
+      companiesQuery += ` AND LOWER(company_name) = LOWER($${queryParams.length + 1})`;
+      queryParams.push(companyFilter);
+    }
+    
+    companiesQuery += ` ORDER BY last_enriched DESC`;
+    
+    const { rows: companies } = queryParams.length > 0 
+      ? await sql.query(companiesQuery, queryParams)
+      : await sql`
+          SELECT 
+            id,
+            company_name,
+            employee_count,
+            last_enriched,
+            enrichment_data,
+            canonical_identifier
+          FROM company_enrichments 
+          WHERE enrichment_data IS NOT NULL
+          ORDER BY last_enriched DESC
+        `;
 
     if (companies.length === 0) {
       return NextResponse.json({

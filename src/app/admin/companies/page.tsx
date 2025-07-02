@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Building2, Users, Clock, RefreshCw, Search, Calendar, Brain, Zap } from 'lucide-react';
+import { Building2, Users, Clock, RefreshCw, Search, Calendar, Brain, Zap, ExternalLink, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 interface CompanyEnrichment {
   id: string;
@@ -327,6 +328,12 @@ export default function AdminCompaniesPage() {
                 </div>
 
                 <div className="flex items-center space-x-2">
+                  <Link href={`/company/${company.id}`}>
+                    <Button variant="default" size="sm" className="whitespace-nowrap">
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                      View Company
+                    </Button>
+                  </Link>
                   <Button
                     variant="outline"
                     size="sm"
