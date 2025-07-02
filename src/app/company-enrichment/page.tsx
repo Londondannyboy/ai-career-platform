@@ -39,6 +39,8 @@ export default function CompanyEnrichmentPage() {
   const [companies, setCompanies] = useState<EnrichedCompany[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState<string | null>(null);
   const [searchResult, setSearchResult] = useState<CompanyProfiles | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -48,6 +50,20 @@ export default function CompanyEnrichmentPage() {
   useEffect(() => {
     loadEnrichedCompanies();
   }, []);
+
+  // Debounced search suggestions
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.length >= 2) {
+        fetchSearchSuggestions(searchQuery);
+      } else {
+        setSearchSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const loadEnrichedCompanies = async () => {
     try {
@@ -63,6 +79,27 @@ export default function CompanyEnrichmentPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchSearchSuggestions = async (query: string) => {
+    try {
+      const response = await fetch(`/api/intelligence/search-suggestions?q=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setSearchSuggestions(data.suggestions);
+        setShowSuggestions(data.suggestions.length > 0);
+      }
+    } catch (error) {
+      console.error('Failed to fetch suggestions:', error);
+    }
+  };
+
+  const selectSuggestion = (suggestion: string) => {
+    setSearchQuery(suggestion);
+    setShowSuggestions(false);
+    // Auto-search when suggestion is selected
+    setTimeout(() => searchCompany(), 100);
   };
 
   const searchCompany = async () => {
@@ -182,15 +219,49 @@ export default function CompanyEnrichmentPage() {
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
-            <Input
-              placeholder="Enter company name (e.g., Microsoft, Google, Apple)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && searchCompany()}
-              className="flex-1"
-            />
+            <div className="flex-1 relative">
+              <Input
+                placeholder="Enter company name (e.g., Microsoft, CK Delta, Apple)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    setShowSuggestions(false);
+                    searchCompany();
+                  }
+                }}
+                onFocus={() => searchSuggestions.length > 0 && setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                className="w-full"
+              />
+              
+              {/* Search Suggestions Dropdown */}
+              {showSuggestions && searchSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {searchSuggestions.map((suggestion, index) => (
+                    <div
+                      key={index}
+                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+                      onClick={() => selectSuggestion(suggestion)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-3 w-3 text-gray-400" />
+                        <span className="capitalize">{suggestion}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="px-3 py-1 text-xs text-gray-500 bg-gray-50 border-t">
+                    Press Enter to search "{searchQuery}"
+                  </div>
+                </div>
+              )}
+            </div>
+            
             <Button 
-              onClick={searchCompany} 
+              onClick={() => {
+                setShowSuggestions(false);
+                searchCompany();
+              }} 
               disabled={isSearching || !searchQuery.trim()}
               className="min-w-[100px]"
             >
