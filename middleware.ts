@@ -26,6 +26,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/debug-user',
   '/api/test/apollo',
   '/api/test/apollo-debug',
+  '/api/test/apollo-simple',
   '/api/enrich/company',
   '/api/demo/(.*)'
 ]);
