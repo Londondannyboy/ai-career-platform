@@ -70,7 +70,9 @@ export async function POST(request: NextRequest) {
     let employees;
     try {
       if (!networkData.employees || !Array.isArray(networkData.employees)) {
-        throw new Error(`Invalid employees data: ${typeof networkData.employees}, length: ${networkData.employees?.length}`);
+        const dataType = typeof networkData.employees;
+        const dataLength = Array.isArray(networkData.employees) ? networkData.employees.length : 'N/A';
+        throw new Error(`Invalid employees data: ${dataType}, length: ${dataLength}`);
       }
       
       employees = networkData.employees.map((emp, index) => {
