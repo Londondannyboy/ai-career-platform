@@ -62,14 +62,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const mockApolloEmployees = linkedInUrls.map((url, index) => ({
-      linkedin_url: url.profileUrl,
-      name: url.name || `Employee ${index + 1}`,
-      title: url.title || 'Unknown',
-      company: url.company || companyIdentifier
-    }));
-
-    const networkData = await apifyService.enrichWithHarvestAPI(mockApolloEmployees);
+    // Run HarvestAPI company enrichment directly
+    const networkData = await apifyService.enrichWithHarvestAPI(companyIdentifier, {
+      maxEmployees: options.maxEmployees || 25
+    });
 
     // Step 3: Process with relationship enrichment service
     const enrichmentService = getRelationshipEnrichmentService();

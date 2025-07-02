@@ -96,32 +96,30 @@ export class ApifyService {
   }
 
   /**
-   * Enrich Apollo employee data using HarvestAPI LinkedIn scraper
+   * Enrich company using HarvestAPI LinkedIn scraper (company-to-employees)
    */
   async enrichWithHarvestAPI(
-    apolloEmployees: Array<{ 
-      linkedin_url?: string; 
-      name: string; 
-      title: string; 
-      company: string; 
-    }>
+    companyIdentifier: string,
+    options: { maxEmployees?: number } = {}
   ): Promise<CompanyNetworkData> {
-    console.log(`🔥 Enriching ${apolloEmployees.length} employees with HarvestAPI scraper`);
+    console.log(`🔥 Enriching company with HarvestAPI scraper: ${companyIdentifier}`);
 
-    const profileUrls = apolloEmployees
-      .filter(emp => emp.linkedin_url)
-      .map(emp => emp.linkedin_url!);
-
-    if (profileUrls.length === 0) {
-      throw new Error('No LinkedIn URLs found in Apollo employee data');
+    // Convert company identifier to LinkedIn company URL if needed
+    const companyUrl = this.normalizeCompanyUrl(companyIdentifier);
+    
+    // Run HarvestAPI scraper with company URL
+    const harvestResults = await this.runHarvestAPIScraper([companyUrl], options.maxEmployees || 25);
+    
+    if (!harvestResults || harvestResults.length === 0) {
+      throw new Error('No employee data returned from HarvestAPI scraper');
     }
 
-    // Run HarvestAPI scraper
-    const harvestResults = await this.runHarvestAPIScraper(profileUrls);
-    
+    // Transform all employee results
     const enrichedProfiles = harvestResults.map(result => 
       this.transformHarvestAPIData(result)
     );
+
+    console.log(`✅ HarvestAPI returned ${enrichedProfiles.length} employee profiles`);
 
     // Analyze relationships using HarvestAPI's rich data
     const internalConnections = this.analyzeHarvestAPIConnections(enrichedProfiles);
@@ -133,12 +131,28 @@ export class ApifyService {
     const socialIntelligence = this.analyzeHarvestAPISocialIntelligence(enrichedProfiles);
 
     return {
-      companyName: apolloEmployees[0]?.company || 'Unknown Company',
+      companyName: this.extractCompanyNameFromUrl(companyUrl),
       employees: enrichedProfiles,
       internalConnections,
       externalInfluencers,
       socialIntelligence
     };
+  }
+
+  /**
+   * Legacy method - convert Apollo employees to company enrichment
+   */
+  async enrichEmployeeRelationships(
+    apolloEmployees: Array<{ 
+      linkedin_url?: string; 
+      name: string; 
+      title: string; 
+      company: string; 
+    }>
+  ): Promise<CompanyNetworkData> {
+    // Extract company from first employee and use company enrichment
+    const companyName = apolloEmployees[0]?.company || 'Unknown Company';
+    return this.enrichWithHarvestAPI(companyName, { maxEmployees: apolloEmployees.length });
   }
 
   /**
@@ -156,16 +170,15 @@ export class ApifyService {
   }
 
   /**
-   * Run HarvestAPI scraper with multiple LinkedIn URLs
+   * Run HarvestAPI scraper with company URLs (not individual profiles)
    */
-  private async runHarvestAPIScraper(profileUrls: string[]): Promise<any[]> {
-    console.log(`🔥 Running HarvestAPI scraper for ${profileUrls.length} profiles`);
+  private async runHarvestAPIScraper(companyUrls: string[], maxItems: number = 25): Promise<any[]> {
+    console.log(`🔥 Running HarvestAPI scraper for ${companyUrls.length} companies`);
 
     const runInput = {
-      startUrls: profileUrls.map(url => ({ url })),
-      proxyConfiguration: {
-        useApifyProxy: true
-      }
+      currentCompanies: companyUrls,
+      maxItems: maxItems,
+      profileScraperMode: "Full ($8 per 1k)"
     };
 
     try {
@@ -654,6 +667,31 @@ export class ApifyService {
       .sort(([,a], [,b]) => b - a)
       .slice(0, 10)
       .map(([topic]) => topic);
+  }
+
+  /**
+   * Normalize company identifier to LinkedIn company URL
+   */
+  private normalizeCompanyUrl(identifier: string): string {
+    if (identifier.includes('linkedin.com/company/')) {
+      return identifier;
+    }
+    
+    // If it's just a company name, we'd need to search for it
+    // For now, assume it's already a valid URL or return as-is
+    return identifier;
+  }
+
+  /**
+   * Extract company name from LinkedIn company URL
+   */
+  private extractCompanyNameFromUrl(url: string): string {
+    try {
+      const match = url.match(/linkedin\.com\/company\/([^\/\?]+)/);
+      return match ? match[1].replace(/-/g, ' ') : 'Unknown Company';
+    } catch {
+      return 'Unknown Company';
+    }
   }
 
   /**
