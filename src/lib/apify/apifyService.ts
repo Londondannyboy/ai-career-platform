@@ -210,7 +210,11 @@ export class ApifyService {
    */
   private async scrapeLinkedInProfile(profileUrl: string): Promise<LinkedInProfile> {
     const results = await this.runHarvestAPIScraper([profileUrl]);
-    return this.transformHarvestAPIData(results[0]);
+    const transformed = this.transformHarvestAPIData(results[0]);
+    if (!transformed) {
+      throw new Error('Failed to transform profile data');
+    }
+    return transformed;
   }
 
   /**
