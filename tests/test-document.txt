@@ -1,0 +1,26 @@
+# Test Document for Quest Document Management
+
+This is a test document to validate the document upload and processing system.
+
+## Product Information
+- Product Name: Quest AI Platform
+- Category: AI-powered career development
+- Features: Voice coaching, document analysis, personalized insights
+
+## Key Features
+- Intelligent document processing
+- Vector-based search capabilities  
+- AI-powered chat interface
+- Multi-workspace collaboration
+
+## Competitive Analysis
+- Main competitors: Traditional career coaching platforms
+- Differentiator: AI-native approach with voice interface
+- Target market: Professionals seeking AI-enhanced career development
+
+## Pricing Considerations
+- Subscription-based model
+- Multiple tiers: Basic, Professional, Enterprise
+- Value proposition: Personalized AI coaching at scale
+
+This document contains various business entities that should be extracted by the AI processing system.

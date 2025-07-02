@@ -9,6 +9,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { User as DatabaseUser } from '@/types/database'
 import Navigation from '@/components/Navigation'
+import CompanyCard from '@/components/CompanyCard'
+import CreateCompanyModal from '@/components/CreateCompanyModal'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -19,14 +21,21 @@ import {
   MessageCircle, 
   Plus,
   TrendingUp,
-  Shield
+  Shield,
+  Building2,
+  Upload
 } from 'lucide-react'
+import { CompanyWorkspace } from '@/lib/documents/workspaceService'
 
 export default function Dashboard() {
   const { user, isLoaded } = useUser()
   const [profile, setProfile] = useState<DatabaseUser | null>(null)
+  const [workspaces, setWorkspaces] = useState<(CompanyWorkspace & { stats?: any })[]>([])
+  const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const supabase = createClient()
 
+  // Load user profile
   useEffect(() => {
     const getProfile = async () => {
       if (user?.id) {
@@ -45,6 +54,32 @@ export default function Dashboard() {
       getProfile()
     }
   }, [user, supabase])
+
+  // Load user workspaces
+  const loadWorkspaces = async () => {
+    if (!user) return
+    
+    setIsLoadingWorkspaces(true)
+    try {
+      const response = await fetch('/api/workspace/list')
+      if (response.ok) {
+        const data = await response.json()
+        setWorkspaces(data.workspaces || [])
+      } else {
+        console.error('Failed to load workspaces:', response.status)
+      }
+    } catch (error) {
+      console.error('Error loading workspaces:', error)
+    } finally {
+      setIsLoadingWorkspaces(false)
+    }
+  }
+
+  useEffect(() => {
+    if (user) {
+      loadWorkspaces()
+    }
+  }, [user])
 
   if (!isLoaded) {
     return (
@@ -93,7 +128,7 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Card className="cursor-pointer transition-shadow hover:shadow-md">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center text-sm font-medium">
@@ -154,6 +189,31 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
+          <Card className="cursor-pointer transition-shadow hover:shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-sm font-medium">
+                <div className="rounded-lg bg-orange-100 p-2 mr-3">
+                  <Building2 className="h-4 w-4 text-orange-600" />
+                </div>
+                Manage Companies
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-gray-600 mb-3">
+                Create workspaces and upload documents
+              </p>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setShowCreateModal(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Company
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card className="cursor-pointer transition-shadow hover:shadow-md border-2 border-purple-200 bg-gradient-to-br from-blue-50 to-purple-50">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center text-sm font-medium">
@@ -174,6 +234,74 @@ export default function Dashboard() {
               </Link>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Company Workspaces Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Your Company Workspaces</h2>
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create Workspace
+            </Button>
+          </div>
+
+          {isLoadingWorkspaces ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="rounded-lg bg-gray-200 p-2 w-9 h-9"></div>
+                      <div className="space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-32"></div>
+                        <div className="h-3 bg-gray-200 rounded w-24"></div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                      <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : workspaces.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {workspaces.map((workspace) => (
+                <CompanyCard
+                  key={workspace.id}
+                  workspace={workspace}
+                  onEdit={() => {
+                    // TODO: Implement edit functionality
+                    console.log('Edit workspace:', workspace.id)
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card className="border-2 border-dashed border-gray-300">
+              <CardContent className="text-center py-12">
+                <Building2 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No company workspaces yet</h3>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  Create your first company workspace to start managing documents, collaborating with your team, and leveraging AI-powered insights.
+                </p>
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Your First Workspace
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Main Content Grid */}
@@ -285,6 +413,13 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* Create Company Modal */}
+      <CreateCompanyModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCompanyCreated={loadWorkspaces}
+      />
     </div>
   )
 }
