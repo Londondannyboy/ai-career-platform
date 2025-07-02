@@ -300,7 +300,7 @@ class GraphService {
   /**
    * Visualize sales opportunities for a target company
    */
-  async generateSalesGraphQuery(targetCompany: string): string {
+  generateSalesGraphQuery(targetCompany: string): string {
     return `
       MATCH (target:Entity {name: '${targetCompany}', type: 'company'})
       OPTIONAL MATCH (target)-[:WORKS_AT]-(person:Entity {type: 'person'})
