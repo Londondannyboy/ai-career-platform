@@ -33,6 +33,7 @@
     "@supabase/supabase-js": "^2.50.2",
     "@types/pg": "^8.15.4",
     "@types/three": "^0.177.0",
+    "@vercel/postgres": "^0.10.0",
     "ai": "^4.3.16",
     "apify-client": "^2.12.6",
     "class-variance-authority": "^0.7.1",

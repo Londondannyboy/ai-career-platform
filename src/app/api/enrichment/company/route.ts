@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       data: {
         companyName: networkData.companyName,
