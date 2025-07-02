@@ -8,6 +8,11 @@ export async function GET(request: NextRequest) {
   const token = process.env.APIFY_TOKEN;
   const actorId = process.env.APIFY_HARVEST_ACTOR_ID;
 
+  // Force check all environment variables
+  const allEnvVars = Object.keys(process.env).filter(key => 
+    key.startsWith('APIFY') || key.includes('TOKEN')
+  );
+
   return NextResponse.json({
     env_check: {
       APIFY_TOKEN: {
@@ -20,6 +25,11 @@ export async function GET(request: NextRequest) {
         value: actorId || null
       }
     },
+    all_apify_vars: allEnvVars.reduce((acc, key) => {
+      acc[key] = !!process.env[key];
+      return acc;
+    }, {} as Record<string, boolean>),
+    deployment_id: process.env.VERCEL_DEPLOYMENT_ID || 'unknown',
     timestamp: new Date().toISOString()
   });
 }
