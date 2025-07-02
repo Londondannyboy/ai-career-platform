@@ -40,8 +40,21 @@ export async function POST(request: NextRequest) {
     // Step 2: Run Apify HarvestAPI enrichment
     const apifyService = createApifyService();
     if (!apifyService) {
+      // Debug environment variables
+      const debugInfo = {
+        APIFY_TOKEN: !!process.env.APIFY_TOKEN,
+        APIFY_HARVEST_ACTOR_ID: process.env.APIFY_HARVEST_ACTOR_ID || 'missing',
+        tokenLength: process.env.APIFY_TOKEN ? process.env.APIFY_TOKEN.length : 0
+      };
+      
+      console.error('❌ Apify service not configured:', debugInfo);
+      
       return NextResponse.json(
-        { error: 'Apify service not configured' },
+        { 
+          error: 'Apify service not configured',
+          debug: debugInfo,
+          help: 'Check environment variables: APIFY_TOKEN and APIFY_HARVEST_ACTOR_ID'
+        },
         { status: 500 }
       );
     }
