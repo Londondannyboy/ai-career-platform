@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Search, RefreshCw, Clock, Users, Building2, AlertCircle, CheckCircle } from 'lucide-react';
+import CompanyGraphVisualization from '@/components/CompanyGraphVisualization';
 
 interface EnrichedCompany {
   id: string;
@@ -355,6 +356,15 @@ export default function CompanyEnrichmentPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Graph Visualization */}
+      {searchResult && (
+        <CompanyGraphVisualization
+          companyName={searchResult.company}
+          employees={searchResult.profiles}
+          className="mt-6"
+        />
       )}
 
       {/* Existing Companies */}

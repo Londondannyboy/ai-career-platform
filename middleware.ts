@@ -30,6 +30,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/enrich/company',
   '/api/enrich/company-smart',
   '/api/enrich/companies',
+  '/api/enrich/cleanup-duplicates',
   '/api/intelligence/company',
   '/api/intelligence/search-suggestions',
   '/api/demo/(.*)'
