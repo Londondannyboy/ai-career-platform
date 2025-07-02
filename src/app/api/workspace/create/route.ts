@@ -40,6 +40,21 @@ export async function POST(request: Request) {
 
     const workspaceService = getWorkspaceService()
     
+    // Check if user already has a workspace (one workspace per user limit)
+    const existingWorkspaces = await workspaceService.getUserWorkspaces(userId)
+    if (existingWorkspaces.length > 0) {
+      return NextResponse.json(
+        { 
+          error: 'You already have a workspace. Only one workspace per user is allowed.',
+          existingWorkspace: {
+            id: existingWorkspaces[0].id,
+            name: existingWorkspaces[0].displayName
+          }
+        },
+        { status: 409 } // Conflict
+      )
+    }
+    
     const workspace = await workspaceService.createWorkspace({
       companyName,
       displayName,

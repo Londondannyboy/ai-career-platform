@@ -149,7 +149,7 @@ export default function WorkspacePage() {
       formData.append('companyId', workspace.companyName)
       formData.append('tags', '')
 
-      const response = await fetch(`/api/workspace/${workspaceId}/upload`, {
+      const response = await fetch(`/api/workspace/${workspaceId}/upload-simple`, {
         method: 'POST',
         body: formData,
       })
