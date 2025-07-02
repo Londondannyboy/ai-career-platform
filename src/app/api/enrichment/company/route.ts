@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
             last_enriched,
             enrichment_data,
             CASE 
-              WHEN last_enriched > NOW() - INTERVAL '7 days' THEN 'fresh'
-              WHEN last_enriched > NOW() - INTERVAL '30 days' THEN 'stale'  
+              WHEN last_enriched > NOW() - INTERVAL '1 month' THEN 'fresh'
+              WHEN last_enriched > NOW() - INTERVAL '3 months' THEN 'stale'  
               ELSE 'expired'
             END as cache_status
           FROM company_enrichments 
@@ -247,6 +247,42 @@ export async function POST(request: NextRequest) {
     // Step 4: Save enrichment data to database for caching
     try {
       console.log(`💾 Saving enrichment data for: ${networkData.companyName}`);
+      console.log(`📝 Company details:`, {
+        name: networkData.companyName,
+        normalized: normalizedCompany,
+        identifier: companyIdentifier,
+        employeeCount: employees.length
+      });
+      
+      // First check if table exists
+      const tableCheck = await sql`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'company_enrichments'
+        );
+      `;
+      console.log('📋 company_enrichments table exists:', tableCheck.rows[0]?.exists);
+      
+      // If table doesn't exist, create it
+      if (!tableCheck.rows[0]?.exists) {
+        console.log('🏗️ Creating company_enrichments table...');
+        await sql`
+          CREATE TABLE IF NOT EXISTS public.company_enrichments (
+            id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+            company_name TEXT NOT NULL UNIQUE,
+            normalized_name TEXT NOT NULL,
+            canonical_identifier TEXT,
+            employee_count INTEGER DEFAULT 0,
+            last_enriched TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            enrichment_type TEXT DEFAULT 'harvestapi',
+            enrichment_data JSONB,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          );
+        `;
+        console.log('✅ Table created successfully');
+      }
       
       const enrichmentData = {
         employees,
@@ -254,7 +290,7 @@ export async function POST(request: NextRequest) {
       };
 
       // Insert or update company enrichment
-      await sql`
+      const result = await sql`
         INSERT INTO company_enrichments (
           company_name,
           normalized_name,
@@ -279,11 +315,16 @@ export async function POST(request: NextRequest) {
           enrichment_type = EXCLUDED.enrichment_type,
           enrichment_data = EXCLUDED.enrichment_data,
           canonical_identifier = EXCLUDED.canonical_identifier
+        RETURNING id, company_name, employee_count;
       `;
       
-      console.log(`✅ Successfully cached enrichment data for ${networkData.companyName}`);
+      console.log(`✅ Successfully cached enrichment data:`, result.rows[0]);
     } catch (dbError) {
-      console.warn('⚠️ Failed to cache enrichment data:', dbError);
+      console.error('❌ Failed to cache enrichment data:', dbError);
+      console.error('❌ Error details:', {
+        message: dbError instanceof Error ? dbError.message : 'Unknown error',
+        stack: dbError instanceof Error ? dbError.stack : 'No stack trace'
+      });
       // Don't fail the request if caching fails
     }
 

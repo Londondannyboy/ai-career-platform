@@ -8,7 +8,19 @@ import { sql } from '@vercel/postgres';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get all company enrichments with employee counts and cache status
+    console.log('🔍 Fetching companies from database...');
+    
+    // First check if table exists and show some debug info
+    const tableCheck = await sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'company_enrichments'
+      );
+    `;
+    console.log('📋 Table exists:', tableCheck.rows[0]?.exists);
+
+    // Get all company enrichments with employee counts and cache status (updated to 1 month cache)
     const { rows } = await sql`
       SELECT 
         id,
@@ -19,14 +31,19 @@ export async function GET(request: NextRequest) {
         last_enriched,
         enrichment_type,
         CASE 
-          WHEN last_enriched > NOW() - INTERVAL '7 days' THEN 'fresh'
-          WHEN last_enriched > NOW() - INTERVAL '30 days' THEN 'stale'
+          WHEN last_enriched > NOW() - INTERVAL '1 month' THEN 'fresh'
+          WHEN last_enriched > NOW() - INTERVAL '3 months' THEN 'stale'
           ELSE 'expired'
         END as cache_status,
         EXTRACT(DAYS FROM NOW() - last_enriched)::integer as days_since_enriched
       FROM company_enrichments 
       ORDER BY last_enriched DESC
     `;
+    
+    console.log(`📊 Found ${rows.length} companies in database`);
+    if (rows.length > 0) {
+      console.log('📝 Sample company:', rows[0]);
+    }
 
     // Calculate stats
     const stats = {
