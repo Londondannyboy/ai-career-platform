@@ -155,19 +155,6 @@ export class ApifyService {
     return this.enrichWithHarvestAPI(companyName, { maxEmployees: apolloEmployees.length });
   }
 
-  /**
-   * Legacy method - kept for backward compatibility
-   */
-  async enrichEmployeeRelationships(
-    apolloEmployees: Array<{ 
-      linkedin_url?: string; 
-      name: string; 
-      title: string; 
-      company: string; 
-    }>
-  ): Promise<CompanyNetworkData> {
-    return this.enrichWithHarvestAPI(apolloEmployees);
-  }
 
   /**
    * Run HarvestAPI scraper with company URLs (not individual profiles)
