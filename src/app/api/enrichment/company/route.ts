@@ -52,25 +52,51 @@ export async function POST(request: NextRequest) {
     // Step 2: Run HarvestAPI company enrichment directly (no URL resolution needed)
     console.log(`📊 Running HarvestAPI enrichment for company: ${companyIdentifier}`);
     
-    const networkData = await apifyService.enrichWithHarvestAPI(companyIdentifier, {
-      maxEmployees: options.maxEmployees || 25
-    });
-
-    console.log(`✅ HarvestAPI returned ${networkData.employees.length} employees with rich data`);
+    let networkData;
+    try {
+      networkData = await apifyService.enrichWithHarvestAPI(companyIdentifier, {
+        maxEmployees: options.maxEmployees || 25
+      });
+      console.log(`✅ HarvestAPI returned data:`, JSON.stringify(networkData, null, 2));
+    } catch (harvestError) {
+      console.error('❌ HarvestAPI enrichment failed:', harvestError);
+      return NextResponse.json({
+        error: 'HarvestAPI enrichment failed',
+        details: harvestError instanceof Error ? harvestError.message : 'Unknown HarvestAPI error'
+      }, { status: 500 });
+    }
 
     // Step 3: Transform to Neo4j format directly from HarvestAPI data
-    const employees = networkData.employees.map(emp => ({
-      name: emp.name,
-      title: emp.headline,
-      linkedin_url: emp.profileUrl,
-      profileImage: null, // HarvestAPI doesn't provide profile images
-      summary: emp.summary,
-      experience: emp.experience,
-      education: emp.education,
-      skills: emp.skills,
-      recommendations: emp.recommendations,
-      connections: emp.connections
-    }));
+    let employees;
+    try {
+      if (!networkData.employees || !Array.isArray(networkData.employees)) {
+        throw new Error(`Invalid employees data: ${typeof networkData.employees}, length: ${networkData.employees?.length}`);
+      }
+      
+      employees = networkData.employees.map((emp, index) => {
+        console.log(`🔄 Transforming employee ${index}:`, JSON.stringify(emp, null, 2));
+        return {
+          name: emp.name || 'Unknown',
+          title: emp.headline || emp.title || '',
+          linkedin_url: emp.profileUrl || '',
+          profileImage: null, // HarvestAPI doesn't provide profile images
+          summary: emp.summary || '',
+          experience: emp.experience || [],
+          education: emp.education || [],
+          skills: emp.skills || [],
+          recommendations: emp.recommendations || [],
+          connections: emp.connections || []
+        };
+      });
+      console.log(`✅ Transformed ${employees.length} employees successfully`);
+    } catch (transformError) {
+      console.error('❌ Data transformation failed:', transformError);
+      return NextResponse.json({
+        error: 'Data transformation failed',
+        details: transformError instanceof Error ? transformError.message : 'Unknown transformation error',
+        rawData: networkData
+      }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
