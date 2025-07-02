@@ -22,9 +22,9 @@ export async function GET(request: NextRequest) {
     const tableExists = tableCheck.rows[0]?.exists;
     console.log('📋 Table exists:', tableExists);
 
-    let companies = [];
-    let tableSchema = [];
-    let sampleData = null;
+    let companies: any[] = [];
+    let tableSchema: any[] = [];
+    let sampleData: any = null;
 
     if (tableExists) {
       // Get table schema
