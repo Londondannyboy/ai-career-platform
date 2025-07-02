@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createApifyService } from '@/lib/apify/apifyService';
+import { sql } from '@vercel/postgres';
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,6 +48,83 @@ export async function POST(request: NextRequest) {
         },
         { status: 500 }
       );
+    }
+
+    // Step 1.5: Check cache before expensive HarvestAPI call
+    const normalizedCompany = companyIdentifier.toLowerCase().trim();
+    const isForceRefresh = options.forceRefresh || false;
+    
+    if (!isForceRefresh) {
+      console.log(`🔍 Checking cache for company: ${normalizedCompany}`);
+      
+      try {
+        const { rows } = await sql`
+          SELECT 
+            id,
+            company_name,
+            employee_count,
+            last_enriched,
+            enrichment_data,
+            CASE 
+              WHEN last_enriched > NOW() - INTERVAL '7 days' THEN 'fresh'
+              WHEN last_enriched > NOW() - INTERVAL '30 days' THEN 'stale'  
+              ELSE 'expired'
+            END as cache_status
+          FROM company_enrichments 
+          WHERE 
+            LOWER(company_name) = ${normalizedCompany} OR
+            LOWER(canonical_identifier) LIKE ${'%' + normalizedCompany + '%'}
+          ORDER BY last_enriched DESC
+          LIMIT 1
+        `;
+
+        if (rows.length > 0) {
+          const cachedCompany = rows[0];
+          console.log(`💾 Found cached company: ${cachedCompany.company_name} (${cachedCompany.cache_status})`);
+          
+          if (cachedCompany.cache_status === 'fresh') {
+            console.log(`✅ Returning fresh cached data for ${cachedCompany.company_name}`);
+            
+            // Return cached data in the expected format
+            const enrichmentData = typeof cachedCompany.enrichment_data === 'string' 
+              ? JSON.parse(cachedCompany.enrichment_data) 
+              : cachedCompany.enrichment_data;
+            
+            return NextResponse.json({
+              success: true,
+              cached: true,
+              data: {
+                companyName: cachedCompany.company_name,
+                enrichmentType: 'harvestapi_cached',
+                profilesEnriched: cachedCompany.employee_count,
+                networkAnalysis: enrichmentData.networkAnalysis || {
+                  totalRelationships: 0,
+                  internalConnections: 0,
+                  externalInfluencers: 0,
+                  averageInfluenceScore: 0.5,
+                  networkDensity: 0.3,
+                  keyConnectors: []
+                },
+                socialIntelligence: {
+                  sentiment: 'neutral' as const,
+                  buyingSignals: [],
+                  decisionMakerActivity: []
+                },
+                lastEnriched: cachedCompany.last_enriched,
+                employees: enrichmentData.employees || []
+              }
+            });
+          } else {
+            console.log(`⚠️ Cache is ${cachedCompany.cache_status}, proceeding with fresh enrichment`);
+          }
+        } else {
+          console.log(`🆕 No cached data found for company: ${normalizedCompany}`);
+        }
+      } catch (cacheError) {
+        console.warn('⚠️ Cache check failed, proceeding with fresh enrichment:', cacheError);
+      }
+    } else {
+      console.log(`🔄 Force refresh requested, skipping cache for: ${normalizedCompany}`);
     }
 
     // Step 2: Run HarvestAPI company enrichment directly (no URL resolution needed)
@@ -164,7 +242,52 @@ export async function POST(request: NextRequest) {
         // For Neo4j visualization
         employees: employees
       }
-    });
+    };
+
+    // Step 4: Save enrichment data to database for caching
+    try {
+      console.log(`💾 Saving enrichment data for: ${networkData.companyName}`);
+      
+      const enrichmentData = {
+        employees,
+        networkAnalysis: responseData.data.networkAnalysis
+      };
+
+      // Insert or update company enrichment
+      await sql`
+        INSERT INTO company_enrichments (
+          company_name,
+          normalized_name,
+          canonical_identifier,
+          employee_count,
+          last_enriched,
+          enrichment_type,
+          enrichment_data
+        ) VALUES (
+          ${networkData.companyName},
+          ${normalizedCompany},
+          ${companyIdentifier},
+          ${employees.length},
+          NOW(),
+          'harvestapi',
+          ${JSON.stringify(enrichmentData)}
+        )
+        ON CONFLICT (company_name) 
+        DO UPDATE SET
+          employee_count = EXCLUDED.employee_count,
+          last_enriched = EXCLUDED.last_enriched,
+          enrichment_type = EXCLUDED.enrichment_type,
+          enrichment_data = EXCLUDED.enrichment_data,
+          canonical_identifier = EXCLUDED.canonical_identifier
+      `;
+      
+      console.log(`✅ Successfully cached enrichment data for ${networkData.companyName}`);
+    } catch (dbError) {
+      console.warn('⚠️ Failed to cache enrichment data:', dbError);
+      // Don't fail the request if caching fails
+    }
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Company enrichment failed:', error);
