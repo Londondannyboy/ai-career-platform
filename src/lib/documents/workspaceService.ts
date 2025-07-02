@@ -150,8 +150,7 @@ class WorkspaceService {
     try {
       const query = `
         SELECT * FROM company_workspaces 
-        WHERE id = $1 
-        AND (owner_id = $2 OR $2 = ANY(collaborators::uuid[]))
+        WHERE id = $1 AND owner_id = $2
       `
       
       const client = await pool.connect()
@@ -181,7 +180,7 @@ class WorkspaceService {
     try {
       const query = `
         SELECT * FROM company_workspaces 
-        WHERE owner_id = $1 OR $1 = ANY(collaborators::uuid[])
+        WHERE owner_id = $1
         ORDER BY updated_at DESC
       `
       

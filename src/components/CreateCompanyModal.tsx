@@ -141,10 +141,10 @@ export default function CreateCompanyModal({
       })
 
       // Close modal and refresh
-      onClose()
       if (onCompanyCreated) {
         onCompanyCreated()
       }
+      onClose()
 
     } catch (error) {
       console.error('❌ Failed to create workspace:', error)
