@@ -41,10 +41,13 @@ export async function POST(request: NextRequest) {
     const apifyService = createApifyService();
     if (!apifyService) {
       // Debug environment variables
+      const token = process.env.APIFY_TOKEN || process.env.APIFY_API_KEY;
       const debugInfo = {
         APIFY_TOKEN: !!process.env.APIFY_TOKEN,
+        APIFY_API_KEY: !!process.env.APIFY_API_KEY,
         APIFY_HARVEST_ACTOR_ID: process.env.APIFY_HARVEST_ACTOR_ID || 'missing',
-        tokenLength: process.env.APIFY_TOKEN ? process.env.APIFY_TOKEN.length : 0
+        tokenLength: token ? token.length : 0,
+        usingApiKey: !!process.env.APIFY_API_KEY && !process.env.APIFY_TOKEN
       };
       
       console.error('❌ Apify service not configured:', debugInfo);

@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
-  const token = process.env.APIFY_TOKEN;
+  const token = process.env.APIFY_TOKEN || process.env.APIFY_API_KEY;
   const actorId = process.env.APIFY_HARVEST_ACTOR_ID;
 
   // Force check all environment variables

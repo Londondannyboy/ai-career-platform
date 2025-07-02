@@ -695,7 +695,7 @@ export class ApifyService {
 
 // Configuration and factory - Updated to force redeploy
 export function createApifyService(): ApifyService | null {
-  const token = process.env.APIFY_TOKEN;
+  const token = process.env.APIFY_TOKEN || process.env.APIFY_API_KEY;
   const actorId = process.env.APIFY_HARVEST_ACTOR_ID || 'M2FMdjRVeF1HPGFcc';
 
   console.log('🔧 Apify Service Configuration:', {
