@@ -15,7 +15,8 @@ const isPublicRoute = createRouteMatcher([
   '/company-insights',
   '/graph-insights',
   '/api/workspace/create',
-  '/api/workspace/list'
+  '/api/workspace/list',
+  '/api/test-db'
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

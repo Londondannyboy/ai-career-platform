@@ -134,6 +134,11 @@ class WorkspaceService {
       
     } catch (error) {
       console.error('❌ Failed to create workspace:', error)
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : null,
+        name: error instanceof Error ? error.name : null
+      })
       throw new Error(`Failed to create workspace: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
