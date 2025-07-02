@@ -74,10 +74,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       company: companyName,
-      totalEmployees: apolloResponse.total_entries,
+      totalEmployees: apolloResponse.pagination.total_entries,
       profilesReturned: apolloResponse.people.length,
-      page: apolloResponse.page,
-      perPage: apolloResponse.per_page,
+      page: apolloResponse.pagination.page,
+      perPage: apolloResponse.pagination.per_page,
       profiles,
       decisionMakers: searchOptions?.includeDecisionMakers ? decisionMakers : undefined,
       insights: {

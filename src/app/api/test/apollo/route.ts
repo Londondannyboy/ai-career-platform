@@ -38,7 +38,7 @@ export async function GET() {
         results.push({
           company: companyName,
           success: true,
-          totalEmployees: response.total_entries,
+          totalEmployees: response.pagination.total_entries,
           samplesReturned: response.people.length,
           decisionMakersFound: decisionMakers.length,
           sampleProfiles: response.people.slice(0, 3).map(person => ({

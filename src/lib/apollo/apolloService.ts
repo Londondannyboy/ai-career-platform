@@ -4,7 +4,7 @@
  */
 
 interface ApolloSearchParams {
-  organization_names?: string[];
+  q_organization_name?: string;
   person_titles?: string[];
   person_seniorities?: string[];
   person_departments?: string[];
@@ -39,9 +39,12 @@ interface ApolloPerson {
 
 interface ApolloResponse {
   people: ApolloPerson[];
-  total_entries: number;
-  page: number;
-  per_page: number;
+  pagination: {
+    page: number;
+    per_page: number;
+    total_entries: number;
+    total_pages: number;
+  };
 }
 
 export class ApolloService {
@@ -68,7 +71,7 @@ export class ApolloService {
   ): Promise<ApolloResponse> {
     try {
       const params: ApolloSearchParams = {
-        organization_names: [companyName],
+        q_organization_name: companyName,
         person_titles: options.titles,
         person_seniorities: options.seniorityLevels,
         person_departments: options.departments,
@@ -100,11 +103,21 @@ export class ApolloService {
 
       const data = await response.json();
       console.log(`Apollo API response for ${companyName}:`, {
-        totalFound: data.total_entries || data.total_people || 0,
+        totalFound: data.pagination?.total_entries || 0,
         peopleReturned: data.people?.length || 0,
         samplePerson: data.people?.[0]
       });
-      return data;
+      
+      // Transform the response to our expected format
+      return {
+        people: data.people || [],
+        pagination: data.pagination || {
+          page: 1,
+          per_page: 25,
+          total_entries: 0,
+          total_pages: 0
+        }
+      };
     } catch (error) {
       console.error('Error searching people by company:', error);
       throw error;
