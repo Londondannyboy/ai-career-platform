@@ -209,7 +209,12 @@ class WorkspaceService {
         AND NOT ($3::uuid = ANY(collaborators::uuid[]))
       `
       
-      await neonClient.query(query, [workspaceId, ownerId, collaboratorId])
+      const client = await pool.connect()
+      try {
+        await client.query(query, [workspaceId, ownerId, collaboratorId])
+      } finally {
+        client.release()
+      }
       
       // TODO: Send notification to new collaborator
       
