@@ -125,13 +125,16 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
       if (data.employees) {
         data.employees.forEach((emp: any, idx: number) => {
           const nodeId = `emp-${idx}`
+          const hasValidImage = emp.profileImage && emp.profileImage !== '' && emp.profileImage !== null
+          
           nodes.add({
             id: nodeId,
             label: emp.name?.split(' ')[0] || 'Employee',
             title: emp.title || 'No title',
-            group: 'employee',
+            group: hasValidImage ? 'employeeWithImage' : 'employee',
             size: 20,
-            image: emp.profileImage
+            image: hasValidImage ? emp.profileImage : undefined,
+            shape: hasValidImage ? 'circularImage' : 'dot'
           })
           edges.add({
             from: nodeId,
@@ -206,6 +209,14 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
           shape: 'triangle'
         },
         employee: {
+          color: {
+            background: '#10b981',
+            border: '#059669'
+          },
+          shape: 'dot',
+          borderWidth: 2
+        },
+        employeeWithImage: {
           color: {
             background: '#10b981',
             border: '#059669'
