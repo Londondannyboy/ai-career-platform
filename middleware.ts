@@ -17,6 +17,8 @@ const isPublicRoute = createRouteMatcher([
   '/api/workspace/create',
   '/api/workspace/list',
   '/api/workspace/cleanup',
+  '/api/workspace/(.*)/upload-simple',
+  '/api/workspace/(.*)/document/(.*)',
   '/api/workspace/(.*)',
   '/api/test-db',
   '/api/test-workspaces',

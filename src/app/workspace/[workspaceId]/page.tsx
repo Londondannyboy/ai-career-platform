@@ -141,6 +141,13 @@ export default function WorkspacePage() {
     e.preventDefault()
     if (!uploadFile || !workspace || isUploading) return
 
+    console.log('📤 Starting upload process...', {
+      fileName: uploadFile.name,
+      fileSize: uploadFile.size,
+      fileType: uploadFile.type,
+      workspaceId
+    })
+
     setIsUploading(true)
     try {
       const formData = new FormData()
@@ -151,13 +158,17 @@ export default function WorkspacePage() {
       formData.append('companyId', workspace.companyName)
       formData.append('tags', '')
 
+      console.log('📤 Sending upload request...')
       const response = await fetch(`/api/workspace/${workspaceId}/upload-simple`, {
         method: 'POST',
         body: formData,
       })
 
+      console.log('📤 Upload response status:', response.status)
+
       if (response.ok) {
-        console.log('✅ Upload successful, refreshing workspace data...')
+        const responseData = await response.json()
+        console.log('✅ Upload successful:', responseData)
         
         // Close dialog first
         setShowUploadDialog(false)
@@ -165,6 +176,7 @@ export default function WorkspacePage() {
         
         // Then refresh workspace data
         try {
+          console.log('🔄 Refreshing workspace data...')
           const workspaceResponse = await fetch(`/api/workspace/${workspaceId}`)
           if (workspaceResponse.ok) {
             const data = await workspaceResponse.json()
@@ -172,17 +184,26 @@ export default function WorkspacePage() {
             setDocuments(data.documents || [])
           } else {
             console.error('Failed to refresh workspace data:', workspaceResponse.status)
+            const errorText = await workspaceResponse.text()
+            console.error('Refresh error details:', errorText)
           }
         } catch (refreshError) {
           console.error('Error refreshing workspace:', refreshError)
         }
       } else {
-        const errorData = await response.json().catch(() => ({}))
-        console.error('Upload failed:', response.status, errorData)
-        alert(`Upload failed: ${errorData.error || 'Unknown error'}`)
+        const errorText = await response.text()
+        console.error('Upload failed:', response.status, errorText)
+        let errorData = {}
+        try {
+          errorData = JSON.parse(errorText)
+        } catch (parseError) {
+          console.error('Could not parse error response:', parseError)
+        }
+        alert(`Upload failed: ${errorData.error || errorText || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Error uploading file:', error)
+      alert(`Upload error: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsUploading(false)
     }
@@ -190,50 +211,68 @@ export default function WorkspacePage() {
 
   const handleViewDocument = async (documentId: string) => {
     try {
-      const response = await fetch(`/api/workspace/${workspaceId}/document/${documentId}`)
+      console.log('👀 Loading document:', documentId, 'from workspace:', workspaceId)
+      const url = `/api/workspace/${workspaceId}/document/${documentId}`
+      console.log('👀 Fetching URL:', url)
+      
+      const response = await fetch(url)
+      console.log('👀 Document response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('👀 Document data received:', data)
         setSelectedDocument(data.document)
         setShowDocumentViewer(true)
       } else {
-        console.error('Failed to load document:', response.status)
-        alert('Failed to load document')
+        const errorText = await response.text()
+        console.error('Failed to load document:', response.status, errorText)
+        alert(`Failed to load document: ${response.status} - ${errorText}`)
       }
     } catch (error) {
       console.error('Error loading document:', error)
-      alert('Error loading document')
+      alert(`Error loading document: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
   const handleDownloadDocument = async (documentId: string, title: string) => {
     try {
-      const response = await fetch(`/api/workspace/${workspaceId}/document/${documentId}`)
+      console.log('💾 Downloading document:', documentId, 'from workspace:', workspaceId)
+      const url = `/api/workspace/${workspaceId}/document/${documentId}`
+      console.log('💾 Fetching URL:', url)
+      
+      const response = await fetch(url)
+      console.log('💾 Download response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('💾 Download data received:', data)
         const document = data.document
         
         // Create a downloadable file with the document content
         const content = document.content || document.contentPreview || 'No content available'
         const blob = new Blob([content], { type: 'text/plain' })
-        const url = window.URL.createObjectURL(blob)
+        const downloadUrl = window.URL.createObjectURL(blob)
         
         // Create download link
-        const a = document.createElement('a')
-        a.href = url
+        const a = window.document.createElement('a')
+        a.href = downloadUrl
         a.download = `${title || 'document'}.txt`
-        document.body.appendChild(a)
+        window.document.body.appendChild(a)
         a.click()
         
         // Cleanup
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
+        window.URL.revokeObjectURL(downloadUrl)
+        window.document.body.removeChild(a)
+        
+        console.log('💾 Download completed successfully')
       } else {
-        console.error('Failed to download document:', response.status)
-        alert('Failed to download document')
+        const errorText = await response.text()
+        console.error('Failed to download document:', response.status, errorText)
+        alert(`Failed to download document: ${response.status} - ${errorText}`)
       }
     } catch (error) {
       console.error('Error downloading document:', error)
-      alert('Error downloading document')
+      alert(`Error downloading document: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
