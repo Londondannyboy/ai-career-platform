@@ -57,7 +57,7 @@ export async function GET(
       // Get document
       const documentQuery = `
         SELECT 
-          id, title, content, content_preview, document_type, 
+          id, title, full_content, content_preview, document_type, 
           file_type, file_size, uploaded_by, tags, auto_tags,
           access_level, created_at
         FROM company_documents 
@@ -79,7 +79,7 @@ export async function GET(
         document: {
           id: doc.id,
           title: doc.title,
-          content: doc.content,
+          content: doc.full_content,
           contentPreview: doc.content_preview,
           documentType: doc.document_type,
           fileType: doc.file_type,

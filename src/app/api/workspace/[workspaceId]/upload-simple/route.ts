@@ -93,7 +93,7 @@ export async function POST(
     // Store in database WITHOUT embeddings (for testing)
     const query = `
       INSERT INTO company_documents (
-        id, workspace_id, title, content, content_preview, 
+        id, workspace_id, title, full_content, content_preview, 
         document_type, file_type, file_size, uploaded_by,
         tags, auto_tags, access_level
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
