@@ -69,11 +69,17 @@ export async function POST(request: NextRequest) {
     // Step 3: Transform to Neo4j format directly from HarvestAPI data
     let employees;
     try {
-      if (!networkData.employees || !Array.isArray(networkData.employees)) {
-        const dataType = typeof networkData.employees;
-        const dataLength = Array.isArray(networkData.employees) ? networkData.employees.length : 'N/A';
-        throw new Error(`Invalid employees data: ${dataType}, length: ${dataLength}`);
+      if (!networkData.employees) {
+        console.error('❌ No employees data returned');
+        throw new Error('No employees data returned from HarvestAPI');
       }
+      
+      if (!Array.isArray(networkData.employees)) {
+        console.error('❌ Invalid employees data type:', typeof networkData.employees);
+        throw new Error(`Invalid employees data: expected array but got ${typeof networkData.employees}`);
+      }
+      
+      console.log(`📊 Processing ${networkData.employees.length} employees from HarvestAPI`);
       
       employees = networkData.employees.map((emp, index) => {
         console.log(`🔄 Transforming employee ${index}:`, JSON.stringify(emp, null, 2));
