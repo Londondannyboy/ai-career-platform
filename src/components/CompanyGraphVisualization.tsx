@@ -7,7 +7,22 @@ import { Badge } from '@/components/ui/badge';
 import { Network, Users, Building2, Eye, EyeOff, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
-const Neo4jGraphVisualization = dynamic(() => import('@/components/Neo4jGraphVisualization'), {
+const Neo4jGraphVisualization = dynamic(() => import('@/components/Neo4jGraphVisualization').catch(() => {
+  // Fallback component if Neo4j fails to load
+  return {
+    default: ({ data, height }: any) => (
+      <div className="h-96 flex items-center justify-center border rounded bg-red-50">
+        <div className="text-center">
+          <Network className="h-12 w-12 mx-auto mb-4 text-red-400" />
+          <p className="text-red-600">Neo4j visualization failed to load</p>
+          <p className="text-sm text-red-500 mt-2">
+            {data?.employees?.length || 0} employees • {Object.keys(data?.relationships?.departments || {}).length || 0} departments
+          </p>
+        </div>
+      </div>
+    )
+  };
+}), {
   ssr: false,
   loading: () => <div className="h-96 flex items-center justify-center text-gray-500">Loading Neo4j graph...</div>
 });
@@ -54,29 +69,46 @@ export default function CompanyGraphVisualization({
     setError(null);
 
     try {
+      if (!employees || employees.length === 0) {
+        setError('No employee data available');
+        return;
+      }
+
+      console.log('Converting employees to Neo4j format:', employees.length, 'employees');
+
       // Convert Apollo employee data to Neo4j format
+      const validEmployees = employees
+        .map(emp => {
+          const name = emp.name || emp.full_name || 
+            `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || 'Unknown';
+          
+          return {
+            name,
+            title: emp.title || emp.currentPosition || emp.headline || 'No Title',
+            department: emp.departments?.[0] || emp.department || 'Other',
+            seniority: emp.seniority || 'entry',
+            profileImage: emp.photo_url,
+            linkedinUrl: emp.linkedin_url || emp.linkedinUrl
+          };
+        })
+        .filter(emp => emp.name && emp.name !== 'Unknown' && emp.name.length > 1);
+
+      console.log('Valid employees after filtering:', validEmployees.length);
+
       const neo4jFormat = {
         company: {
           name: companyName,
-          industry: 'Technology', // Could be extracted from Apollo data
-          employees: employees.length
+          industry: 'Technology',
+          employees: validEmployees.length
         },
-        employees: employees.map(emp => ({
-          name: emp.name || emp.full_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim(),
-          title: emp.title || emp.currentPosition || emp.headline,
-          department: emp.departments?.[0] || emp.department,
-          seniority: emp.seniority,
-          profileImage: emp.photo_url,
-          linkedinUrl: emp.linkedin_url || emp.linkedinUrl
-        })).filter(emp => emp.name && emp.name !== ''),
+        employees: validEmployees,
         relationships: {
-          // Group employees by department for clustering
-          departments: employees.reduce((depts: any, emp: any) => {
-            const dept = emp.departments?.[0] || emp.department || 'Other';
+          departments: validEmployees.reduce((depts: any, emp: any) => {
+            const dept = emp.department || 'Other';
             if (!depts[dept]) depts[dept] = [];
             depts[dept].push({
-              name: emp.name || emp.full_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim(),
-              title: emp.title || emp.currentPosition,
+              name: emp.name,
+              title: emp.title,
               seniority: emp.seniority
             });
             return depts;
@@ -84,11 +116,12 @@ export default function CompanyGraphVisualization({
         }
       };
 
+      console.log('Neo4j format created:', neo4jFormat);
       setNeo4jData(neo4jFormat);
 
     } catch (error) {
       console.error('Error converting to Neo4j format:', error);
-      setError('Failed to convert graph data');
+      setError(`Failed to convert graph data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -209,11 +242,25 @@ export default function CompanyGraphVisualization({
               </div>
               
               {/* Neo4j Network Component */}
-              {neo4jData && (
+              {isLoading ? (
+                <div className="h-96 flex items-center justify-center">
+                  <div className="text-center">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                    <p className="text-gray-600">Generating graph visualization...</p>
+                  </div>
+                </div>
+              ) : neo4jData ? (
                 <Neo4jGraphVisualization 
                   data={neo4jData} 
                   height="500px"
                 />
+              ) : (
+                <div className="h-96 flex items-center justify-center">
+                  <div className="text-center">
+                    <Network className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p className="text-gray-600">No graph data available</p>
+                  </div>
+                </div>
               )}
               
               {/* Network structure info */}
