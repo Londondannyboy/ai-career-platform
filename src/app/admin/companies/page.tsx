@@ -108,9 +108,25 @@ export default function AdminCompaniesPage() {
     }
   };
 
-  const filteredCompanies = companies.filter(company =>
-    company.company_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCompanies = companies.filter(company => {
+    const searchLower = searchTerm.toLowerCase();
+    const companyLower = company.company_name.toLowerCase();
+    
+    // Direct match
+    if (companyLower.includes(searchLower)) return true;
+    
+    // Handle "CK Delta" variations
+    if (searchLower.includes('ck') && searchLower.includes('delta')) {
+      return companyLower.includes('ckdelta') || companyLower.includes('ck') || companyLower.includes('delta');
+    }
+    
+    // Handle "ckdelta" variations  
+    if (companyLower.includes('ckdelta') && (searchLower.includes('ck') || searchLower.includes('delta'))) {
+      return true;
+    }
+    
+    return false;
+  });
 
   const getCacheStatusColor = (status: string) => {
     switch (status) {
