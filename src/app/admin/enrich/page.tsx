@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Building2, RefreshCw, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
 
 export default function EnrichPage() {
@@ -13,6 +14,7 @@ export default function EnrichPage() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [forceRefresh, setForceRefresh] = useState(false);
 
   const enrichCompany = async () => {
     setLoading(true);
@@ -26,7 +28,7 @@ export default function EnrichPage() {
         body: JSON.stringify({
           companyIdentifier: companyName,
           options: {
-            forceRefresh: true,
+            forceRefresh: forceRefresh,
             maxEmployees: 10
           }
         })
@@ -130,6 +132,18 @@ export default function EnrichPage() {
                 </>
               )}
             </Button>
+          </div>
+          
+          {/* Cache Options */}
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="forceRefresh"
+              checked={forceRefresh}
+              onCheckedChange={(checked) => setForceRefresh(!!checked)}
+            />
+            <label htmlFor="forceRefresh" className="text-sm text-gray-600 cursor-pointer">
+              Force refresh (bypass cache) - Only use if you need fresh data
+            </label>
           </div>
 
           {/* Results */}
