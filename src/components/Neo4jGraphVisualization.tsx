@@ -141,6 +141,7 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
           width: 2,
           shadow: true,
           smooth: {
+            enabled: true,
             type: 'continuous',
             roundness: 0.2
           },
