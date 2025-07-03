@@ -1,7 +1,13 @@
 import { auth } from '@clerk/nextjs/server';
 import { neon } from '@neondatabase/serverless';
 
-const sql = neon(process.env.DATABASE_URL!);
+// Clean up DATABASE_URL (remove any line breaks or extra whitespace)
+let databaseUrl = process.env.DATABASE_URL;
+if (databaseUrl) {
+  databaseUrl = databaseUrl.replace(/\s+/g, '').trim();
+}
+
+const sql = neon(databaseUrl!);
 
 /**
  * POST /api/admin/cleanup-test-data
