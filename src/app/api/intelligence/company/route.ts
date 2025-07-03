@@ -147,7 +147,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Helper function
+// Helper function - Check if user has admin privileges
 function isAdminUser(userId: string): boolean {
-  return userId === 'test-user-123' || userId.startsWith('admin_');
+  // Add your actual Clerk user ID here for admin access
+  const adminUserIds = [
+    'user_2k8J9X4Z3Y2W1V5T', // Replace with your actual Clerk user ID
+    // Add other admin user IDs as needed
+  ];
+  
+  return adminUserIds.includes(userId) || userId.startsWith('admin_');
 }
