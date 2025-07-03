@@ -5,8 +5,9 @@ import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ExternalLink, Award, Briefcase, GraduationCap, Users, MessageSquare, Building2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Award, Briefcase, GraduationCap, Users, MessageSquare, Building2, Network } from 'lucide-react';
 import Link from 'next/link';
+import Neo4jGraphVisualization from '@/components/Neo4jGraphVisualization';
 
 interface Employee {
   name: string;
@@ -83,6 +84,66 @@ export default function EmployeePage() {
       setLoading(false);
     }
   };
+
+  // Create focused graph data for this employee
+  const createEmployeeGraphData = () => {
+    if (!employee || !companyData) return null;
+
+    const allEmployees = companyData.enrichment_data?.employees || [];
+    
+    // Find employees connected to this person through recommendations
+    const connectedEmployees = [];
+    const relationships = { recommendations: [] };
+
+    if (companyData.enrichment_data?.relationships?.recommendations) {
+      for (const rec of companyData.enrichment_data.relationships.recommendations) {
+        if (rec.from === employee.name || rec.to === employee.name) {
+          relationships.recommendations.push(rec);
+          
+          // Find the connected employee
+          const connectedName = rec.from === employee.name ? rec.to : rec.from;
+          const connectedEmp = allEmployees.find((emp: any) => emp.name === connectedName);
+          if (connectedEmp && !connectedEmployees.find((e: any) => e.name === connectedName)) {
+            connectedEmployees.push(connectedEmp);
+          }
+        }
+      }
+    }
+
+    // Also include employees from the same department
+    const sameCompanyEmployees = allEmployees.filter((emp: any) => 
+      emp.name !== employee.name && 
+      (emp.department === employee.department || 
+       emp.title?.toLowerCase().includes(employee.title?.toLowerCase().split(' ')[0] || ''))
+    ).slice(0, 5); // Limit to 5 for clarity
+
+    const finalEmployees = [
+      employee,
+      ...connectedEmployees,
+      ...sameCompanyEmployees.filter((emp: any) => 
+        !connectedEmployees.find((ce: any) => ce.name === emp.name)
+      )
+    ].slice(0, 8); // Limit total to 8 employees for readability
+
+    return {
+      company: {
+        name: companyData.company_name,
+        employees: finalEmployees.length,
+        totalRecommendations: relationships.recommendations.length
+      },
+      employees: finalEmployees,
+      relationships: {
+        departments: {
+          [employee.department || 'General']: finalEmployees.filter(emp => 
+            emp.department === employee.department || !emp.department
+          )
+        },
+        recommendations: relationships.recommendations
+      }
+    };
+  };
+
+  const employeeGraphData = createEmployeeGraphData();
 
   if (loading) {
     return (
@@ -170,6 +231,27 @@ export default function EmployeePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Personal Network Graph */}
+      {employeeGraphData && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Network className="h-5 w-5 mr-2" />
+              Personal Network & Relationships
+            </CardTitle>
+            <CardDescription>
+              {employee.name}'s professional connections and relationships within {companyData?.company_name}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Neo4jGraphVisualization
+              data={employeeGraphData}
+              height="400px"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Skills */}
       {employee.skills && employee.skills.length > 0 && (

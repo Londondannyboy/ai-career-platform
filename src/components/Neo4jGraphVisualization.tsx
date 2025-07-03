@@ -11,11 +11,18 @@ interface Neo4jGraphProps {
 export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4jGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [network, setNetwork] = useState<Network | null>(null)
+  const [focusedEmployee, setFocusedEmployee] = useState<string | null>(null)
+  const [originalData, setOriginalData] = useState<any>(null)
 
   useEffect(() => {
     if (!containerRef.current || !data) return
 
     console.log('🎯 Neo4j Graph received data:', data)
+    
+    // Store original data for zoom out functionality
+    if (!originalData) {
+      setOriginalData(data)
+    }
 
     // Create nodes and edges from company data
     const nodes = new DataSet<any>([])
@@ -74,20 +81,32 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
           const deptName = emp.department || 'Other'
           const deptId = `dept-${deptName.replace(/\s+/g, '-').toLowerCase()}`
           
+          // Determine if this employee should be highlighted or dimmed
+          const isFocused = focusedEmployee === empId
+          const isConnectedToFocused = focusedEmployee ? 
+            data.relationships?.recommendations?.some((rec: any) => 
+              rec.from === emp.name || rec.to === emp.name
+            ) : false
+          const shouldDim = focusedEmployee && !isFocused && !isConnectedToFocused
+
           nodes.add({
             id: empId,
             label: emp.name,
-            title: `${emp.name}\n${emp.title}\n${emp.department || 'Other'}\n\n👆 Click to view profile`,
+            title: `${emp.name}\n${emp.title}\n${emp.department || 'Other'}\n\n👆 Click to focus/expand • Ctrl+Click for profile`,
             group: 'employee',
-            size: 25,
-            font: { size: 12, color: '#000000' },
+            size: isFocused ? 35 : (shouldDim ? 20 : 25),
+            font: { 
+              size: isFocused ? 14 : (shouldDim ? 10 : 12), 
+              color: shouldDim ? '#9ca3af' : '#000000' 
+            },
             color: { 
-              background: getSeniorityColor(emp.seniority), 
-              border: '#374151',
+              background: isFocused ? '#ef4444' : (shouldDim ? '#e5e7eb' : getSeniorityColor(emp.seniority)), 
+              border: isFocused ? '#dc2626' : '#374151',
               hover: { background: '#fbbf24', border: '#f59e0b' }
             },
             shape: hasValidImage ? 'circularImage' : 'dot',
             image: hasValidImage ? emp.profileImage : undefined,
+            opacity: shouldDim ? 0.3 : 1,
             chosen: {
               node: (values: any, id: string, selected: boolean, hovering: boolean) => {
                 if (hovering) {
@@ -121,15 +140,20 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
             const fromIdx = data.employees.indexOf(fromEmp)
             const toIdx = data.employees.indexOf(toEmp)
             
+            // Highlight recommendation edges when focusing on connected employees
+            const isRelevantToFocus = focusedEmployee && 
+              (focusedEmployee === `emp-${fromIdx}` || focusedEmployee === `emp-${toIdx}`)
+            
             edges.add({
               from: `emp-${fromIdx}`,
               to: `emp-${toIdx}`,
               label: 'RECOMMENDS',
-              color: { color: '#10b981' },
-              width: 3,
+              color: { color: isRelevantToFocus ? '#ef4444' : '#10b981' },
+              width: isRelevantToFocus ? 5 : 3,
               arrows: 'to',
               dashes: false,
-              title: rec.context || 'LinkedIn recommendation'
+              title: rec.context || 'LinkedIn recommendation',
+              opacity: focusedEmployee && !isRelevantToFocus ? 0.2 : 1
             })
           }
         })
@@ -215,21 +239,40 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
           const node = nodes.get(nodeId)
           console.log('Node clicked:', node)
           
-          // Navigate to employee page if it's an employee node
+          // Handle employee node clicks
           if (nodeId.startsWith('emp-')) {
             const empIndex = parseInt(nodeId.replace('emp-', ''))
             const employee = data.employees?.[empIndex]
             
-            if (employee && employee.linkedinUrl) {
-              const encodedUrl = encodeURIComponent(employee.linkedinUrl)
-              console.log('Navigating to employee:', employee.name, 'URL:', `/employee/${encodedUrl}`)
-              
+            // Check if Ctrl/Cmd key is pressed for navigation
+            if (event.event.srcEvent && (event.event.srcEvent.ctrlKey || event.event.srcEvent.metaKey)) {
               // Navigate to employee page
-              window.open(`/employee/${encodedUrl}`, '_blank')
+              if (employee && employee.linkedinUrl) {
+                const encodedUrl = encodeURIComponent(employee.linkedinUrl)
+                console.log('Navigating to employee:', employee.name, 'URL:', `/employee/${encodedUrl}`)
+                window.open(`/employee/${encodedUrl}`, '_blank')
+              } else {
+                console.log('Employee LinkedIn URL not found for:', employee?.name || 'Unknown employee')
+              }
             } else {
-              console.log('Employee LinkedIn URL not found for:', employee?.name || 'Unknown employee')
+              // Toggle focus on this employee (in-graph expansion)
+              if (focusedEmployee === nodeId) {
+                // If already focused, unfocus (zoom out)
+                setFocusedEmployee(null)
+                console.log('Unfocusing employee, showing full graph')
+              } else {
+                // Focus on this employee
+                setFocusedEmployee(nodeId)
+                console.log('Focusing on employee:', employee?.name || 'Unknown employee')
+              }
             }
+          } else {
+            // Clicking on non-employee nodes unfocuses
+            setFocusedEmployee(null)
           }
+        } else {
+          // Clicking on empty space unfocuses
+          setFocusedEmployee(null)
         }
       })
 
@@ -261,7 +304,7 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
     } catch (error) {
       console.error('Error creating Neo4j visualization:', error)
     }
-  }, [data, height])
+  }, [data, height, focusedEmployee])
 
   // Helper function to get color based on seniority
   function getSeniorityColor(seniority: string): string {
@@ -286,15 +329,33 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
   }
 
   return (
-    <div 
-      ref={containerRef} 
-      style={{ 
-        height, 
-        width: '100%',
-        border: '1px solid #e5e7eb',
-        borderRadius: '8px',
-        background: '#fafafa'
-      }} 
-    />
+    <div className="space-y-3">
+      <div 
+        ref={containerRef} 
+        style={{ 
+          height, 
+          width: '100%',
+          border: '1px solid #e5e7eb',
+          borderRadius: '8px',
+          background: '#fafafa'
+        }} 
+      />
+      
+      {/* Show All button when an employee is focused */}
+      {focusedEmployee && (
+        <div className="flex justify-center">
+          <button
+            onClick={() => setFocusedEmployee(null)}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <span>Show All Employees</span>
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
