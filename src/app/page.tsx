@@ -195,22 +195,18 @@ export default function Dashboard() {
                 <div className="rounded-lg bg-orange-100 p-2 mr-3">
                   <Building2 className="h-4 w-4 text-orange-600" />
                 </div>
-                Manage Companies
+                Company Repository
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-gray-600 mb-3">
-                Create workspaces and upload documents
+                AI-powered company intelligence and network analysis
               </p>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="w-full"
-                onClick={() => setShowCreateModal(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Company
-              </Button>
+              <Link href="/admin/companies">
+                <Button size="sm" className="w-full bg-orange-600 hover:bg-orange-700">
+                  Browse Companies
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 
