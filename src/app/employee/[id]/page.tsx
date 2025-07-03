@@ -15,6 +15,8 @@ interface Employee {
   linkedinUrl: string;
   profilePicture?: string;
   about?: string;
+  department?: string;
+  seniority?: string;
   skills: string[];
   experience: Array<{
     title: string;
