@@ -35,6 +35,27 @@ export default function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const supabase = createClient()
 
+  // Comprehensive logout cleanup when user is not authenticated
+  useEffect(() => {
+    if (isLoaded && !user) {
+      // User has been signed out, perform cleanup
+      const performLogoutCleanup = async () => {
+        try {
+          // Call our comprehensive logout API
+          await fetch('/api/auth/logout', { method: 'POST' });
+          
+          // Clear local storage and session storage
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch (error) {
+          console.error('Logout cleanup error:', error);
+        }
+      };
+      
+      performLogoutCleanup();
+    }
+  }, [isLoaded, user]);
+
   // Load user profile
   useEffect(() => {
     const getProfile = async () => {
