@@ -237,12 +237,16 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
       networkInstance.on('hoverNode', (event) => {
         const nodeId = event.node
         if (nodeId.startsWith('emp-')) {
-          networkInstance.canvas.body.container.style.cursor = 'pointer'
+          if (containerRef.current) {
+            containerRef.current.style.cursor = 'pointer'
+          }
         }
       })
 
       networkInstance.on('blurNode', () => {
-        networkInstance.canvas.body.container.style.cursor = 'default'
+        if (containerRef.current) {
+          containerRef.current.style.cursor = 'default'
+        }
       })
 
       setNetwork(networkInstance)
