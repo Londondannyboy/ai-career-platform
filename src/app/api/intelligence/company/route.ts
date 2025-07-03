@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { getUnifiedIntelligenceService } from '@/lib/intelligence/unifiedIntelligenceService';
 
 export const runtime = 'nodejs';
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         searchQuery: companyName,
         normalizedName: intelligence.normalizedName,
         timestamp: new Date().toISOString(),
-        isAdmin: isAdminUser(userId)
+        isAdmin: await isAdminUser(userId)
       }
     });
 
@@ -148,12 +148,21 @@ export async function GET(request: NextRequest) {
 }
 
 // Helper function - Check if user has admin privileges
-function isAdminUser(userId: string): boolean {
-  // Add your actual Clerk user ID here for admin access
-  const adminUserIds = [
-    'user_2k8J9X4Z3Y2W1V5T', // Replace with your actual Clerk user ID
-    // Add other admin user IDs as needed
-  ];
-  
-  return adminUserIds.includes(userId) || userId.startsWith('admin_');
+async function isAdminUser(userId: string): Promise<boolean> {
+  try {
+    const user = await currentUser();
+    if (!user) return false;
+    
+    // Check by email address (more reliable than user ID)
+    const primaryEmail = user.emailAddresses.find(email => email.id === user.primaryEmailAddressId);
+    const adminEmails = [
+      'keegan.dan@gmail.com',
+      // Add other admin emails as needed
+    ];
+    
+    return adminEmails.includes(primaryEmail?.emailAddress || '') || userId.startsWith('admin_');
+  } catch (error) {
+    console.error('Admin check error:', error);
+    return false;
+  }
 }
