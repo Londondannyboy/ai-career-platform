@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createApifyService } from '@/lib/apify/apifyService';
-import { sql } from '@vercel/postgres';
+import { sql } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
