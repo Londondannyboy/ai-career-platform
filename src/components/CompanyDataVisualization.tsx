@@ -163,7 +163,7 @@ export default function CompanyDataVisualization({
               onClick={() => setActiveTab('skills')}
             >
               <Award className="h-4 w-4 mr-2" />
-              Skills Heat Map
+              Skills Distribution
             </Button>
             <Button
               variant={activeTab === 'education' ? 'default' : 'outline'}
@@ -191,24 +191,40 @@ export default function CompanyDataVisualization({
             </Button>
           </div>
 
-          {/* Skills Heat Map */}
+          {/* Skills Bar Chart */}
           {activeTab === 'skills' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold mb-3">Skills Heat Map</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Most common skills across {employees.length} employees. Darker colors indicate higher prevalence.
+              <h3 className="text-lg font-semibold mb-3">Skills Distribution</h3>
+              <p className="text-sm text-gray-600 mb-6">
+                Most common skills across {employees.length} employees, ranked by prevalence.
               </p>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {topSkills.map((skill, index) => (
-                  <div
-                    key={skill.name}
-                    className={`p-3 rounded-lg text-center transition-all hover:scale-105 cursor-pointer ${getSkillColor(skill.count, maxSkillCount)}`}
-                    title={`${skill.count} employees have this skill: ${skill.employees.join(', ')}`}
-                  >
-                    <div className="font-medium text-sm">{skill.name}</div>
-                    <div className="text-xs opacity-90">{skill.count} people</div>
-                  </div>
-                ))}
+              <div className="space-y-3">
+                {topSkills.map((skill, index) => {
+                  const percentage = (skill.count / maxSkillCount) * 100;
+                  const color = index < 5 ? 'bg-blue-500' : index < 10 ? 'bg-green-500' : 'bg-gray-400';
+                  
+                  return (
+                    <div key={skill.name} className="group">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-medium text-sm">{skill.name}</span>
+                        <span className="text-xs text-gray-500">{skill.count} people</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-6 relative overflow-hidden">
+                        <div 
+                          className={`h-6 ${color} rounded-full transition-all duration-700 ease-out flex items-center justify-end pr-2`}
+                          style={{ width: `${percentage}%` }}
+                        >
+                          <span className="text-xs text-white font-medium">
+                            {Math.round(percentage)}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        Employees: {skill.employees.slice(0, 3).join(', ')}{skill.employees.length > 3 && ` +${skill.employees.length - 3} more`}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               
               {topSkills.length === 0 && (

@@ -343,16 +343,18 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
       
       {/* Show All button when an employee is focused */}
       {focusedEmployee && (
-        <div className="flex justify-center">
-          <button
-            onClick={() => setFocusedEmployee(null)}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
-          >
+        <div className="flex justify-between items-center bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+          <div className="flex items-center space-x-2 text-blue-700">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
-            <span>Show All Employees</span>
+            <span className="text-sm font-medium">Focused on employee relationships</span>
+          </div>
+          <button
+            onClick={() => setFocusedEmployee(null)}
+            className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
+          >
+            Show All
           </button>
         </div>
       )}

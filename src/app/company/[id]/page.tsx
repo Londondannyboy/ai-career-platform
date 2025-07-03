@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Users, Clock, RefreshCw, Brain, Zap, ArrowLeft, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import CompanyGraphVisualization from '@/components/CompanyGraphVisualization';
+import Neo4jGraphVisualization from '@/components/Neo4jGraphVisualization';
 import CompanyDataVisualization from '@/components/CompanyDataVisualization';
 
 interface CompanyData {
@@ -344,10 +344,32 @@ export default function CompanyPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CompanyGraphVisualization
-            companyName={company.company_name}
-            employees={employees}
-            className="h-96"
+          <Neo4jGraphVisualization
+            data={{
+              company: {
+                name: company.company_name,
+                employees: employees.length,
+                totalRecommendations: company.enrichment_data?.networkAnalysis?.totalRelationships || 0
+              },
+              employees: employees.map((emp: any) => ({
+                name: emp.name || emp.full_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim(),
+                title: emp.title || emp.currentPosition || emp.headline || 'No Title',
+                department: emp.departments?.[0] || emp.department || 'Other',
+                seniority: emp.seniority || 'entry',
+                profileImage: emp.photo_url || emp.profileImage,
+                linkedinUrl: emp.linkedin_url || emp.linkedinUrl
+              })),
+              relationships: {
+                departments: employees.reduce((depts: any, emp: any) => {
+                  const dept = emp.departments?.[0] || emp.department || 'Other';
+                  if (!depts[dept]) depts[dept] = [];
+                  depts[dept].push(emp);
+                  return depts;
+                }, {}),
+                recommendations: company.enrichment_data?.relationships?.recommendations || []
+              }
+            }}
+            height="500px"
           />
         </CardContent>
       </Card>
