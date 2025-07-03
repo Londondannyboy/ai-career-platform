@@ -10,18 +10,15 @@ export const runtime = 'nodejs'
  */
 export async function GET(request: Request) {
   try {
-    // Temporarily skip auth completely for testing
-    let userId = 'test-user-123'
-    
-    // Try to get real auth, but don't fail if it doesn't work
-    try {
-      const authResult = await auth()
-      if (authResult?.userId) {
-        userId = authResult.userId
-      }
-    } catch (authError) {
-      console.log('🔍 Auth failed, using test user:', authError)
+    // Enforce authentication - no fallback
+    const authResult = await auth()
+    if (!authResult?.userId) {
+      return Response.json({ 
+        error: 'Authentication required. Please log in.' 
+      }, { status: 401 })
     }
+    
+    const userId = authResult.userId
 
     console.log(`📁 Getting all workspaces for user ${userId}`)
 

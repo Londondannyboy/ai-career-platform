@@ -14,6 +14,25 @@ import {
 export default function Navigation() {
   const { user, isLoaded } = useUser()
 
+  // Comprehensive logout handler
+  const handleSignOut = async () => {
+    try {
+      // Call our comprehensive logout API
+      await fetch('/api/auth/logout', { method: 'POST' });
+      
+      // Clear local storage and session storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Force page refresh to clear any cached state
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Fallback: force navigation to home
+      window.location.href = '/';
+    }
+  };
+
   if (!isLoaded || !user) {
     return null
   }
@@ -140,6 +159,8 @@ export default function Navigation() {
               userProfileMode="navigation"
               userProfileUrl="/profile"
               afterSignOutUrl="/"
+              signInUrl="/sign-in"
+              afterSignOutCallback={handleSignOut}
             />
           </div>
         </div>
