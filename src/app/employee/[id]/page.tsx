@@ -92,8 +92,8 @@ export default function EmployeePage() {
     const allEmployees = companyData.enrichment_data?.employees || [];
     
     // Find employees connected to this person through recommendations
-    const connectedEmployees = [];
-    const relationships = { recommendations: [] };
+    const connectedEmployees: any[] = [];
+    const relationships = { recommendations: [] as any[] };
 
     if (companyData.enrichment_data?.relationships?.recommendations) {
       for (const rec of companyData.enrichment_data.relationships.recommendations) {
