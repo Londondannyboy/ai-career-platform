@@ -4,13 +4,15 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Building2, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { Building2, RefreshCw, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 
 export default function EnrichPage() {
   const [companyName, setCompanyName] = useState('CK Delta');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
   const enrichCompany = async () => {
     setLoading(true);
@@ -34,6 +36,22 @@ export default function EnrichPage() {
 
       if (data.success) {
         setResult(data);
+        
+        // Fetch the company ID for navigation
+        try {
+          const companiesResponse = await fetch('/api/admin/companies');
+          const companiesData = await companiesResponse.json();
+          if (companiesData.success) {
+            const company = companiesData.companies.find((c: any) => 
+              c.company_name.toLowerCase() === companyName.toLowerCase()
+            );
+            if (company) {
+              setCompanyId(company.id);
+            }
+          }
+        } catch (idError) {
+          console.warn('Failed to fetch company ID:', idError);
+        }
       } else {
         setError(data.error || 'Enrichment failed');
       }
@@ -133,11 +151,27 @@ export default function EnrichPage() {
                       </div>
                     ) : (
                       <div className="text-sm text-green-700">
-                        <p>Company: {result.data?.companyName}</p>
-                        <p>Employees found: {result.data?.employeeCount}</p>
-                        <p>Relationships: {result.data?.relationshipCount}</p>
-                        <p>Intelligence score: {result.data?.intelligenceScore}</p>
-                        <p>Cached: {result.cached ? 'Yes' : 'No'}</p>
+                        <p>Company: {result.data?.companyName || 'Unknown'}</p>
+                        <p>Employees found: {result.data?.profilesEnriched || 0}</p>
+                        <p>Relationships: {result.data?.networkAnalysis?.totalRelationships || 0}</p>
+                        <p>Intelligence score: {(result.data?.networkAnalysis?.averageInfluenceScore * 100)?.toFixed(1) || 'N/A'}</p>
+                        <p>Cached: No (Force refresh)</p>
+                        <details className="mt-3">
+                          <summary className="cursor-pointer text-xs text-gray-500">Show raw API response</summary>
+                          <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto max-h-40">
+                            {JSON.stringify(result, null, 2)}
+                          </pre>
+                        </details>
+                        {companyId && (
+                          <div className="mt-4">
+                            <Link href={`/company/${companyId}`}>
+                              <Button size="sm" className="w-full">
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                View Company Page & Neo4j Graph
+                              </Button>
+                            </Link>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
