@@ -139,7 +139,7 @@ export default function EnrichPage() {
             <Checkbox
               id="forceRefresh"
               checked={forceRefresh}
-              onCheckedChange={(checked) => setForceRefresh(!!checked)}
+              onChange={(e) => setForceRefresh(e.target.checked)}
             />
             <label htmlFor="forceRefresh" className="text-sm text-gray-600 cursor-pointer">
               Force refresh (bypass cache) - Only use if you need fresh data
