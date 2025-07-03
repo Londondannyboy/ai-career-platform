@@ -77,16 +77,26 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
           nodes.add({
             id: empId,
             label: emp.name,
-            title: `${emp.name}\n${emp.title}\n${emp.department || 'Other'}`,
+            title: `${emp.name}\n${emp.title}\n${emp.department || 'Other'}\n\n👆 Click to view profile`,
             group: 'employee',
             size: 25,
             font: { size: 12, color: '#000000' },
             color: { 
               background: getSeniorityColor(emp.seniority), 
-              border: '#374151' 
+              border: '#374151',
+              hover: { background: '#fbbf24', border: '#f59e0b' }
             },
             shape: hasValidImage ? 'circularImage' : 'dot',
-            image: hasValidImage ? emp.profileImage : undefined
+            image: hasValidImage ? emp.profileImage : undefined,
+            chosen: {
+              node: (values: any, id: string, selected: boolean, hovering: boolean) => {
+                if (hovering) {
+                  values.color = '#fbbf24'
+                  values.borderColor = '#f59e0b'
+                  values.borderWidth = 3
+                }
+              }
+            }
           })
 
           // Connect employee to department
@@ -172,7 +182,8 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
           tooltipDelay: 200,
           dragNodes: true,
           dragView: true,
-          zoomView: true
+          zoomView: true,
+          hoverConnectedEdges: false
         },
         groups: {
           company: {
@@ -203,7 +214,35 @@ export default function Neo4jGraphVisualization({ data, height = '600px' }: Neo4
           const nodeId = event.nodes[0]
           const node = nodes.get(nodeId)
           console.log('Node clicked:', node)
+          
+          // Navigate to employee page if it's an employee node
+          if (nodeId.startsWith('emp-')) {
+            const empIndex = parseInt(nodeId.replace('emp-', ''))
+            const employee = data.employees?.[empIndex]
+            
+            if (employee && employee.linkedinUrl) {
+              const encodedUrl = encodeURIComponent(employee.linkedinUrl)
+              console.log('Navigating to employee:', employee.name, 'URL:', `/employee/${encodedUrl}`)
+              
+              // Navigate to employee page
+              window.open(`/employee/${encodedUrl}`, '_blank')
+            } else {
+              console.log('Employee LinkedIn URL not found for:', employee?.name || 'Unknown employee')
+            }
+          }
         }
+      })
+
+      // Change cursor on hover
+      networkInstance.on('hoverNode', (event) => {
+        const nodeId = event.node
+        if (nodeId.startsWith('emp-')) {
+          networkInstance.canvas.body.container.style.cursor = 'pointer'
+        }
+      })
+
+      networkInstance.on('blurNode', () => {
+        networkInstance.canvas.body.container.style.cursor = 'default'
       })
 
       setNetwork(networkInstance)
