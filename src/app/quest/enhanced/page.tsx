@@ -475,7 +475,7 @@ export default function EnhancedQuestPage() {
             </p>
             {primaryCoach && (
               <p className="text-xs text-gray-500 mt-1">
-                Active coach: {primaryCoach.name || primaryCoach.type}
+                Active coach: {primaryCoach.type.replace('_', ' ')}
               </p>
             )}
           </div>
