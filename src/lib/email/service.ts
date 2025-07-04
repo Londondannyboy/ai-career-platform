@@ -17,11 +17,18 @@ import {
 import { MailtrapService, createMailtrapService } from './mailtrap-service'
 
 export class EmailService {
-  private mailtrap: MailtrapService
+  private mailtrap: MailtrapService | null = null
   private supabase = createClient()
 
   constructor() {
-    this.mailtrap = createMailtrapService()
+    // Lazy initialization to avoid build-time errors
+  }
+
+  private getMailtrapService(): MailtrapService {
+    if (!this.mailtrap) {
+      this.mailtrap = createMailtrapService()
+    }
+    return this.mailtrap
   }
 
   /**
@@ -29,7 +36,7 @@ export class EmailService {
    */
   async sendEmail(options: EmailOptions): Promise<EmailResult> {
     // Send via Mailtrap
-    const result = await this.mailtrap.sendEmail(options)
+    const result = await this.getMailtrapService().sendEmail(options)
 
     // Log the email
     await this.logEmail({
@@ -82,6 +89,7 @@ export class EmailService {
     // Send email
     const emailOptions: EmailOptions = {
       to: { email: invite.recipientEmail, name: invite.recipientName },
+      subject: `${invite.senderName} wants to connect on Quest`, // Fallback, will be replaced by template
       template: templateMap[invite.connectionType],
       variables: {
         recipientName: invite.recipientName || 'there',
@@ -138,6 +146,7 @@ export class EmailService {
     // Send email
     return this.sendEmail({
       to: { email: companyEmail, name: userName },
+      subject: `Verify your ${companyName} email for Quest`, // Fallback, will be replaced by template
       template: 'verification',
       variables: {
         userName,
@@ -158,6 +167,7 @@ export class EmailService {
   ): Promise<EmailResult> {
     return this.sendEmail({
       to: { email, name: userName },
+      subject: 'Welcome to Quest - Your AI coaching journey begins', // Fallback, will be replaced by template
       template: 'welcome',
       variables: {
         userName,
@@ -165,6 +175,118 @@ export class EmailService {
         startLink: `${process.env.NEXT_PUBLIC_APP_URL}/quest`
       },
       category: 'onboarding'
+    })
+  }
+
+  /**
+   * Send connection accepted notification
+   */
+  async sendConnectionAccepted(
+    senderName: string,
+    senderEmail: string,
+    recipientName: string,
+    connectionType: ConnectionType,
+    responseMessage?: string
+  ): Promise<EmailResult> {
+    return this.sendEmail({
+      to: { email: senderEmail, name: senderName },
+      subject: `${recipientName} accepted your ${connectionType} request`, // Fallback, will be replaced by template
+      template: 'connection_accepted',
+      variables: {
+        senderName,
+        recipientName,
+        connectionType,
+        responseMessage,
+        startConversationLink: `${process.env.NEXT_PUBLIC_APP_URL}/connections/${recipientName.toLowerCase().replace(/\s+/g, '-')}`
+      },
+      category: 'connection_update'
+    })
+  }
+
+  /**
+   * Send coaching session feedback
+   */
+  async sendCoachingFeedback(
+    userEmail: string,
+    userName: string,
+    sessionDate: string,
+    insights: string[],
+    actionItems: string[],
+    nextSteps?: string
+  ): Promise<EmailResult> {
+    return this.sendEmail({
+      to: { email: userEmail, name: userName },
+      subject: `Your coaching session feedback - ${sessionDate}`, // Fallback, will be replaced by template
+      template: 'coaching_feedback',
+      variables: {
+        userName,
+        sessionDate,
+        insights,
+        actionItems,
+        nextSteps,
+        continueCoachingLink: `${process.env.NEXT_PUBLIC_APP_URL}/quest`
+      },
+      category: 'coaching_feedback'
+    })
+  }
+
+  /**
+   * Send job opportunity notification
+   */
+  async sendJobOpportunity(
+    userEmail: string,
+    userName: string,
+    jobTitle: string,
+    company: string,
+    location: string,
+    salary: string,
+    matchReasons: string[],
+    description: string,
+    applyLink: string
+  ): Promise<EmailResult> {
+    return this.sendEmail({
+      to: { email: userEmail, name: userName },
+      subject: `Job opportunity that matches your goals: ${jobTitle}`, // Fallback, will be replaced by template
+      template: 'job_opportunity',
+      variables: {
+        userName,
+        jobTitle,
+        company,
+        location,
+        salary,
+        matchReasons,
+        description,
+        applyLink,
+        coachingLink: `${process.env.NEXT_PUBLIC_APP_URL}/quest?topic=job_opportunity&job=${encodeURIComponent(jobTitle)}`
+      },
+      category: 'job_notification'
+    })
+  }
+
+  /**
+   * Send goal milestone achievement
+   */
+  async sendGoalMilestone(
+    userEmail: string,
+    userName: string,
+    milestoneTitle: string,
+    milestoneDescription: string,
+    progressPoints: string[],
+    nextGoal?: string
+  ): Promise<EmailResult> {
+    return this.sendEmail({
+      to: { email: userEmail, name: userName },
+      subject: `Congratulations! You achieved: ${milestoneTitle}`, // Fallback, will be replaced by template
+      template: 'goal_milestone',
+      variables: {
+        userName,
+        milestoneTitle,
+        milestoneDescription,
+        progressPoints,
+        nextGoal,
+        viewProgressLink: `${process.env.NEXT_PUBLIC_APP_URL}/profile/goals`
+      },
+      category: 'goal_achievement'
     })
   }
 
@@ -184,6 +306,7 @@ export class EmailService {
 
     return this.sendEmail({
       to: { email: recipientEmail, name: recipientName },
+      subject: `${senderName} invited you to join Quest`, // Fallback, will be replaced by template
       template: 'join_quest',
       variables: {
         recipientName: recipientName || 'there',

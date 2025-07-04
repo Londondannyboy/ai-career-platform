@@ -60,6 +60,70 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(result)
       }
 
+      case 'send_connection_accepted': {
+        const result = await emailService.sendConnectionAccepted(
+          params.senderName,
+          params.senderEmail,
+          params.recipientName,
+          params.connectionType,
+          params.responseMessage
+        )
+        
+        return NextResponse.json(result)
+      }
+
+      case 'send_coaching_feedback': {
+        const result = await emailService.sendCoachingFeedback(
+          params.userEmail,
+          params.userName,
+          params.sessionDate,
+          params.insights,
+          params.actionItems,
+          params.nextSteps
+        )
+        
+        return NextResponse.json(result)
+      }
+
+      case 'send_job_opportunity': {
+        const result = await emailService.sendJobOpportunity(
+          params.userEmail,
+          params.userName,
+          params.jobTitle,
+          params.company,
+          params.location,
+          params.salary,
+          params.matchReasons,
+          params.description,
+          params.applyLink
+        )
+        
+        return NextResponse.json(result)
+      }
+
+      case 'send_goal_milestone': {
+        const result = await emailService.sendGoalMilestone(
+          params.userEmail,
+          params.userName,
+          params.milestoneTitle,
+          params.milestoneDescription,
+          params.progressPoints,
+          params.nextGoal
+        )
+        
+        return NextResponse.json(result)
+      }
+
+      case 'send_welcome': {
+        const result = await emailService.sendWelcomeEmail(
+          params.email,
+          params.userName,
+          params.company
+        )
+        
+        return NextResponse.json(result)
+      }
+
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }

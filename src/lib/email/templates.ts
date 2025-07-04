@@ -386,6 +386,396 @@ Here's how to get started:
 Start Your First Session: {{startLink}}
     `,
     variables: ['userName', 'company', 'startLink']
+  },
+
+  connection_accepted: {
+    id: 'connection_accepted',
+    name: 'Connection Request Accepted',
+    subject: '{{recipientName}} accepted your {{connectionType}} request',
+    htmlContent: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: #f0fdf4; border-radius: 8px; padding: 30px; margin-bottom: 20px; text-align: center;">
+    <h1 style="color: #10b981; margin: 0;">Connection Accepted!</h1>
+  </div>
+  
+  <div style="background-color: white; border-radius: 8px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <p>Hi {{senderName}},</p>
+    
+    <p>Great news! <strong>{{recipientName}}</strong> has accepted your {{connectionType}} request.</p>
+    
+    {{#if responseMessage}}
+    <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
+      <p style="margin: 0; font-style: italic;">"{{responseMessage}}"</p>
+      <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 14px;">- {{recipientName}}</p>
+    </div>
+    {{/if}}
+    
+    <p>You can now:</p>
+    <ul style="color: #4b5563;">
+      <li>Start coaching conversations</li>
+      <li>Share insights and resources</li>
+      <li>Collaborate on professional development</li>
+      <li>Schedule coaching sessions</li>
+    </ul>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{startConversationLink}}" style="background-color: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+        Start Conversation
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+    `,
+    textContent: `
+Hi {{senderName}},
+
+Great news! {{recipientName}} has accepted your {{connectionType}} request.
+
+{{#if responseMessage}}
+Response from {{recipientName}}:
+"{{responseMessage}}"
+{{/if}}
+
+You can now:
+- Start coaching conversations
+- Share insights and resources
+- Collaborate on professional development
+- Schedule coaching sessions
+
+Start Conversation: {{startConversationLink}}
+    `,
+    variables: ['senderName', 'recipientName', 'connectionType', 'responseMessage', 'startConversationLink']
+  },
+
+  coaching_feedback: {
+    id: 'coaching_feedback',
+    name: 'Coaching Session Feedback',
+    subject: 'Your coaching session feedback - {{sessionDate}}',
+    htmlContent: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: white; border-radius: 8px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <h2 style="color: #1f2937;">Your Coaching Session Insights</h2>
+    
+    <p>Hi {{userName}},</p>
+    
+    <p>Here's a summary of your coaching session on {{sessionDate}}:</p>
+    
+    <div style="background-color: #f3f4f6; border-radius: 6px; padding: 20px; margin: 20px 0;">
+      <h4 style="margin: 0 0 10px 0; color: #1f2937;">Key Insights:</h4>
+      <ul style="margin: 0; color: #4b5563;">
+        {{#each insights}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
+    </div>
+    
+    <div style="background-color: #eff6ff; border-radius: 6px; padding: 20px; margin: 20px 0;">
+      <h4 style="margin: 0 0 10px 0; color: #1f2937;">Action Items:</h4>
+      <ul style="margin: 0; color: #4b5563;">
+        {{#each actionItems}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
+    </div>
+    
+    {{#if nextSteps}}
+    <p><strong>Recommended next steps:</strong> {{nextSteps}}</p>
+    {{/if}}
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{continueCoachingLink}}" style="background-color: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+        Continue Coaching
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+    `,
+    textContent: `
+Your Coaching Session Insights
+
+Hi {{userName}},
+
+Here's a summary of your coaching session on {{sessionDate}}:
+
+Key Insights:
+{{#each insights}}
+- {{this}}
+{{/each}}
+
+Action Items:
+{{#each actionItems}}
+- {{this}}
+{{/each}}
+
+{{#if nextSteps}}
+Recommended next steps: {{nextSteps}}
+{{/if}}
+
+Continue Coaching: {{continueCoachingLink}}
+    `,
+    variables: ['userName', 'sessionDate', 'insights', 'actionItems', 'nextSteps', 'continueCoachingLink']
+  },
+
+  job_opportunity: {
+    id: 'job_opportunity',
+    name: 'Job Opportunity',
+    subject: 'Job opportunity that matches your goals: {{jobTitle}}',
+    htmlContent: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: #fef3c7; border-radius: 8px; padding: 30px; margin-bottom: 20px; text-align: center;">
+    <h1 style="color: #d97706; margin: 0;">New Job Opportunity</h1>
+  </div>
+  
+  <div style="background-color: white; border-radius: 8px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <p>Hi {{userName}},</p>
+    
+    <p>I found a job opportunity that aligns with your career goals:</p>
+    
+    <div style="border: 2px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="margin: 0 0 10px 0; color: #1f2937;">{{jobTitle}}</h3>
+      <p style="margin: 5px 0; color: #6b7280;"><strong>Company:</strong> {{company}}</p>
+      <p style="margin: 5px 0; color: #6b7280;"><strong>Location:</strong> {{location}}</p>
+      <p style="margin: 5px 0; color: #6b7280;"><strong>Salary:</strong> {{salary}}</p>
+    </div>
+    
+    <p><strong>Why this matches your profile:</strong></p>
+    <ul style="color: #4b5563;">
+      {{#each matchReasons}}
+      <li>{{this}}</li>
+      {{/each}}
+    </ul>
+    
+    {{#if description}}
+    <p>{{description}}</p>
+    {{/if}}
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{applyLink}}" style="background-color: #f59e0b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500; margin-right: 10px;">
+        View Job Details
+      </a>
+      <a href="{{coachingLink}}" style="background-color: #e5e7eb; color: #374151; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+        Discuss with Coach
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+    `,
+    textContent: `
+New Job Opportunity
+
+Hi {{userName}},
+
+I found a job opportunity that aligns with your career goals:
+
+{{jobTitle}} at {{company}}
+Location: {{location}}
+Salary: {{salary}}
+
+Why this matches your profile:
+{{#each matchReasons}}
+- {{this}}
+{{/each}}
+
+{{#if description}}
+{{description}}
+{{/if}}
+
+View Job Details: {{applyLink}}
+Discuss with Coach: {{coachingLink}}
+    `,
+    variables: ['userName', 'jobTitle', 'company', 'location', 'salary', 'matchReasons', 'description', 'applyLink', 'coachingLink']
+  },
+
+  goal_milestone: {
+    id: 'goal_milestone',
+    name: 'Goal Milestone Achievement',
+    subject: 'Congratulations! You achieved: {{milestoneTitle}}',
+    htmlContent: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: #f0fdf4; border-radius: 8px; padding: 30px; margin-bottom: 20px; text-align: center;">
+    <h1 style="color: #10b981; margin: 0;">🎉 Milestone Achieved!</h1>
+  </div>
+  
+  <div style="background-color: white; border-radius: 8px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <p>Hi {{userName}},</p>
+    
+    <p>Congratulations! You've achieved an important milestone:</p>
+    
+    <div style="background-color: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+      <h3 style="margin: 0; color: #065f46;">{{milestoneTitle}}</h3>
+      <p style="margin: 10px 0 0 0; color: #6b7280;">{{milestoneDescription}}</p>
+    </div>
+    
+    <p><strong>Your progress:</strong></p>
+    <ul style="color: #4b5563;">
+      {{#each progressPoints}}
+      <li>{{this}}</li>
+      {{/each}}
+    </ul>
+    
+    {{#if nextGoal}}
+    <p><strong>Next goal:</strong> {{nextGoal}}</p>
+    {{/if}}
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{viewProgressLink}}" style="background-color: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+        View Full Progress
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+    `,
+    textContent: `
+🎉 Milestone Achieved!
+
+Hi {{userName}},
+
+Congratulations! You've achieved an important milestone:
+
+{{milestoneTitle}}
+{{milestoneDescription}}
+
+Your progress:
+{{#each progressPoints}}
+- {{this}}
+{{/each}}
+
+{{#if nextGoal}}
+Next goal: {{nextGoal}}
+{{/if}}
+
+View Full Progress: {{viewProgressLink}}
+    `,
+    variables: ['userName', 'milestoneTitle', 'milestoneDescription', 'progressPoints', 'nextGoal', 'viewProgressLink']
+  },
+
+  session_reminder: {
+    id: 'session_reminder',
+    name: 'Session Reminder',
+    subject: 'Your coaching session with {{coachName}} starts in {{timeUntil}}',
+    htmlContent: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: white; border-radius: 8px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <h2 style="color: #1f2937;">Coaching Session Reminder</h2>
+    
+    <p>Hi {{userName}},</p>
+    
+    <p>Your coaching session with <strong>{{coachName}}</strong> starts in <strong>{{timeUntil}}</strong>.</p>
+    
+    <div style="background-color: #f3f4f6; border-radius: 6px; padding: 20px; margin: 20px 0;">
+      <p style="margin: 5px 0;"><strong>Time:</strong> {{sessionTime}}</p>
+      <p style="margin: 5px 0;"><strong>Topic:</strong> {{sessionTopic}}</p>
+      <p style="margin: 5px 0;"><strong>Duration:</strong> {{duration}}</p>
+    </div>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{joinSessionLink}}" style="background-color: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+        Join Session
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+    `,
+    textContent: `
+Coaching Session Reminder
+
+Hi {{userName}},
+
+Your coaching session with {{coachName}} starts in {{timeUntil}}.
+
+Time: {{sessionTime}}
+Topic: {{sessionTopic}}
+Duration: {{duration}}
+
+Join Session: {{joinSessionLink}}
+    `,
+    variables: ['userName', 'coachName', 'timeUntil', 'sessionTime', 'sessionTopic', 'duration', 'joinSessionLink']
+  },
+
+  weekly_progress: {
+    id: 'weekly_progress',
+    name: 'Weekly Progress Summary',
+    subject: 'Your weekly coaching progress - {{weekEnding}}',
+    htmlContent: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: white; border-radius: 8px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <h2 style="color: #1f2937;">Your Weekly Progress</h2>
+    
+    <p>Hi {{userName}},</p>
+    
+    <p>Here's your coaching progress for the week ending {{weekEnding}}:</p>
+    
+    <div style="background-color: #f3f4f6; border-radius: 6px; padding: 20px; margin: 20px 0;">
+      <h4 style="margin: 0 0 10px 0; color: #1f2937;">This Week's Achievements:</h4>
+      <ul style="margin: 0; color: #4b5563;">
+        {{#each achievements}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
+    </div>
+    
+    <div style="background-color: #eff6ff; border-radius: 6px; padding: 20px; margin: 20px 0;">
+      <h4 style="margin: 0 0 10px 0; color: #1f2937;">Sessions Completed:</h4>
+      <p style="margin: 0; color: #4b5563;">{{sessionsCount}} coaching conversations</p>
+    </div>
+    
+    <div style="background-color: #f0fdf4; border-radius: 6px; padding: 20px; margin: 20px 0;">
+      <h4 style="margin: 0 0 10px 0; color: #1f2937;">Next Week's Focus:</h4>
+      <ul style="margin: 0; color: #4b5563;">
+        {{#each nextWeekGoals}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
+    </div>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{continueJourneyLink}}" style="background-color: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+        Continue Your Journey
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+    `,
+    textContent: `
+Your Weekly Progress
+
+Hi {{userName}},
+
+Here's your coaching progress for the week ending {{weekEnding}}:
+
+This Week's Achievements:
+{{#each achievements}}
+- {{this}}
+{{/each}}
+
+Sessions Completed: {{sessionsCount}} coaching conversations
+
+Next Week's Focus:
+{{#each nextWeekGoals}}
+- {{this}}
+{{/each}}
+
+Continue Your Journey: {{continueJourneyLink}}
+    `,
+    variables: ['userName', 'weekEnding', 'achievements', 'sessionsCount', 'nextWeekGoals', 'continueJourneyLink']
   }
 }
 

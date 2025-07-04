@@ -12,6 +12,12 @@ export type EmailTemplateType =
   | 'colleague_connect'  // Colleague connection
   | 'verification'       // Company verification
   | 'welcome'           // Post-registration welcome
+  | 'connection_accepted' // Connection request accepted
+  | 'coaching_feedback'  // Coaching session feedback
+  | 'job_opportunity'    // Job opportunity notification
+  | 'session_reminder'   // Upcoming coaching session
+  | 'goal_milestone'     // Goal achievement notification
+  | 'weekly_progress'    // Weekly progress summary
 
 export type ConnectionType = 'coach' | 'peer' | 'colleague' | 'mentor'
 

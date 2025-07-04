@@ -150,7 +150,12 @@ export function createMailtrapService(): MailtrapService {
   const apiToken = process.env.MAILTRAP_API_TOKEN
 
   if (!apiToken) {
-    throw new Error('MAILTRAP_API_TOKEN environment variable is required')
+    // During build time, return a dummy service that will fail gracefully
+    console.warn('MAILTRAP_API_TOKEN not provided - email service will not work')
+    return new MailtrapService({
+      apiToken: 'dummy-token',
+      testing: true
+    })
   }
 
   const config: MailtrapConfig = {
