@@ -3,8 +3,8 @@
  * Basic duplicate detection and merging for company records
  */
 
-import { Pool } from 'pg'
 import { NextRequest, NextResponse } from 'next/server'
+import { query, getClient, withTransaction } from '@/lib/database/neon'
 
 export const runtime = 'nodejs'
 
@@ -52,14 +52,8 @@ export async function POST(request: NextRequest) {
 }
 
 async function findDuplicateCompanies() {
-  const pool = new Pool({
-    connectionString: process.env.NEON_DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-  })
-  const client = await pool.connect()
-  
-  // Get all companies
-  const result = await client.query(`
+  // Get all companies using standardized query function
+  const result = await query(`
     SELECT id, name, metadata
     FROM company_profiles
     ORDER BY name
@@ -93,8 +87,6 @@ async function findDuplicateCompanies() {
     processed.add(companies[i].id)
   }
   
-  client.release()
-  await pool.end()
   return duplicateGroups
 }
 
@@ -146,37 +138,36 @@ function levenshteinDistance(str1: string, str2: string): number {
 }
 
 async function mergeCompanyGroup(group: any[]) {
-  const pool = new Pool({
-    connectionString: process.env.NEON_DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+  // Use transaction for atomic merge operation
+  return await withTransaction(async (client) => {
+    // Use first company as canonical
+    const canonical = group[0]
+    const duplicateIds = group.slice(1).map(c => c.id)
+    
+    // Update references to point to canonical company
+    await client.query(`
+      UPDATE person_profiles 
+      SET metadata = jsonb_set(
+        metadata, 
+        '{company_id}', 
+        to_jsonb($1::text)
+      )
+      WHERE metadata->>'company_id' = ANY($2)
+    `, [canonical.id, duplicateIds])
+    
+    // Delete duplicate company records
+    await client.query(`
+      DELETE FROM company_profiles 
+      WHERE id = ANY($1)
+    `, [duplicateIds])
+    
+    console.log(`Merged ${duplicateIds.length} companies into ${canonical.name}`)
+    
+    return {
+      canonical: canonical.name,
+      mergedCount: duplicateIds.length
+    }
   })
-  const client = await pool.connect()
-  
-  // Use first company as canonical
-  const canonical = group[0]
-  const duplicateIds = group.slice(1).map(c => c.id)
-  
-  // Update references to point to canonical company
-  await client.query(`
-    UPDATE person_profiles 
-    SET metadata = jsonb_set(
-      metadata, 
-      '{company_id}', 
-      to_jsonb($1::text)
-    )
-    WHERE metadata->>'company_id' = ANY($2)
-  `, [canonical.id, duplicateIds])
-  
-  // Delete duplicate company records
-  await client.query(`
-    DELETE FROM company_profiles 
-    WHERE id = ANY($1)
-  `, [duplicateIds])
-  
-  console.log(`Merged ${duplicateIds.length} companies into ${canonical.name}`)
-  
-  client.release()
-  await pool.end()
 }
 
 export async function GET() {
