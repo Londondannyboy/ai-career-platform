@@ -376,10 +376,13 @@ export default function EnhancedQuestPage() {
                 <Brain className="h-8 w-8 text-blue-600" />
                 <span className="text-2xl font-bold text-gray-900">Quest Enhanced</span>
               </div>
-              <Link href="/" className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors">
+              <button
+                onClick={() => window.location.href = '/'}
+                className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
+              >
                 <Home className="h-4 w-4" />
                 <span className="text-sm font-medium">Dashboard</span>
-              </Link>
+              </button>
             </div>
             <div className="flex items-center space-x-4">
               <button
