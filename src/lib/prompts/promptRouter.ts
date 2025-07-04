@@ -293,11 +293,11 @@ export class VectorizedPromptRouter {
         ) VALUES (
           ${prompt.id}, 
           ${prompt.type}, 
-          ${prompt.context_tags}, 
+          ${JSON.stringify(prompt.context_tags || [])}, 
           ${prompt.name}, 
           ${prompt.content},
           ${JSON.stringify(prompt.variables || {})}, 
-          ${prompt.embedding || null},
+          ${prompt.embedding ? JSON.stringify(prompt.embedding) : null},
           ${prompt.metadata?.author || 'system'}, 
           ${prompt.metadata?.effectiveness_score || 0.8}, 
           ${prompt.metadata?.usage_count || 0}
@@ -467,7 +467,14 @@ export class VectorizedPromptRouter {
       return {
         content: basePrompt.content,
         sources: [{ promptId: basePrompt.id, weight: 1.0, relevance: 1.0 }],
-        variables: { ...basePrompt.variables, ...context }
+        variables: { 
+          ...basePrompt.variables, 
+          userId: context.userId || '',
+          companyName: context.companyName || '',
+          relationshipType: context.relationshipType || '',
+          conversationHistory: context.conversationHistory?.join('\n') || '',
+          userGoals: context.userGoals?.join(', ') || ''
+        }
       }
     }
     
@@ -490,7 +497,11 @@ export class VectorizedPromptRouter {
       {
         coachType,
         userName: context.userId || 'User',
-        ...context
+        userId: context.userId || '',
+        companyName: context.companyName || '',
+        relationshipType: context.relationshipType || '',
+        conversationHistory: context.conversationHistory?.join('\n') || '',
+        userGoals: context.userGoals?.join(', ') || ''
       }
     )
   }

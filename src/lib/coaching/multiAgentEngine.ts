@@ -209,9 +209,10 @@ export class MultiAgentCoachingEngine {
     const needsCoachChange = await this.analyzeCoachingNeed(input, this.activeSession)
     
     // Check for coach intervention needs using advanced collaboration system
-    const primaryCoach = this.activeSession.activeCoaches.find(c => c.isActive && 
-      c.weight === Math.max(...this.activeSession.activeCoaches.filter(c => c.isActive).map(c => c.weight))
-    )
+    const activeCoaches = this.activeSession.activeCoaches.filter(c => c.isActive)
+    const primaryCoach = activeCoaches.length > 0 
+      ? activeCoaches.find(c => c.weight === Math.max(...activeCoaches.map(c => c.weight))) 
+      : null
     
     const interventionNeeded = await coachCollaborator.detectInterventionNeeds(
       this.activeSession.id,
@@ -610,9 +611,10 @@ export class MultiAgentCoachingEngine {
     if (!suggestedCoachDef) return
 
     // Create intervention message
-    const currentPrimary = this.activeSession.activeCoaches.find(c => c.isActive && 
-      c.weight === Math.max(...this.activeSession.activeCoaches.filter(c => c.isActive).map(c => c.weight))
-    )
+    const activeCoaches = this.activeSession.activeCoaches.filter(c => c.isActive)
+    const currentPrimary = activeCoaches.length > 0 
+      ? activeCoaches.find(c => c.weight === Math.max(...activeCoaches.map(c => c.weight)))
+      : null
 
     if (currentPrimary) {
       // Execute handoff through collaboration system
