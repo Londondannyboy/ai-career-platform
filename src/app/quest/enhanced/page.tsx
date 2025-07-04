@@ -8,8 +8,6 @@ import { useUser } from '@clerk/nextjs'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Slider } from '@/components/ui/slider'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import Link from 'next/link'
 import { Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff, Brain, Zap, Target, Briefcase, MessageSquare, Home, Settings, User } from 'lucide-react'
 import { useVoice, VoiceReadyState } from '@humeai/voice-react'
@@ -452,18 +450,17 @@ export default function EnhancedQuestPage() {
             <h3 className="text-lg font-semibold text-gray-900">Coaching Configuration</h3>
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-600">Methodology:</span>
-              <Select value={coachingMethodology} onValueChange={setCoachingMethodology}>
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="OKR">OKR</SelectItem>
-                  <SelectItem value="SMART">SMART</SelectItem>
-                  <SelectItem value="GROW">GROW</SelectItem>
-                  <SelectItem value="CLEAR">CLEAR</SelectItem>
-                  <SelectItem value="FAST">FAST</SelectItem>
-                </SelectContent>
-              </Select>
+              <select 
+                value={coachingMethodology} 
+                onChange={(e) => setCoachingMethodology(e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="OKR">OKR</option>
+                <option value="SMART">SMART</option>
+                <option value="GROW">GROW</option>
+                <option value="CLEAR">CLEAR</option>
+                <option value="FAST">FAST</option>
+              </select>
             </div>
           </div>
           
@@ -477,12 +474,14 @@ export default function EnhancedQuestPage() {
                 </div>
                 <span className="text-sm font-semibold text-blue-600">{focusPercentages.career}%</span>
               </div>
-              <Slider
-                value={[focusPercentages.career]}
-                onValueChange={(value) => setFocusPercentages(prev => ({ ...prev, career: value[0] }))}
-                max={100}
-                step={5}
-                className="w-full"
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={focusPercentages.career}
+                onChange={(e) => setFocusPercentages(prev => ({ ...prev, career: parseInt(e.target.value) }))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-blue"
               />
             </div>
             
@@ -494,12 +493,14 @@ export default function EnhancedQuestPage() {
                 </div>
                 <span className="text-sm font-semibold text-green-600">{focusPercentages.productivity}%</span>
               </div>
-              <Slider
-                value={[focusPercentages.productivity]}
-                onValueChange={(value) => setFocusPercentages(prev => ({ ...prev, productivity: value[0] }))}
-                max={100}
-                step={5}
-                className="w-full"
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={focusPercentages.productivity}
+                onChange={(e) => setFocusPercentages(prev => ({ ...prev, productivity: parseInt(e.target.value) }))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-green"
               />
             </div>
             
@@ -511,12 +512,14 @@ export default function EnhancedQuestPage() {
                 </div>
                 <span className="text-sm font-semibold text-purple-600">{focusPercentages.leadership}%</span>
               </div>
-              <Slider
-                value={[focusPercentages.leadership]}
-                onValueChange={(value) => setFocusPercentages(prev => ({ ...prev, leadership: value[0] }))}
-                max={100}
-                step={5}
-                className="w-full"
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={focusPercentages.leadership}
+                onChange={(e) => setFocusPercentages(prev => ({ ...prev, leadership: parseInt(e.target.value) }))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-purple"
               />
             </div>
           </div>
