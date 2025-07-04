@@ -206,13 +206,9 @@ export function withThemeClass<P extends object>(
     const themeClass = theme ? THEME_CLASSES[theme] : '';
     const combinedClassName = [themeClass, className].filter(Boolean).join(' ');
     
-    const ComponentToRender = Component as React.ComponentType<P>;
-    
-    return (
-      <ComponentToRender 
-        {...(props as P)}
-        className={combinedClassName}
-      />
-    );
+    return React.createElement(Component, {
+      ...(props as P),
+      className: combinedClassName
+    });
   };
 }
