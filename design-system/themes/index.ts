@@ -5,6 +5,7 @@
  * custom properties, and theme switching utilities.
  */
 
+import React from 'react';
 import { lightTheme, darkTheme } from '../tokens/colors';
 import { typographyVars } from '../tokens/typography';
 import { spacingVars } from '../tokens/spacing';
