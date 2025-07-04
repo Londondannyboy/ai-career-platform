@@ -6,14 +6,10 @@ export const dynamic = 'force-dynamic'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { createClient } from '@/lib/supabase/client'
-import Navigation from '@/components/Navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff, Settings, Users, Brain } from 'lucide-react'
+import { Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff, Brain, Zap, Target, Briefcase } from 'lucide-react'
 import { useVoice, VoiceReadyState } from '@humeai/voice-react'
-import { PlaybookWeightController } from '@/components/PlaybookWeightController'
-import { CoachPresenceIndicator, ConversationStateIndicator } from '@/components/CoachPresenceIndicator'
 import { usePlaybookWeights, useCoachingSession } from '@/hooks/usePlaybookWeights'
 import { multiAgentCoachingEngine, CoachWeights, CoachAgent } from '@/lib/coaching/multiAgentEngine'
 
@@ -346,258 +342,157 @@ export default function EnhancedQuestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-      <Navigation />
-      
-      <main className="mx-auto max-w-7xl px-4 py-8">
-        <div className="mb-8">
+    <div className="min-h-screen bg-gray-50">
+      {/* Simple header */}
+      <div className="bg-white border-b">
+        <div className="mx-auto max-w-2xl px-4 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Enhanced Quest
-              </h1>
-              <p className="mt-2 text-gray-600">
-                Multi-agent AI coaching with personalized focus control
-              </p>
-              <div className="mt-1 text-xs text-gray-400 font-mono">
-                🚀 Version: 5.0.0 - Multi-Agent Coaching System
-                {!user && <span className="ml-2 text-orange-500">🔧 DEBUG MODE</span>}
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <Brain className="h-8 w-8 text-blue-600" />
+                <span className="text-2xl font-bold text-gray-900">Quest</span>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <ConversationStateIndicator 
-                state={conversationState}
-                primaryCoach={coaching.coaches.find(c => c.type === primaryCoach?.type)}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowSettings(!showSettings)}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
+            <div className="flex items-center space-x-2">
+              {user?.imageUrl && (
+                <img 
+                  src={user.imageUrl} 
+                  alt="Profile" 
+                  className="w-8 h-8 rounded-full"
+                />
+              )}
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Conversation Area */}
-          <div className="lg:col-span-3">
-            <Card className="h-[700px] flex flex-col">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Multi-Agent Conversation</span>
-                  <div className="flex items-center space-x-4">
-                    <CoachPresenceIndicator
-                      coaches={coaching.coaches}
-                      conversationState={conversationState}
-                      layout="horizontal"
-                      showDetails={false}
-                    />
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col">
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-                  {messages.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Users className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                      <p>Configure your coaching focus and start your quest</p>
-                      <p className="text-sm">AI coaches will adapt to your goals and communication style</p>
-                      {totalWeight === 0 && (
-                        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                          <p className="text-yellow-700 text-sm">
-                            ⚠️ Please set your coaching focus in the settings panel to begin
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
-                            message.isUser
-                              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                              : 'bg-white text-gray-900 shadow-sm border'
-                          }`}
-                        >
-                          <p className="text-sm">{message.text}</p>
-                          <div className="flex justify-between items-center mt-2">
-                            <p className="text-xs opacity-70">
-                              {message.timestamp.toLocaleTimeString()}
-                            </p>
-                            {message.coachName && !message.isUser && (
-                              <Badge variant="outline" className="text-xs">
-                                {message.coachName}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Controls */}
-                <div className="border-t pt-4">
-                  <div className="flex justify-center space-x-4">
-                    {getConversationControls()}
-                  </div>
-                  
-                  {/* Coaching Status */}
-                  {coaching.isActive && (
-                    <div className="mt-4 text-center">
-                      <CoachPresenceIndicator
-                        coaches={coaching.coaches}
-                        conversationState={conversationState}
-                        layout="horizontal"
-                        showDetails={true}
-                      />
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Settings & Info Panel */}
-          <div className="space-y-6">
-            {/* Coaching Focus Control */}
-            <PlaybookWeightController
-              currentWeights={weights}
-              onWeightsChange={updateWeights}
-              isActive={!coaching.isActive}
-            />
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Quick Focus</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => applyPreset('career_focus')}
-                    className="text-xs"
-                  >
-                    Career
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => applyPreset('productivity_focus')}
-                    className="text-xs"
-                  >
-                    Productivity
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => applyPreset('leadership_focus')}
-                    className="text-xs"
-                  >
-                    Leadership
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => applyPreset('technical_focus')}
-                    className="text-xs"
-                  >
-                    Technical
-                  </Button>
-                </div>
-                
-                {recommendations.length > 0 && (
-                  <div className="mt-3 text-xs text-gray-600">
-                    💡 {recommendations[0]}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Active Coaches Detail */}
-            {coaching.coaches.length > 0 && (
-              <CoachPresenceIndicator
-                coaches={coaching.coaches}
-                conversationState={conversationState}
-                layout="vertical"
-                showDetails={true}
-              />
-            )}
-
-            {/* Quest Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Session Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Status</span>
-                    <Badge variant={isConnected ? "default" : "secondary"}>
-                      {isConnected ? 'Connected' : 'Offline'}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Messages</span>
-                    <span>{messages.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Focus Weight</span>
-                    <Badge variant={isBalanced ? "default" : "secondary"}>
-                      {totalWeight}%
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Active Coaches</span>
-                    <span>{coaching.coaches.filter(c => c.isActive).length}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Previous Sessions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Previous Quests</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {conversationHistory.length > 0 ? (
-                  <div className="space-y-3 max-h-48 overflow-y-auto">
-                    {conversationHistory.map((session, index) => (
-                      <div key={session.id} className="border-b pb-2 last:border-b-0">
-                        <div className="text-sm font-medium text-gray-900">
-                          {index === 0 ? 'Latest' : `${index + 1} sessions ago`}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(session.created_at).toLocaleDateString()}
-                        </div>
-                        <div className="text-sm text-gray-600 mt-1 truncate">
-                          {session.title}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-sm text-gray-500">
-                    No previous sessions yet
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+      {/* Main conversation area - Jack & Jill style */}
+      <div className="mx-auto max-w-2xl px-4 py-8">
+        
+        {/* Coach presence indicators - like sound bars */}
+        <div className="mb-8 flex justify-center">
+          <div className="flex items-center space-x-2">
+            {Array.from({ length: 5 }).map((_, i) => {
+              const isActive = i < Math.min(activeCoaches.length, 5)
+              const height = isActive ? 'h-16' : 'h-8'
+              const opacity = conversationState === 'thinking' || conversationState === 'speaking' ? 'animate-pulse' : ''
+              return (
+                <div
+                  key={i}
+                  className={`w-8 ${height} bg-gray-800 rounded-full transition-all duration-300 ${opacity}`}
+                  style={{ 
+                    backgroundColor: isActive ? '#1f2937' : '#d1d5db',
+                    transform: conversationState === 'speaking' && isActive ? `scaleY(${1 + Math.sin(Date.now() / 200 + i) * 0.3})` : 'scaleY(1)'
+                  }}
+                />
+              )
+            })}
           </div>
         </div>
-      </main>
+
+        {/* Messages */}
+        <div className="mb-8 min-h-[300px] space-y-4">
+          {messages.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <p className="text-lg mb-4">Ready to start your coaching session?</p>
+              <p className="text-sm">Choose your focus below and begin</p>
+            </div>
+          ) : (
+            messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-md px-4 py-3 rounded-2xl ${
+                    message.isUser
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-gray-900 shadow-sm border'
+                  }`}
+                >
+                  <p>{message.text}</p>
+                  {message.coachName && !message.isUser && (
+                    <p className="text-xs text-gray-500 mt-2">{message.coachName}</p>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Quick focus buttons */}
+        {!isConnected && (
+          <div className="mb-6">
+            <p className="text-center text-sm text-gray-600 mb-4">Choose your coaching focus:</p>
+            <div className="flex justify-center space-x-3">
+              <button
+                onClick={() => {
+                  console.log('Career focus clicked')
+                  applyPreset('career_focus')
+                }}
+                className="bg-blue-100 hover:bg-blue-200 px-4 py-2 rounded-full text-sm font-medium text-blue-800 transition-colors"
+              >
+                <Briefcase className="w-4 h-4 inline mr-2" />
+                Career Growth
+              </button>
+              <button
+                onClick={() => {
+                  console.log('Productivity focus clicked')
+                  applyPreset('productivity_focus')
+                }}
+                className="bg-green-100 hover:bg-green-200 px-4 py-2 rounded-full text-sm font-medium text-green-800 transition-colors"
+              >
+                <Zap className="w-4 h-4 inline mr-2" />
+                Productivity
+              </button>
+              <button
+                onClick={() => {
+                  console.log('Leadership focus clicked')
+                  applyPreset('leadership_focus')
+                }}
+                className="bg-purple-100 hover:bg-purple-200 px-4 py-2 rounded-full text-sm font-medium text-purple-800 transition-colors"
+              >
+                <Target className="w-4 h-4 inline mr-2" />
+                Leadership
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Voice controls */}
+        <div className="flex justify-center space-x-4 mb-4">
+          {getConversationControls()}
+        </div>
+        
+        {/* Simple status */}
+        {isConnected && (
+          <div className="text-center">
+            <p className="text-sm text-gray-600">
+              {conversationState === 'listening' && 'Listening...'}
+              {conversationState === 'thinking' && 'Processing...'}
+              {conversationState === 'speaking' && 'Responding...'}
+            </p>
+            {primaryCoach && (
+              <p className="text-xs text-gray-500 mt-1">
+                Active coach: {primaryCoach.name || primaryCoach.type}
+              </p>
+            )}
+          </div>
+        )}
+        
+        {/* Troubleshooting */}
+        {isConnected && (
+          <div className="mt-8 text-center">
+            <button className="text-blue-600 text-sm underline">
+              Having trouble speaking with Quest?
+            </button>
+            <p className="text-xs text-gray-500 mt-2">
+              You can log off and rejoin your call at any time - your conversation will be saved.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
