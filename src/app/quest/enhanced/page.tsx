@@ -8,7 +8,10 @@ import { useUser } from '@clerk/nextjs'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff, Brain, Zap, Target, Briefcase } from 'lucide-react'
+import { Slider } from '@/components/ui/slider'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import Link from 'next/link'
+import { Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff, Brain, Zap, Target, Briefcase, MessageSquare, Home, Settings, User } from 'lucide-react'
 import { useVoice, VoiceReadyState } from '@humeai/voice-react'
 import { usePlaybookWeights, useCoachingSession } from '@/hooks/usePlaybookWeights'
 import { multiAgentCoachingEngine, CoachWeights, CoachAgent } from '@/lib/coaching/multiAgentEngine'
@@ -31,7 +34,14 @@ export default function EnhancedQuestPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isMuted, setIsMuted] = useState(false)
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true)
-  const [showSettings, setShowSettings] = useState(false)
+  const [showTranscript, setShowTranscript] = useState(false)
+  const [coachingMethodology, setCoachingMethodology] = useState('OKR')
+  const [focusPercentages, setFocusPercentages] = useState({
+    career: 70,
+    productivity: 20,
+    leadership: 10
+  })
+  const [speechIntensity, setSpeechIntensity] = useState(0)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [conversationHistory, setConversationHistory] = useState<any[]>([])
@@ -78,9 +88,25 @@ export default function EnhancedQuestPage() {
         handleUserMessage(latestMessage.message.content, latestMessage.models?.prosody?.scores)
       } else if (latestMessage.type === 'assistant_message' && latestMessage.message?.content) {
         handleAssistantMessage(latestMessage.message.content)
+        // Update speech intensity for animations
+        const intensity = Math.random() * 0.8 + 0.2 // Simulate speech intensity
+        setSpeechIntensity(intensity)
+        setTimeout(() => setSpeechIntensity(0), 100)
       }
     }
   }, [voiceMessages])
+
+  // Animate speech intensity
+  useEffect(() => {
+    if (conversationState === 'speaking') {
+      const interval = setInterval(() => {
+        setSpeechIntensity(Math.random() * 0.8 + 0.2)
+      }, 100)
+      return () => clearInterval(interval)
+    } else {
+      setSpeechIntensity(0)
+    }
+  }, [conversationState])
 
   const handleUserMessage = async (content: string, emotionalMeasures?: any) => {
     const userMessage: Message = {
@@ -343,46 +369,76 @@ export default function EnhancedQuestPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Simple header */}
+      {/* Enhanced header with navigation */}
       <div className="bg-white border-b">
-        <div className="mx-auto max-w-2xl px-4 py-4">
+        <div className="mx-auto max-w-6xl px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-6">
               <div className="flex items-center space-x-2">
                 <Brain className="h-8 w-8 text-blue-600" />
-                <span className="text-2xl font-bold text-gray-900">Quest</span>
+                <span className="text-2xl font-bold text-gray-900">Quest Enhanced</span>
               </div>
+              <Link href="/" className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors">
+                <Home className="h-4 w-4" />
+                <span className="text-sm font-medium">Dashboard</span>
+              </Link>
             </div>
-            <div className="flex items-center space-x-2">
-              {user?.imageUrl && (
-                <img 
-                  src={user.imageUrl} 
-                  alt="Profile" 
-                  className="w-8 h-8 rounded-full"
-                />
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setShowTranscript(!showTranscript)}
+                className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm transition-colors ${
+                  showTranscript 
+                    ? 'bg-blue-100 text-blue-800' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span>Transcript</span>
+              </button>
+              {user ? (
+                <div className="flex items-center space-x-2">
+                  <img 
+                    src={user.imageUrl || '/default-avatar.png'} 
+                    alt="Profile" 
+                    className="w-8 h-8 rounded-full"
+                  />
+                  <span className="text-sm font-medium text-gray-700">{user.firstName}</span>
+                </div>
+              ) : (
+                <Link href="/sign-in" className="text-sm font-medium text-blue-600 hover:text-blue-800">
+                  Sign In
+                </Link>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main conversation area - Jack & Jill style */}
-      <div className="mx-auto max-w-2xl px-4 py-8">
+      {/* Main conversation area - Voice-first design */}
+      <div className="mx-auto max-w-4xl px-4 py-8">
         
-        {/* Coach presence indicators - like sound bars */}
-        <div className="mb-8 flex justify-center">
-          <div className="flex items-center space-x-2">
-            {Array.from({ length: 5 }).map((_, i) => {
-              const isActive = i < Math.min(activeCoaches.length, 5)
-              const height = isActive ? 'h-16' : 'h-8'
-              const opacity = conversationState === 'thinking' || conversationState === 'speaking' ? 'animate-pulse' : ''
+        {/* Enhanced voice visualization bars */}
+        <div className="mb-12 flex justify-center">
+          <div className="flex items-end space-x-3">
+            {Array.from({ length: 7 }).map((_, i) => {
+              const isActive = i < Math.min(activeCoaches.length, 7)
+              const baseHeight = isActive ? 32 : 16
+              const animationHeight = conversationState === 'speaking' && isActive 
+                ? baseHeight + (speechIntensity * 40 * Math.sin(Date.now() / (150 + i * 20) + i))
+                : baseHeight
+              
               return (
                 <div
                   key={i}
-                  className={`w-8 ${height} bg-gray-800 rounded-full transition-all duration-300 ${opacity}`}
+                  className={`w-6 rounded-full transition-all duration-100 ease-out`}
                   style={{ 
-                    backgroundColor: isActive ? '#1f2937' : '#d1d5db',
-                    transform: conversationState === 'speaking' && isActive ? `scaleY(${1 + Math.sin(Date.now() / 200 + i) * 0.3})` : 'scaleY(1)'
+                    height: `${Math.max(animationHeight, 8)}px`,
+                    backgroundColor: isActive 
+                      ? `hsl(${220 + i * 15}, 70%, ${50 + speechIntensity * 20}%)` 
+                      : '#e5e7eb',
+                    boxShadow: conversationState === 'speaking' && isActive 
+                      ? `0 0 ${speechIntensity * 20}px hsla(${220 + i * 15}, 70%, 60%, 0.6)`
+                      : 'none'
                   }}
                 />
               )
@@ -390,75 +446,125 @@ export default function EnhancedQuestPage() {
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="mb-8 min-h-[300px] space-y-4">
-          {messages.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <p className="text-lg mb-4">Ready to start your coaching session?</p>
-              <p className="text-sm">Choose your focus below and begin</p>
+        {/* Coaching methodology and focus controls */}
+        <div className="mb-8 bg-white rounded-xl p-6 shadow-sm border">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">Coaching Configuration</h3>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Methodology:</span>
+              <Select value={coachingMethodology} onValueChange={setCoachingMethodology}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="OKR">OKR</SelectItem>
+                  <SelectItem value="SMART">SMART</SelectItem>
+                  <SelectItem value="GROW">GROW</SelectItem>
+                  <SelectItem value="CLEAR">CLEAR</SelectItem>
+                  <SelectItem value="FAST">FAST</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-md px-4 py-3 rounded-2xl ${
-                    message.isUser
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-900 shadow-sm border'
-                  }`}
-                >
-                  <p>{message.text}</p>
-                  {message.coachName && !message.isUser && (
-                    <p className="text-xs text-gray-500 mt-2">{message.coachName}</p>
-                  )}
+          </div>
+          
+          {/* Focus percentage sliders */}
+          <div className="space-y-6">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <Briefcase className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-700">Career Growth</span>
                 </div>
+                <span className="text-sm font-semibold text-blue-600">{focusPercentages.career}%</span>
               </div>
-            ))
-          )}
-          <div ref={messagesEndRef} />
+              <Slider
+                value={[focusPercentages.career]}
+                onValueChange={(value) => setFocusPercentages(prev => ({ ...prev, career: value[0] }))}
+                max={100}
+                step={5}
+                className="w-full"
+              />
+            </div>
+            
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <Zap className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-gray-700">Productivity</span>
+                </div>
+                <span className="text-sm font-semibold text-green-600">{focusPercentages.productivity}%</span>
+              </div>
+              <Slider
+                value={[focusPercentages.productivity]}
+                onValueChange={(value) => setFocusPercentages(prev => ({ ...prev, productivity: value[0] }))}
+                max={100}
+                step={5}
+                className="w-full"
+              />
+            </div>
+            
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <Target className="h-4 w-4 text-purple-600" />
+                  <span className="text-sm font-medium text-gray-700">Leadership</span>
+                </div>
+                <span className="text-sm font-semibold text-purple-600">{focusPercentages.leadership}%</span>
+              </div>
+              <Slider
+                value={[focusPercentages.leadership]}
+                onValueChange={(value) => setFocusPercentages(prev => ({ ...prev, leadership: value[0] }))}
+                max={100}
+                step={5}
+                className="w-full"
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Quick focus buttons */}
-        {!isConnected && (
-          <div className="mb-6">
-            <p className="text-center text-sm text-gray-600 mb-4">Choose your coaching focus:</p>
-            <div className="flex justify-center space-x-3">
+        {/* Optional transcript view */}
+        {showTranscript && (
+          <div className="mb-8 bg-white rounded-xl p-6 shadow-sm border">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Conversation Transcript</h3>
               <button
-                onClick={() => {
-                  console.log('Career focus clicked')
-                  applyPreset('career_focus')
-                }}
-                className="bg-blue-100 hover:bg-blue-200 px-4 py-2 rounded-full text-sm font-medium text-blue-800 transition-colors"
+                onClick={() => setShowTranscript(false)}
+                className="text-gray-400 hover:text-gray-600"
               >
-                <Briefcase className="w-4 h-4 inline mr-2" />
-                Career Growth
+                ×
               </button>
-              <button
-                onClick={() => {
-                  console.log('Productivity focus clicked')
-                  applyPreset('productivity_focus')
-                }}
-                className="bg-green-100 hover:bg-green-200 px-4 py-2 rounded-full text-sm font-medium text-green-800 transition-colors"
-              >
-                <Zap className="w-4 h-4 inline mr-2" />
-                Productivity
-              </button>
-              <button
-                onClick={() => {
-                  console.log('Leadership focus clicked')
-                  applyPreset('leadership_focus')
-                }}
-                className="bg-purple-100 hover:bg-purple-200 px-4 py-2 rounded-full text-sm font-medium text-purple-800 transition-colors"
-              >
-                <Target className="w-4 h-4 inline mr-2" />
-                Leadership
-              </button>
+            </div>
+            <div className="max-h-80 overflow-y-auto space-y-4">
+              {messages.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm">Conversation transcript will appear here</p>
+                </div>
+              ) : (
+                messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-md px-4 py-3 rounded-2xl ${
+                        message.isUser
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-900 shadow-sm border'
+                      }`}
+                    >
+                      <p className="text-sm">{message.text}</p>
+                      {message.coachName && !message.isUser && (
+                        <p className="text-xs text-gray-500 mt-2">{message.coachName}</p>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+              <div ref={messagesEndRef} />
             </div>
           </div>
         )}
+
 
         {/* Voice controls */}
         <div className="flex justify-center space-x-4 mb-4">
