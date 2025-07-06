@@ -13,6 +13,8 @@ export default function QuestHumePage() {
   const [lastResponse, setLastResponse] = useState<string>('')
   const [userProfile, setUserProfile] = useState<any>(null)
   const [humeConfig, setHumeConfig] = useState<any>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
   
   // Voice recognition refs
   const recognitionRef = useRef<any>(null)
@@ -151,7 +153,14 @@ export default function QuestHumePage() {
 
   const processVoiceInput = async (transcript: string) => {
     try {
+      setIsProcessing(true)
       setLastResponse(`You said: "${transcript}"\n\nProcessing...`)
+      
+      // Stop any ongoing speech before processing
+      if ('speechSynthesis' in window) {
+        speechSynthesis.cancel()
+        setIsSpeaking(false)
+      }
       
       const response = await fetch('/api/hume-clm', {
         method: 'POST',
@@ -191,19 +200,41 @@ export default function QuestHumePage() {
       }
       
       setLastResponse(`You: "${transcript}"\n\nQuest AI: ${result}`)
+      setIsProcessing(false)
       
       // Speak the response
       if ('speechSynthesis' in window && result) {
+        setIsSpeaking(true)
         const utterance = new SpeechSynthesisUtterance(result)
         utterance.rate = 0.9
         utterance.pitch = 1
+        
+        utterance.onend = () => {
+          setIsSpeaking(false)
+        }
+        
+        utterance.onstart = () => {
+          setIsSpeaking(true)
+        }
+        
         speechSynthesis.speak(utterance)
       }
       
     } catch (error) {
       console.error('❌ Error processing voice input:', error)
       setLastResponse('Error processing voice input: ' + error)
+      setIsProcessing(false)
     }
+  }
+
+  const interruptConversation = () => {
+    // Stop current speech immediately
+    if ('speechSynthesis' in window) {
+      speechSynthesis.cancel()
+    }
+    setIsSpeaking(false)
+    setIsProcessing(false)
+    setLastResponse('Conversation interrupted. Listening for new input...')
   }
 
   const stopHumeConversation = () => {
@@ -323,8 +354,19 @@ export default function QuestHumePage() {
                 variant={isRecording ? "destructive" : "default"}
                 disabled={!userProfile}
               >
-                {isRecording ? '🛑 Stop Conversation' : '🎤 Start Hume EVI'}
+                {isRecording ? '🛑 Stop Conversation' : '🎤 Start Voice Chat'}
               </Button>
+              
+              {isRecording && (
+                <Button 
+                  onClick={interruptConversation}
+                  variant="outline"
+                  className="w-full"
+                  disabled={!isRecording}
+                >
+                  ⚡ Interrupt & Speak
+                </Button>
+              )}
               
               <Button 
                 onClick={testCLMDirectly}
@@ -335,6 +377,24 @@ export default function QuestHumePage() {
                 🧪 Test CLM Response
               </Button>
             </div>
+
+            {/* Voice Status */}
+            {isRecording && (
+              <div className="p-3 rounded-lg bg-blue-50">
+                <div className="text-sm font-medium mb-1">Voice Status</div>
+                <div className="space-y-1">
+                  <div className="text-sm">
+                    🎤 Listening: {isRecording ? '🟢 Active' : '🔴 Inactive'}
+                  </div>
+                  <div className="text-sm">
+                    🧠 Processing: {isProcessing ? '🟡 Thinking...' : '✅ Ready'}
+                  </div>
+                  <div className="text-sm">
+                    🔊 Speaking: {isSpeaking ? '🟢 Active' : '⚪ Silent'}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Connection Status */}
             <div className="p-3 rounded-lg bg-muted">
