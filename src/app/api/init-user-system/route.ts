@@ -18,36 +18,26 @@ export async function POST(req: NextRequest) {
     // Create user profiles table (Clerk integration)
     await sql`
       CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,  -- Clerk user ID
+        id TEXT PRIMARY KEY,
         email TEXT NOT NULL UNIQUE,
         name TEXT NOT NULL,
         full_name TEXT,
         first_name TEXT,
         last_name TEXT,
         profile_image_url TEXT,
-        
-        -- Professional context
         "current_role" TEXT,
         company TEXT,
         department TEXT,
         seniority_level TEXT DEFAULT 'mid',
         years_experience INTEGER DEFAULT 0,
-        
-        -- Skills and goals
         skills TEXT[] DEFAULT '{}',
         professional_goals TEXT,
         career_interests TEXT[],
         industry TEXT,
-        
-        -- LinkedIn integration
         linkedin_url TEXT,
         linkedin_data JSONB DEFAULT '{}',
-        
-        -- Preferences
         coaching_preferences JSONB DEFAULT '{}',
         privacy_settings JSONB DEFAULT '{"profile_visible": true, "share_insights": true}',
-        
-        -- System fields
         is_active BOOLEAN DEFAULT true,
         last_active_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -56,31 +46,26 @@ export async function POST(req: NextRequest) {
     `
 
     await sql`
-      -- Create conversation history table
       CREATE TABLE IF NOT EXISTS conversation_sessions (
         id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         session_id TEXT NOT NULL,
         session_type TEXT DEFAULT 'quest_conversation',
         
-        -- Conversation data
         transcript TEXT,
         ai_response TEXT,
         emotional_context JSONB DEFAULT '{}',
         conversation_metadata JSONB DEFAULT '{}',
         
-        -- Context and insights
         topics_discussed TEXT[],
         insights_generated TEXT[],
         action_items TEXT[],
         mood_assessment TEXT,
         
-        -- Session info
         duration_seconds INTEGER DEFAULT 0,
         platform TEXT DEFAULT 'web',
         voice_enabled BOOLEAN DEFAULT false,
         
-        -- Timestamps
         started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         ended_at TIMESTAMP WITH TIME ZONE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -88,13 +73,11 @@ export async function POST(req: NextRequest) {
     `
 
     await sql`
-      -- Create user-company relationships table
       CREATE TABLE IF NOT EXISTS user_company_relationships (
         id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         company_id UUID REFERENCES company_enrichments(id) ON DELETE CASCADE,
         
-        -- Relationship details
         relationship_type TEXT DEFAULT 'employee',
         role_at_company TEXT,
         department TEXT,
@@ -102,11 +85,9 @@ export async function POST(req: NextRequest) {
         end_date DATE,
         is_current BOOLEAN DEFAULT true,
         
-        -- Connection strength
         connection_strength INTEGER DEFAULT 1,
         interaction_frequency TEXT DEFAULT 'occasional',
         
-        -- Metadata
         notes TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -116,56 +97,46 @@ export async function POST(req: NextRequest) {
     `
 
     await sql`
-      -- Create user goals table
       CREATE TABLE IF NOT EXISTS user_goals (
         id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         
-        -- Goal details
         goal_type TEXT NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
         target_date DATE,
         
-        -- Progress tracking
         status TEXT DEFAULT 'active',
         progress_percentage INTEGER DEFAULT 0,
         milestones JSONB DEFAULT '[]',
         
-        -- AI coaching context
         coaching_notes TEXT,
         recommended_actions TEXT[],
         related_skills TEXT[],
         
-        -- Timestamps
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
     `
 
     await sql`
-      -- Create user skills tracking table
       CREATE TABLE IF NOT EXISTS user_skills (
         id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         
-        -- Skill details
         skill_name TEXT NOT NULL,
         skill_category TEXT,
         proficiency_level INTEGER DEFAULT 3,
         years_experience DECIMAL(3,1) DEFAULT 0,
         
-        -- Evidence and validation
         evidence_sources TEXT[],
         last_used_date DATE,
         improvement_goals TEXT,
         
-        -- AI insights
         market_demand INTEGER DEFAULT 3,
         growth_potential TEXT,
         related_skills TEXT[],
         
-        -- Timestamps
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         
