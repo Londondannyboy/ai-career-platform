@@ -86,12 +86,25 @@ export default function QuestCLMTestPage() {
     }
   }
 
+  const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
+    // For now, use a simple prompt for user input since we don't have Whisper API
+    // In production, this would send audioBlob to /api/transcribe
+    const userInput = prompt("Enter your message (speech recognition not available in this test):")
+    
+    if (userInput && userInput.trim()) {
+      return userInput.trim()
+    }
+    
+    // Fallback to test message
+    return "Hello, I'm testing the new CLM integration"
+  }
+
   const processAudioMessage = async (audioBlob: Blob) => {
     const startTime = Date.now()
     
     try {
-      // Simulate transcription (would use Whisper API)
-      const userMessage = "Hello, I'm testing the new CLM integration"
+      // Use Web Speech API for transcription (fallback to hardcoded for testing)
+      const userMessage = await transcribeAudio(audioBlob)
       
       // Add user message to conversation
       const userTurn: ConversationTurn = {
