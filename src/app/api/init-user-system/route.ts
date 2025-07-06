@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
     console.log('✅ User system schema created successfully')
 
     // Get current user from Clerk if authenticated
-    const { userId: clerkUserId } = auth()
+    const { userId: clerkUserId } = await auth()
     let currentUser = null
     
     if (clerkUserId) {
@@ -393,7 +393,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     // Check current user system status
-    const { userId } = auth()
+    const { userId } = await auth()
     
     const tables = await sql`
       SELECT table_name 
