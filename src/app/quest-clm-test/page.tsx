@@ -155,6 +155,11 @@ export default function QuestCLMTestPage() {
   }
 
   const callHumeCLM = async (userMessage: string): Promise<string> => {
+    // Use Dan's hardcoded ID if no Clerk user is logged in
+    const effectiveUserId = userId || 'user_2cNjk7xDvHPeCKhDLxH0GBMqVzI'
+    
+    console.log('Calling CLM with userId:', effectiveUserId)
+    
     const response = await fetch('/api/hume-clm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -163,8 +168,8 @@ export default function QuestCLMTestPage() {
           { role: 'system', content: 'You are Quest, an AI career coach.' },
           { role: 'user', content: userMessage }
         ],
-        custom_session_id: `user_${userId}_${Date.now()}`,
-        user_id: userId,
+        custom_session_id: `user_${effectiveUserId}_${Date.now()}`,
+        user_id: effectiveUserId,
         emotional_context: { engagement: 0.8, stress: 0.2 }
       })
     })
@@ -178,15 +183,28 @@ export default function QuestCLMTestPage() {
     let result = ''
     
     if (reader) {
+      const decoder = new TextDecoder()
+      let buffer = ''
+      
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
         
-        const chunk = new TextDecoder().decode(value)
-        // Parse SSE format and extract content
-        const lines = chunk.split('\n')
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() || ''
+        
         for (const line of lines) {
-          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          if (line.startsWith('0:')) {
+            // Handle the streaming format: 0:"content"
+            const match = line.match(/0:"([^"]*)"/)
+            if (match) {
+              result += match[1]
+            }
+          } else if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+            // Handle standard SSE format
             try {
               const data = JSON.parse(line.slice(6))
               if (data.choices?.[0]?.delta?.content) {
@@ -200,6 +218,7 @@ export default function QuestCLMTestPage() {
       }
     }
 
+    console.log('CLM Response:', result)
     return result || 'Hello! I\'m Quest with enhanced context. How can I help you today?'
   }
 
