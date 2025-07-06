@@ -15,10 +15,14 @@ export default function QuestHybridPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voiceMode, setVoiceMode] = useState<'web_speech' | 'hume_ready'>('web_speech')
+  const [voiceLevel, setVoiceLevel] = useState(0)
   
   // Voice recognition refs
   const recognitionRef = useRef<any>(null)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const voiceDetectionRef = useRef<boolean>(false)
 
   useEffect(() => {
     if (isLoaded && userId) {
@@ -167,6 +171,74 @@ export default function QuestHybridPage() {
     }
   }
 
+  const setupVoiceActivityDetection = async () => {
+    try {
+      // Get microphone access for voice activity detection
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: false, // We want to detect ALL audio
+          noiseSuppression: false,
+          autoGainControl: false
+        } 
+      })
+
+      // Create audio context and analyser
+      const audioContext = new AudioContext()
+      const analyser = audioContext.createAnalyser()
+      const microphone = audioContext.createMediaStreamSource(stream)
+      
+      analyser.fftSize = 256
+      analyser.smoothingTimeConstant = 0.8
+      microphone.connect(analyser)
+      
+      audioContextRef.current = audioContext
+      analyserRef.current = analyser
+
+      // Start voice activity monitoring
+      const monitorVoiceActivity = () => {
+        if (!analyserRef.current) return
+
+        const bufferLength = analyserRef.current.frequencyBinCount
+        const dataArray = new Uint8Array(bufferLength)
+        analyserRef.current.getByteFrequencyData(dataArray)
+
+        // Calculate audio level
+        const sum = dataArray.reduce((a, b) => a + b, 0)
+        const average = sum / bufferLength
+        
+        // Voice activity threshold (adjust as needed)
+        const voiceThreshold = 25
+        const isVoiceActive = average > voiceThreshold
+        
+        // Update voice level for UI feedback
+        setVoiceLevel(Math.round(average))
+
+        // If voice is detected and AI is speaking, interrupt immediately
+        if (isVoiceActive && isSpeaking) {
+          console.log('🛑 Voice activity detected - interrupting AI (level:', average, ')')
+          if ('speechSynthesis' in window) {
+            speechSynthesis.cancel()
+          }
+          setIsSpeaking(false)
+          if (utteranceRef.current) {
+            utteranceRef.current = null
+          }
+        }
+
+        // Continue monitoring
+        if (isRecording) {
+          requestAnimationFrame(monitorVoiceActivity)
+        }
+      }
+
+      // Start monitoring
+      monitorVoiceActivity()
+
+    } catch (error) {
+      console.error('❌ Error setting up voice activity detection:', error)
+    }
+  }
+
   const startVoiceConversation = async () => {
     if (!userProfile) {
       alert('Please create your user profile first')
@@ -176,6 +248,9 @@ export default function QuestHybridPage() {
     try {
       setIsRecording(true)
       setIsConnected(true)
+      
+      // Setup voice activity detection for interruption
+      await setupVoiceActivityDetection()
       
       // Initialize Web Speech API with enhanced settings
       if ('webkitSpeechRecognition' in window) {
@@ -256,6 +331,13 @@ export default function QuestHybridPage() {
     if (recognitionRef.current) {
       recognitionRef.current.stop()
     }
+    
+    // Stop voice activity detection
+    if (audioContextRef.current) {
+      audioContextRef.current.close()
+      audioContextRef.current = null
+    }
+    analyserRef.current = null
     
     // Stop any ongoing speech
     if ('speechSynthesis' in window) {
@@ -374,6 +456,12 @@ export default function QuestHybridPage() {
                     <span>Speaking:</span>
                     <span className={isSpeaking ? 'text-blue-600 font-medium' : 'text-gray-400'}>
                       {isSpeaking ? '🔊 Active' : '⚪ Silent'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Voice Level:</span>
+                    <span className={voiceLevel > 25 ? 'text-green-600 font-medium' : 'text-gray-400'}>
+                      {voiceLevel} {voiceLevel > 25 ? '🔊' : '🔇'}
                     </span>
                   </div>
                 </div>
