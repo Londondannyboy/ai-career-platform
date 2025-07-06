@@ -71,30 +71,77 @@ export default function QuestHumeRealPage() {
 
   const initializeHumeEVI = async () => {
     try {
+      // Check for Hume API key
+      const apiKey = process.env.NEXT_PUBLIC_HUME_API_KEY
+      if (!apiKey) {
+        setLastResponse('❌ Hume API key not configured. Please add NEXT_PUBLIC_HUME_API_KEY to environment variables.')
+        return
+      }
+
+      setLastResponse('🔄 Connecting to Hume EVI...')
+
       // Get microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
+          autoGainControl: true,
+          sampleRate: 16000
         } 
       })
       mediaStreamRef.current = stream
 
       // Initialize AudioContext
-      const audioContext = new AudioContext()
+      const audioContext = new AudioContext({ sampleRate: 16000 })
       audioContextRef.current = audioContext
 
-      // Connect to Hume EVI WebSocket
-      const apiKey = process.env.NEXT_PUBLIC_HUME_API_KEY
-      if (!apiKey) {
-        throw new Error('Hume API key not found')
-      }
+      // Try different Hume WebSocket URL formats
+      const possibleUrls = [
+        `wss://api.hume.ai/v0/evi/socket?api_key=${apiKey}`,
+        `wss://api.hume.ai/v0/evi/chat?api_key=${apiKey}`,
+        `wss://ws.hume.ai/v0/evi/socket?api_key=${apiKey}`
+      ]
 
-      // Hume EVI WebSocket connection
-      const socketUrl = `wss://api.hume.ai/v0/evi/socket?api_key=${apiKey}`
-      const socket = new WebSocket(socketUrl)
-      humeSocketRef.current = socket
+      let socket: WebSocket | null = null
+      
+      for (const url of possibleUrls) {
+        try {
+          console.log('🔄 Trying WebSocket URL:', url.replace(apiKey, 'API_KEY'))
+          socket = new WebSocket(url)
+          humeSocketRef.current = socket
+          
+          // Wait for connection or error
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reject(new Error('Connection timeout'))
+            }, 5000)
+            
+            socket!.onopen = () => {
+              clearTimeout(timeout)
+              resolve(true)
+            }
+            
+            socket!.onerror = (error) => {
+              clearTimeout(timeout)
+              reject(error)
+            }
+          })
+          
+          // If we get here, connection succeeded
+          break
+          
+        } catch (error) {
+          console.log('❌ Failed with URL:', url.replace(apiKey, 'API_KEY'))
+          if (socket) {
+            socket.close()
+            socket = null
+          }
+        }
+      }
+      
+      if (!socket) {
+        throw new Error('Failed to connect to any Hume WebSocket endpoint')
+      }
 
       socket.onopen = () => {
         console.log('🎤 Connected to Hume EVI')
