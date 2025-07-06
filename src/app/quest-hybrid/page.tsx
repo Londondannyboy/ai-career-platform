@@ -16,6 +16,7 @@ export default function QuestHybridPage() {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voiceMode, setVoiceMode] = useState<'web_speech' | 'hume_ready'>('web_speech')
   const [voiceLevel, setVoiceLevel] = useState(0)
+  const [debugMode, setDebugMode] = useState(false)
   
   // Voice recognition refs
   const recognitionRef = useRef<any>(null)
@@ -173,49 +174,72 @@ export default function QuestHybridPage() {
 
   const setupVoiceActivityDetection = async () => {
     try {
+      console.log('🔧 Setting up voice activity detection...')
+      
       // Get microphone access for voice activity detection
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
-          echoCancellation: false, // We want to detect ALL audio
+          echoCancellation: false, // We want to detect ALL audio including user voice
           noiseSuppression: false,
           autoGainControl: false
         } 
       })
+
+      console.log('🎤 Microphone access granted for voice detection')
 
       // Create audio context and analyser
       const audioContext = new AudioContext()
       const analyser = audioContext.createAnalyser()
       const microphone = audioContext.createMediaStreamSource(stream)
       
-      analyser.fftSize = 256
-      analyser.smoothingTimeConstant = 0.8
+      analyser.fftSize = 512  // Increased for better detection
+      analyser.smoothingTimeConstant = 0.3  // More responsive
       microphone.connect(analyser)
       
       audioContextRef.current = audioContext
       analyserRef.current = analyser
 
+      console.log('🔊 Audio analysis setup complete')
+
       // Start voice activity monitoring
+      let consecutiveVoiceFrames = 0
       const monitorVoiceActivity = () => {
-        if (!analyserRef.current) return
+        if (!analyserRef.current || !isRecording) return
 
         const bufferLength = analyserRef.current.frequencyBinCount
         const dataArray = new Uint8Array(bufferLength)
         analyserRef.current.getByteFrequencyData(dataArray)
 
-        // Calculate audio level
+        // Calculate audio level (more sensitive calculation)
         const sum = dataArray.reduce((a, b) => a + b, 0)
         const average = sum / bufferLength
         
-        // Voice activity threshold (adjust as needed)
-        const voiceThreshold = 25
-        const isVoiceActive = average > voiceThreshold
+        // Also check for peaks in specific frequency ranges
+        const midFreqStart = Math.floor(bufferLength * 0.2)
+        const midFreqEnd = Math.floor(bufferLength * 0.8)
+        const midFreqSum = dataArray.slice(midFreqStart, midFreqEnd).reduce((a, b) => a + b, 0)
+        const midFreqAverage = midFreqSum / (midFreqEnd - midFreqStart)
+        
+        // Use both overall and mid-frequency levels
+        const combinedLevel = Math.max(average, midFreqAverage * 0.8)
+        
+        // Lower threshold for more sensitive detection
+        const voiceThreshold = 15
+        const isVoiceActive = combinedLevel > voiceThreshold
         
         // Update voice level for UI feedback
-        setVoiceLevel(Math.round(average))
+        setVoiceLevel(Math.round(combinedLevel))
 
-        // If voice is detected and AI is speaking, interrupt immediately
-        if (isVoiceActive && isSpeaking) {
-          console.log('🛑 Voice activity detected - interrupting AI (level:', average, ')')
+        // Count consecutive frames of voice activity for stability
+        if (isVoiceActive) {
+          consecutiveVoiceFrames++
+        } else {
+          consecutiveVoiceFrames = 0
+        }
+
+        // If voice is detected for multiple frames and AI is speaking, interrupt immediately
+        if (consecutiveVoiceFrames >= 2 && isSpeaking) {
+          console.log('🛑 VOICE INTERRUPTION! Level:', combinedLevel, 'Frames:', consecutiveVoiceFrames)
           if ('speechSynthesis' in window) {
             speechSynthesis.cancel()
           }
@@ -223,19 +247,22 @@ export default function QuestHybridPage() {
           if (utteranceRef.current) {
             utteranceRef.current = null
           }
+          consecutiveVoiceFrames = 0 // Reset
         }
 
-        // Continue monitoring
+        // Continue monitoring at 60fps
         if (isRecording) {
           requestAnimationFrame(monitorVoiceActivity)
         }
       }
 
-      // Start monitoring
+      // Start monitoring immediately
+      console.log('▶️ Starting voice activity monitoring')
       monitorVoiceActivity()
 
     } catch (error) {
       console.error('❌ Error setting up voice activity detection:', error)
+      setLastResponse('❌ Voice detection setup failed: ' + error.message)
     }
   }
 
@@ -433,6 +460,15 @@ export default function QuestHybridPage() {
                   ⚡ Interrupt & Speak Now
                 </Button>
               )}
+              
+              <Button 
+                onClick={() => setDebugMode(!debugMode)}
+                variant="outline"
+                className="w-full"
+                size="sm"
+              >
+                🔍 {debugMode ? 'Hide' : 'Show'} Debug Info
+              </Button>
             </div>
 
             {/* Voice Status */}
@@ -460,10 +496,28 @@ export default function QuestHybridPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Voice Level:</span>
-                    <span className={voiceLevel > 25 ? 'text-green-600 font-medium' : 'text-gray-400'}>
-                      {voiceLevel} {voiceLevel > 25 ? '🔊' : '🔇'}
+                    <span className={voiceLevel > 15 ? 'text-green-600 font-medium' : 'text-gray-400'}>
+                      {voiceLevel} {voiceLevel > 15 ? '🟢' : '🔇'} {voiceLevel > 30 ? '🔊' : ''}
                     </span>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Debug Info */}
+            {debugMode && (
+              <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
+                <div className="text-sm font-medium mb-2">🔍 Voice Detection Debug</div>
+                <div className="space-y-1 text-xs">
+                  <div>Audio Context: {audioContextRef.current ? '🟢 Active' : '🔴 None'}</div>
+                  <div>Analyser: {analyserRef.current ? '🟢 Connected' : '🔴 None'}</div>
+                  <div>Voice Level: {voiceLevel} (threshold: 15)</div>
+                  <div>Detection Active: {voiceLevel > 15 ? '🟢 YES' : '🔴 NO'}</div>
+                  <div>AI Speaking: {isSpeaking ? '🟢 YES' : '🔴 NO'}</div>
+                  <div>Should Interrupt: {voiceLevel > 15 && isSpeaking ? '🟢 YES' : '🔴 NO'}</div>
+                </div>
+                <div className="mt-2 text-xs text-yellow-700">
+                  Speak now to test voice detection - level should go above 15
                 </div>
               </div>
             )}
