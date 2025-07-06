@@ -181,7 +181,7 @@ export default function QuestHybridPage() {
       if ('webkitSpeechRecognition' in window) {
         const recognition = new (window as any).webkitSpeechRecognition()
         recognition.continuous = true
-        recognition.interimResults = false
+        recognition.interimResults = true  // Enable interim results for faster interruption
         recognition.lang = 'en-US'
         recognition.maxAlternatives = 1
         
@@ -191,10 +191,23 @@ export default function QuestHybridPage() {
         }
         
         recognition.onresult = async (event: any) => {
-          const transcript = event.results[event.results.length - 1][0].transcript.trim()
-          console.log('🗣️ User said:', transcript)
+          const result = event.results[event.results.length - 1]
+          const transcript = result[0].transcript.trim()
+          const isFinal = result.isFinal
           
-          if (transcript.length > 0) {
+          // Immediate interruption on ANY voice activity (even interim results)
+          if (isSpeaking && 'speechSynthesis' in window && transcript.length > 2) {
+            console.log('🛑 Auto-interrupting AI speech - user voice detected')
+            speechSynthesis.cancel()
+            setIsSpeaking(false)
+            if (utteranceRef.current) {
+              utteranceRef.current = null
+            }
+          }
+          
+          // Only process final results for actual conversation
+          if (isFinal && transcript.length > 0) {
+            console.log('🗣️ User said (final):', transcript)
             await processVoiceInput(transcript)
           }
         }
@@ -373,8 +386,8 @@ export default function QuestHybridPage() {
               <div className="text-sm space-y-1">
                 <div>CLM Endpoint: 🟢 Ready</div>
                 <div>User Context: {userProfile ? '🟢 Available' : '🔴 Missing'}</div>
-                <div>Voice Engine: 🟢 Browser Speech API</div>
-                <div>Interruption: 🟢 Enabled</div>
+                <div>Voice Engine: 🟢 Enhanced Speech API</div>
+                <div>Auto-Interruption: 🟢 Active</div>
               </div>
             </div>
           </CardContent>
@@ -434,8 +447,8 @@ export default function QuestHybridPage() {
               <h4 className="font-medium mb-2">🎤 Voice Tips:</h4>
               <ul className="text-sm space-y-1 list-disc list-inside">
                 <li>Speak clearly and naturally</li>
-                <li>Wait for the AI to finish speaking</li>
-                <li>Use the interrupt button if needed</li>
+                <li><strong>Just start talking</strong> - AI stops automatically</li>
+                <li>No need to wait or press buttons</li>
                 <li>Ask about your career, goals, or company</li>
               </ul>
             </div>
