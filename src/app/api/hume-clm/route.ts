@@ -30,6 +30,12 @@ interface UserProfile {
   professional_goals?: string
   industry?: string
   linkedin_data?: any
+  company?: string
+  department?: string
+  years_experience?: number
+  active_goals?: string[]
+  colleagues?: any[]
+  company_roles?: string[]
 }
 
 interface ConversationHistory {
