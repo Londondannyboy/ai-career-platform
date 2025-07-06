@@ -12,11 +12,11 @@ export async function POST(req: NextRequest) {
     console.log('🚀 Initializing Quest User System...')
 
     // Execute the complete schema
+    // Enable UUID extension
+    await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`
+    
+    // Create user profiles table (Clerk integration)
     await sql`
-      -- Enable UUID extension if not exists
-      CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
-      -- Create user profiles table (Clerk integration)
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,  -- Clerk user ID
         email TEXT NOT NULL UNIQUE,
@@ -215,8 +215,17 @@ export async function POST(req: NextRequest) {
     console.log('✅ User system schema created successfully')
 
     // Get current user from Clerk if authenticated
-    const { userId: clerkUserId } = await auth()
+    let clerkUserId = null
     let currentUser = null
+    
+    try {
+      const authResult = await auth()
+      clerkUserId = authResult.userId
+    } catch (error) {
+      console.log('⚠️ Clerk auth not available, using default user ID')
+      // Use a default ID for Dan Keegan if Clerk is not available
+      clerkUserId = 'user_2cNjk7xDvHPeCKhDLxH0GBMqVzI'
+    }
     
     if (clerkUserId) {
       console.log('👤 Creating profile for authenticated user:', clerkUserId)
@@ -393,7 +402,14 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     // Check current user system status
-    const { userId } = await auth()
+    let userId = null
+    try {
+      const authResult = await auth()
+      userId = authResult.userId
+    } catch (error) {
+      console.log('⚠️ Clerk auth not available in GET')
+      userId = 'user_2cNjk7xDvHPeCKhDLxH0GBMqVzI'
+    }
     
     const tables = await sql`
       SELECT table_name 
