@@ -147,85 +147,88 @@ function extractUserIdFromSessionId(sessionId?: string): string | null {
 }
 
 /**
- * Fetch comprehensive user context from actual database structure
+ * Fetch comprehensive user context from real database
  */
 async function fetchUserContext(userId: string): Promise<UserProfile | null> {
   try {
-    // Try Clerk user ID first (most likely case)
-    console.log('🔍 Fetching user context for:', userId)
+    console.log('🔍 Fetching real user context for:', userId)
     
-    // For now, use Clerk authentication to get basic user info
-    // In production, we'd query from the actual users table once it's set up properly
-    
-    // Mock user context based on Clerk user ID
-    // This will be replaced with real database queries once schema is aligned
-    const mockUserContext = {
-      id: userId,
-      name: 'Quest User', // Would come from Clerk user.fullName
-      current_role: 'Software Engineer', // Would come from user profile
-      experience_level: 'Mid-level',
-      skills: ['JavaScript', 'TypeScript', 'React', 'Node.js'],
-      professional_goals: 'Looking to advance to senior engineering role',
-      industry: 'Technology',
-      linkedin_data: null
-    }
-    
-    console.log('✅ User context (mock):', {
-      name: mockUserContext.name,
-      role: mockUserContext.current_role,
-      skillsCount: mockUserContext.skills.length
-    })
-    
-    return mockUserContext
-    
-    /* TODO: Replace with real database queries once schema is aligned
-    // This is what the query should look like with the actual schema:
+    // Query user profile with related data
     const userQuery = await sql`
       SELECT 
-        id,
-        email,
-        name,
-        headline,
-        company,
-        skills,
-        experience,
-        linkedin_data
-      FROM users 
-      WHERE id = ${userId}
-      LIMIT 1
+        u.*,
+        array_agg(DISTINCT ug.title) FILTER (WHERE ug.title IS NOT NULL) as active_goals,
+        array_agg(DISTINCT us.skill_name) FILTER (WHERE us.skill_name IS NOT NULL) as skill_list,
+        array_agg(DISTINCT ucr.role_at_company) FILTER (WHERE ucr.role_at_company IS NOT NULL) as company_roles
+      FROM users u
+      LEFT JOIN user_goals ug ON u.id = ug.user_id AND ug.status = 'active'
+      LEFT JOIN user_skills us ON u.id = us.user_id
+      LEFT JOIN user_company_relationships ucr ON u.id = ucr.user_id AND ucr.is_current = true
+      WHERE u.id = ${userId}
+      GROUP BY u.id
+      LIMIT 1;
     `
     
     if (userQuery.rows.length === 0) {
-      console.log('⚠️ User not found:', userId)
+      console.log('⚠️ User not found in database:', userId)
       return null
     }
     
     const user = userQuery.rows[0]
     
-    return {
+    // Get CKDelta colleagues for enhanced context
+    const colleaguesQuery = await sql`
+      SELECT 
+        ce.enrichment_data->'employees' as colleagues
+      FROM company_enrichments ce
+      INNER JOIN user_company_relationships ucr ON ce.id = ucr.company_id
+      WHERE ucr.user_id = ${userId} AND ucr.is_current = true
+      LIMIT 1;
+    `
+    
+    const colleagues = colleaguesQuery.rows[0]?.colleagues || []
+    
+    const userContext = {
       id: user.id,
-      name: user.name || 'there',
-      current_role: user.headline,
-      experience_level: user.experience?.level,
-      skills: user.skills || [],
-      professional_goals: user.experience?.goals,
-      industry: user.company,
-      linkedin_data: user.linkedin_data
+      name: user.name || user.full_name || 'there',
+      current_role: user.current_role,
+      experience_level: user.seniority_level,
+      skills: user.skill_list || user.skills || [],
+      professional_goals: user.professional_goals,
+      industry: user.industry,
+      linkedin_data: user.linkedin_data,
+      company: user.company,
+      department: user.department,
+      years_experience: user.years_experience,
+      active_goals: user.active_goals || [],
+      colleagues: colleagues.slice(0, 5), // First 5 colleagues for context
+      company_roles: user.company_roles || []
     }
-    */
+    
+    console.log('✅ Real user context loaded:', {
+      name: userContext.name,
+      role: userContext.current_role,
+      company: userContext.company,
+      skillsCount: userContext.skills.length,
+      goalsCount: userContext.active_goals.length,
+      colleaguesCount: Array.isArray(userContext.colleagues) ? userContext.colleagues.length : 0
+    })
+    
+    return userContext
     
   } catch (error) {
     console.error('❌ Error fetching user context:', error)
     
-    // Fallback to basic context
+    // Try fallback to basic mock data if database query fails
+    console.log('🔄 Falling back to mock context due to error')
     return {
       id: userId,
-      name: 'there',
-      current_role: undefined,
-      experience_level: undefined,
-      skills: [],
-      professional_goals: undefined,
-      industry: undefined,
+      name: 'Quest User',
+      current_role: 'Professional',
+      experience_level: 'Mid-level',
+      skills: ['Leadership', 'Communication'],
+      professional_goals: 'Career advancement and skill development',
+      industry: 'Technology',
       linkedin_data: null
     }
   }
@@ -236,58 +239,49 @@ async function fetchUserContext(userId: string): Promise<UserProfile | null> {
  */
 async function fetchConversationHistory(userId: string, sessionId?: string): Promise<ConversationHistory[]> {
   try {
-    console.log('🔍 Fetching conversation history for user:', userId)
+    console.log('🔍 Fetching real conversation history for user:', userId)
     
-    // For now, return mock conversation history
-    // This will be replaced with real database queries once schema is aligned
-    const mockHistory: ConversationHistory[] = [
-      {
-        id: '1',
-        content: 'I want to improve my leadership skills',
-        role: 'user',
-        timestamp: new Date(Date.now() - 86400000), // 1 day ago
-        emotional_context: { engagement: 0.8, confidence: 0.6 }
-      },
-      {
-        id: '2',
-        content: 'How can I prepare for a senior engineering interview?',
-        role: 'user', 
-        timestamp: new Date(Date.now() - 172800000), // 2 days ago
-        emotional_context: { anxiety: 0.4, determination: 0.9 }
-      }
-    ]
-    
-    console.log('✅ Conversation history (mock):', mockHistory.length, 'turns')
-    return mockHistory
-    
-    /* TODO: Replace with real database queries once schema is aligned
-    // This is what the query should look like:
+    // Query conversation sessions from the database
     const query = await sql`
       SELECT 
         id,
         transcript as content,
-        'user' as role,
-        created_at as timestamp,
-        emotional_context
-      FROM repo_sessions 
+        ai_response,
+        emotional_context,
+        topics_discussed,
+        session_type,
+        started_at as timestamp,
+        duration_seconds
+      FROM conversation_sessions 
       WHERE user_id = ${userId}
-        AND type = 'quest_conversation'
         ${sessionId ? sql`AND session_id = ${sessionId}` : sql``}
-      ORDER BY created_at DESC
+      ORDER BY started_at DESC
       LIMIT 10
     `
     
-    return query.rows.map(row => ({
+    const history = query.rows.map(row => ({
       id: row.id,
       content: row.content || '',
-      role: row.role,
+      role: 'user' as const,
       timestamp: row.timestamp,
-      emotional_context: row.emotional_context
+      emotional_context: row.emotional_context || {},
+      ai_response: row.ai_response,
+      topics_discussed: row.topics_discussed || [],
+      duration_seconds: row.duration_seconds
     }))
-    */
+    
+    console.log('✅ Real conversation history loaded:', {
+      sessionsCount: history.length,
+      recentTopics: history.slice(0, 3).map(h => h.topics_discussed).flat().slice(0, 5)
+    })
+    
+    return history
     
   } catch (error) {
     console.error('❌ Error fetching conversation history:', error)
+    
+    // Fallback to empty array if database query fails
+    console.log('🔄 No conversation history available yet')
     return []
   }
 }
@@ -302,27 +296,25 @@ async function storeConversationTurn(
   emotionalContext?: any
 ): Promise<void> {
   try {
-    console.log('💾 Storing conversation turn:', { 
+    console.log('💾 Storing conversation turn to database:', { 
       userId: userId.substring(0, 8) + '...', 
       sessionId, 
       contentLength: content.length 
     })
     
-    // For now, just log the conversation turn
-    // This will be replaced with real database storage once schema is aligned
-    console.log('📝 Conversation content:', content.substring(0, 100) + '...')
-    console.log('🎭 Emotional context:', emotionalContext)
-    
-    /* TODO: Replace with real database storage once schema is aligned
-    // This is what the storage should look like:
+    // Store conversation in database
     await sql`
-      INSERT INTO repo_sessions (
+      INSERT INTO conversation_sessions (
         user_id,
         session_id,
-        type,
+        session_type,
         transcript,
         emotional_context,
-        created_at
+        conversation_metadata,
+        topics_discussed,
+        platform,
+        voice_enabled,
+        started_at
       )
       VALUES (
         ${userId},
@@ -330,20 +322,61 @@ async function storeConversationTurn(
         'quest_conversation_clm',
         ${content},
         ${JSON.stringify(emotionalContext || {})},
+        ${JSON.stringify({ source: 'hume_clm', version: '1.0' })},
+        ${extractTopicsFromContent(content)},
+        'web',
+        true,
         NOW()
       )
+      ON CONFLICT (user_id, session_id) 
+      DO UPDATE SET
+        transcript = EXCLUDED.transcript,
+        emotional_context = EXCLUDED.emotional_context,
+        updated_at = NOW()
     `
     
-    // Add vectorization for semantic search
-    await neonClient.storeDocument({
-      content,
-      metadata: { userId, sessionId, type: 'conversation', emotionalContext }
-    })
-    */
+    console.log('✅ Conversation stored successfully')
+    
+    // TODO: Add vectorization for semantic search in future iteration
+    // await neonClient.storeDocument({
+    //   content,
+    //   metadata: { userId, sessionId, type: 'conversation', emotionalContext }
+    // })
     
   } catch (error) {
     console.error('❌ Error storing conversation turn:', error)
+    // Don't throw error - conversation should continue even if storage fails
   }
+}
+
+/**
+ * Extract topics from conversation content for better context
+ */
+function extractTopicsFromContent(content: string): string[] {
+  const topics: string[] = []
+  const lowercaseContent = content.toLowerCase()
+  
+  // Career-related keywords
+  const careerKeywords = {
+    'job search': /job.{0,10}search|looking.{0,10}job|find.{0,10}job/,
+    'interview': /interview|interviewing/,
+    'leadership': /leadership|leading|manage|manager/,
+    'skills': /skill|learn|improve|develop/,
+    'promotion': /promotion|advance|career.{0,10}growth/,
+    'networking': /network|connect|colleague/,
+    'goals': /goal|objective|target/,
+    'feedback': /feedback|review|evaluation/,
+    'mentoring': /mentor|coach|guidance/,
+    'work-life balance': /work.{0,5}life|balance|stress/
+  }
+  
+  Object.entries(careerKeywords).forEach(([topic, regex]) => {
+    if (regex.test(lowercaseContent)) {
+      topics.push(topic)
+    }
+  })
+  
+  return topics.slice(0, 5) // Limit to 5 topics
 }
 
 /**
@@ -365,17 +398,37 @@ Key Capabilities:
 
 `
 
-  // Add user context if available
+  // Add comprehensive user context if available
   if (userContext) {
-    prompt += `User Profile:
-- Name: ${userContext.name}
-${userContext.current_role ? `- Current Role: ${userContext.current_role}` : ''}
-${userContext.experience_level ? `- Experience: ${userContext.experience_level}` : ''}
+    prompt += `User Profile - ${userContext.name}:
+${userContext.current_role ? `- Role: ${userContext.current_role}` : ''}
+${userContext.company ? `- Company: ${userContext.company}` : ''}
+${userContext.department ? `- Department: ${userContext.department}` : ''}
+${userContext.experience_level ? `- Seniority: ${userContext.experience_level}` : ''}
+${userContext.years_experience ? `- Experience: ${userContext.years_experience} years` : ''}
 ${userContext.industry ? `- Industry: ${userContext.industry}` : ''}
-${userContext.professional_goals ? `- Goals: ${userContext.professional_goals}` : ''}
 ${userContext.skills?.length ? `- Skills: ${userContext.skills.join(', ')}` : ''}
+${userContext.professional_goals ? `- Goals: ${userContext.professional_goals}` : ''}
 
 `
+
+    // Add active goals if available
+    if (userContext.active_goals && userContext.active_goals.length > 0) {
+      prompt += `Active Goals:
+${userContext.active_goals.map(goal => `- ${goal}`).join('\n')}
+
+`
+    }
+
+    // Add colleagues context if available
+    if (userContext.colleagues && Array.isArray(userContext.colleagues) && userContext.colleagues.length > 0) {
+      prompt += `Team/Colleagues at ${userContext.company}:
+${userContext.colleagues.slice(0, 3).map((colleague: any) => 
+  `- ${colleague.name}: ${colleague.title || colleague.headline || 'Team Member'}`
+).join('\n')}
+
+`
+    }
   }
 
   // Add conversation context
