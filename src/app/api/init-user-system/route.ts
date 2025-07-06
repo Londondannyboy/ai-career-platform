@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
         profile_image_url TEXT,
         
         -- Professional context
-        current_role TEXT,
+        "current_role" TEXT,
         company TEXT,
         department TEXT,
         seniority_level TEXT DEFAULT 'mid',
@@ -230,7 +230,7 @@ export async function POST(req: NextRequest) {
           full_name,
           first_name,
           last_name,
-          current_role,
+          "current_role",
           company,
           department,
           seniority_level,
@@ -256,7 +256,7 @@ export async function POST(req: NextRequest) {
         ) ON CONFLICT (email) DO UPDATE SET
           id = EXCLUDED.id,
           name = EXCLUDED.name,
-          current_role = EXCLUDED.current_role,
+          "current_role" = EXCLUDED."current_role",
           company = EXCLUDED.company,
           updated_at = NOW()
         RETURNING *;
