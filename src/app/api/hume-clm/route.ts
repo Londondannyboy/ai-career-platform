@@ -242,22 +242,41 @@ async function fetchConversationHistory(userId: string, sessionId?: string): Pro
     console.log('🔍 Fetching real conversation history for user:', userId)
     
     // Query conversation sessions from the database
-    const query = await sql`
-      SELECT 
-        id,
-        transcript as content,
-        ai_response,
-        emotional_context,
-        topics_discussed,
-        session_type,
-        started_at as timestamp,
-        duration_seconds
-      FROM conversation_sessions 
-      WHERE user_id = ${userId}
-        ${sessionId ? sql`AND session_id = ${sessionId}` : sql``}
-      ORDER BY started_at DESC
-      LIMIT 10
-    `
+    let query
+    if (sessionId) {
+      query = await sql`
+        SELECT 
+          id,
+          transcript as content,
+          ai_response,
+          emotional_context,
+          topics_discussed,
+          session_type,
+          started_at as timestamp,
+          duration_seconds
+        FROM conversation_sessions 
+        WHERE user_id = ${userId}
+          AND session_id = ${sessionId}
+        ORDER BY started_at DESC
+        LIMIT 10
+      `
+    } else {
+      query = await sql`
+        SELECT 
+          id,
+          transcript as content,
+          ai_response,
+          emotional_context,
+          topics_discussed,
+          session_type,
+          started_at as timestamp,
+          duration_seconds
+        FROM conversation_sessions 
+        WHERE user_id = ${userId}
+        ORDER BY started_at DESC
+        LIMIT 10
+      `
+    }
     
     const history = query.rows.map(row => ({
       id: row.id,
