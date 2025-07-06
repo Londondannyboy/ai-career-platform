@@ -262,7 +262,7 @@ export default function QuestHybridPage() {
 
     } catch (error) {
       console.error('❌ Error setting up voice activity detection:', error)
-      setLastResponse('❌ Voice detection setup failed: ' + error.message)
+      setLastResponse('❌ Voice detection setup failed: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
 
