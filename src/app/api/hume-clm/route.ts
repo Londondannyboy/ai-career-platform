@@ -342,7 +342,7 @@ async function storeConversationTurn(
         ${content},
         ${JSON.stringify(emotionalContext || {})},
         ${JSON.stringify({ source: 'hume_clm', version: '1.0' })},
-        ${extractTopicsFromContent(content)},
+        ${JSON.stringify(extractTopicsFromContent(content))},
         'web',
         true,
         NOW()
