@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 
 export async function POST(req: NextRequest) {
+  const { force_user_id, user_data } = await req.json().catch(() => ({}))
+  
   const results = {
     extension: false,
     users: false,
@@ -61,9 +63,15 @@ export async function POST(req: NextRequest) {
       results.errors.push(`Users table: ${e}`)
     }
 
-    // Step 3: Create Dan Keegan user
+    // Step 3: Create user (use force_user_id if provided)
     if (results.users) {
       try {
+        const userId = force_user_id || 'user_2cNjk7xDvHPeCKhDLxH0GBMqVzI'
+        const email = user_data?.email || 'keegan.dan@gmail.com'
+        const name = user_data?.name || 'Dan Keegan'
+        const company = user_data?.company || 'CKDelta'
+        const role = user_data?.current_role || 'Entrepreneur/Consultant'
+        
         await sql`
           INSERT INTO users (
             id, 
@@ -81,14 +89,14 @@ export async function POST(req: NextRequest) {
             professional_goals,
             industry
           ) VALUES (
-            'user_2cNjk7xDvHPeCKhDLxH0GBMqVzI',
-            'keegan.dan@gmail.com',
-            'Dan Keegan',
-            'Dan Keegan',
+            ${userId},
+            ${email},
+            ${name},
+            ${name},
             'Dan',
             'Keegan',
-            'Entrepreneur/Consultant',
-            'CKDelta',
+            ${role},
+            ${company},
             'Leadership',
             'senior',
             15,
@@ -96,6 +104,7 @@ export async function POST(req: NextRequest) {
             'Build and scale Quest AI platform to help professionals advance their careers through personalized AI coaching',
             'Technology/Consulting'
           ) ON CONFLICT (email) DO UPDATE SET
+            id = EXCLUDED.id,
             name = EXCLUDED.name,
             "current_role" = EXCLUDED."current_role",
             company = EXCLUDED.company,

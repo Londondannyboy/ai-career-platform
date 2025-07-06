@@ -270,6 +270,36 @@ export default function QuestCLMTestPage() {
     setMetrics([])
   }
 
+  const createUserProfile = async () => {
+    if (!userId) return
+    
+    try {
+      // Create Dan Keegan profile for the logged-in user
+      const response = await fetch('/api/init-db-simple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          force_user_id: userId,
+          user_data: {
+            email: 'keegan.dan@gmail.com',
+            name: 'Dan Keegan',
+            company: 'CKDelta',
+            current_role: 'Entrepreneur/Consultant'
+          }
+        })
+      })
+      
+      const result = await response.json()
+      console.log('User profile creation result:', result)
+      
+      // Update user context
+      fetchUserContext()
+      
+    } catch (error) {
+      console.error('Error creating user profile:', error)
+    }
+  }
+
   const averageResponseTime = metrics.length > 0 
     ? metrics.reduce((sum, m) => sum + m.responseTime, 0) / metrics.length 
     : 0
@@ -335,6 +365,15 @@ export default function QuestCLMTestPage() {
                 className="w-full"
               >
                 🗑️ Clear Conversation
+              </Button>
+              
+              <Button 
+                onClick={createUserProfile}
+                variant="outline"
+                className="w-full"
+                disabled={!userId}
+              >
+                👤 Create My Profile
               </Button>
             </div>
           </CardContent>
@@ -444,7 +483,11 @@ export default function QuestCLMTestPage() {
               </Badge>
               
               <Badge variant={userId ? "default" : "destructive"}>
-                {userId ? `👤 User: ${userId.substring(0, 8)}...` : '❌ No User'}
+                {userId ? `👤 Clerk ID: ${userId.substring(0, 12)}...` : '❌ No User'}
+              </Badge>
+              
+              <Badge variant="outline">
+                Using: {userId || 'user_2cNjk7xDvHPeCKhDLxH0GBMqVzI'}
               </Badge>
               
               <Badge variant={userContext ? "default" : "secondary"}>
