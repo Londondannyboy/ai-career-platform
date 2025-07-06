@@ -14,8 +14,8 @@ export default function QuestHumePage() {
   const [userProfile, setUserProfile] = useState<any>(null)
   const [humeConfig, setHumeConfig] = useState<any>(null)
   
-  // Hume EVI integration refs
-  const humeClientRef = useRef<any>(null)
+  // Voice recognition refs
+  const recognitionRef = useRef<any>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
 
   useEffect(() => {
@@ -101,19 +101,108 @@ export default function QuestHumePage() {
       setIsRecording(true)
       setIsConnected(true)
       
-      // For now, simulate Hume integration
-      // In production, this would initialize the actual Hume EVI client
-      console.log('🎤 Starting Hume EVI with CLM endpoint...')
-      console.log('📋 User Profile:', userProfile)
-      console.log('🔗 CLM URL:', humeConfig?.customLLMUrl)
-      
-      // Simulate conversation start
-      setLastResponse('Hume EVI connected with personalized context for ' + userProfile.name)
+      // Initialize Web Speech API for voice input
+      if ('webkitSpeechRecognition' in window) {
+        const recognition = new (window as any).webkitSpeechRecognition()
+        recognition.continuous = true
+        recognition.interimResults = false
+        recognition.lang = 'en-US'
+        
+        recognition.onstart = () => {
+          console.log('🎤 Voice recognition started')
+          setLastResponse('Listening... speak now!')
+        }
+        
+        recognition.onresult = async (event: any) => {
+          const transcript = event.results[event.results.length - 1][0].transcript
+          console.log('🗣️ User said:', transcript)
+          
+          // Process the voice input through CLM
+          await processVoiceInput(transcript)
+        }
+        
+        recognition.onerror = (event: any) => {
+          console.error('❌ Speech recognition error:', event.error)
+          setLastResponse('Voice recognition error: ' + event.error)
+        }
+        
+        recognition.onend = () => {
+          console.log('🛑 Voice recognition ended')
+          if (isRecording) {
+            // Restart if still in conversation mode
+            recognition.start()
+          }
+        }
+        
+        recognitionRef.current = recognition
+        recognition.start()
+        
+        setLastResponse('🎤 Voice recognition active. Say something!')
+      } else {
+        setLastResponse('❌ Speech recognition not supported in this browser')
+      }
       
     } catch (error) {
-      console.error('❌ Error starting Hume conversation:', error)
+      console.error('❌ Error starting voice conversation:', error)
       setIsRecording(false)
       setIsConnected(false)
+    }
+  }
+
+  const processVoiceInput = async (transcript: string) => {
+    try {
+      setLastResponse(`You said: "${transcript}"\n\nProcessing...`)
+      
+      const response = await fetch('/api/hume-clm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: 'You are Quest, an AI career coach. Respond conversationally and warmly.' },
+            { role: 'user', content: transcript }
+          ],
+          user_id: userId,
+          custom_session_id: `quest_voice_${userId}_${Date.now()}`,
+          emotional_context: { engagement: 0.8, conversation_mode: 'voice' }
+        })
+      })
+
+      const reader = response.body?.getReader()
+      let result = ''
+      
+      if (reader) {
+        const decoder = new TextDecoder()
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          
+          const chunk = decoder.decode(value)
+          const lines = chunk.split('\n')
+          
+          for (const line of lines) {
+            if (line.startsWith('0:')) {
+              const match = line.match(/0:"([^"]*)"/)
+              if (match) {
+                result += match[1]
+              }
+            }
+          }
+        }
+      }
+      
+      setLastResponse(`You: "${transcript}"\n\nQuest AI: ${result}`)
+      
+      // Speak the response
+      if ('speechSynthesis' in window && result) {
+        const utterance = new SpeechSynthesisUtterance(result)
+        utterance.rate = 0.9
+        utterance.pitch = 1
+        speechSynthesis.speak(utterance)
+      }
+      
+    } catch (error) {
+      console.error('❌ Error processing voice input:', error)
+      setLastResponse('Error processing voice input: ' + error)
     }
   }
 
@@ -122,9 +211,14 @@ export default function QuestHumePage() {
     setIsConnected(false)
     setLastResponse('')
     
-    // Stop Hume EVI client
-    if (humeClientRef.current) {
-      // humeClientRef.current.disconnect()
+    // Stop voice recognition
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
+    }
+    
+    // Stop any ongoing speech
+    if ('speechSynthesis' in window) {
+      speechSynthesis.cancel()
     }
   }
 
