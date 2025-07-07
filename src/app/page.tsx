@@ -28,31 +28,28 @@ import {
 function VoiceCircle({ 
   isListening, 
   isSpeaking, 
-  isConnected, 
-  onClick,
+  isConnected,
   userName
 }: {
   isListening: boolean
   isSpeaking: boolean
   isConnected: boolean
-  onClick: () => void
   userName: string
 }) {
   return (
     <div className="flex flex-col items-center space-y-6">
       {/* Main voice circle */}
       <div
-        onClick={onClick}
-        className={`relative w-40 h-40 md:w-56 md:h-56 rounded-full cursor-pointer transition-all duration-500 ${
+        className={`relative w-40 h-40 md:w-56 md:h-56 rounded-full transition-all duration-500 ${
           isConnected 
             ? 'bg-gradient-to-br from-blue-500 via-purple-600 to-blue-700 shadow-2xl shadow-blue-500/25' 
-            : 'bg-gradient-to-br from-gray-600 to-gray-700 shadow-lg hover:shadow-xl'
+            : 'bg-gradient-to-br from-gray-600 to-gray-700 shadow-lg'
         } ${
           isSpeaking 
             ? 'animate-pulse scale-110 shadow-2xl shadow-purple-500/40' 
             : isListening 
             ? 'animate-bounce scale-105' 
-            : 'hover:scale-105'
+            : ''
         }`}
       >
         {/* Center icon */}
@@ -89,7 +86,7 @@ function VoiceCircle({
            'Ready to chat'}
         </h2>
         <p className="text-lg text-gray-300">
-          {!isConnected ? 'Tap to start your career coaching session' : 
+          {!isConnected ? 'Ready for your career coaching session' : 
            'Your AI career coach is active'}
         </p>
       </div>
@@ -201,8 +198,19 @@ export default function HomePage() {
       setIsConnected(true)
       setIsListening(true)
       
-      // Navigate to the working quest-hume-debug interface
-      window.location.href = '/quest-hume-debug'
+      // TODO: Initialize Hume connection here
+      console.log('Starting voice conversation...')
+      
+      // Simulate conversation states for now
+      setTimeout(() => {
+        setIsListening(false)
+        setIsSpeaking(true)
+      }, 2000)
+      
+      setTimeout(() => {
+        setIsSpeaking(false)
+        setIsListening(true)
+      }, 4000)
     } catch (error) {
       console.error('Failed to start conversation:', error)
       setIsConnected(false)
@@ -327,13 +335,68 @@ export default function HomePage() {
 
       {/* Main conversation interface */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
-        <VoiceCircle
-          isListening={isListening}
-          isSpeaking={isSpeaking}
-          isConnected={isConnected}
-          onClick={isConnected ? stopConversation : startConversation}
-          userName={user?.firstName || 'there'}
-        />
+        <div className="flex flex-col items-center space-y-8">
+          <VoiceCircle
+            isListening={isListening}
+            isSpeaking={isSpeaking}
+            isConnected={isConnected}
+            userName={user?.firstName || 'there'}
+          />
+          
+          {/* Control buttons */}
+          <div className="flex space-x-4">
+            {!isConnected ? (
+              <Button
+                onClick={startConversation}
+                size="lg"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-3"
+              >
+                <Mic className="w-5 h-5 mr-2" />
+                Start Conversation
+              </Button>
+            ) : (
+              <div className="flex space-x-3">
+                <Button
+                  onClick={stopConversation}
+                  size="lg"
+                  variant="outline"
+                  className="border-red-500 text-red-400 hover:bg-red-500/10 px-6 py-3"
+                >
+                  Stop
+                </Button>
+                <Button
+                  onClick={() => {
+                    // TODO: Mute/unmute functionality
+                    console.log('Toggle mute')
+                  }}
+                  size="lg"
+                  variant="outline"
+                  className="border-gray-500 text-gray-300 hover:bg-gray-500/10 px-6 py-3"
+                >
+                  Mute
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          {/* Quick access to debug interface for testing */}
+          {isConnected && (
+            <div className="text-center">
+              <p className="text-sm text-gray-400 mb-2">
+                For advanced debugging and testing
+              </p>
+              <Link href="/quest-hume-debug">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="text-gray-500 hover:text-gray-300"
+                >
+                  Open Debug Interface
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Colleague Suggestions */}
