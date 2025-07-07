@@ -179,14 +179,67 @@ export default function QuestHumeProductionPage() {
           
           // CRITICAL: Restart speech recognition after AI finishes speaking
           // This allows user to speak again without the AI hearing itself
-          if (isRecording && recognitionRef.current) {
-            console.log('🎤 Restarting speech recognition after AI finished speaking')
-            setTimeout(() => {
-              if (isRecording && recognitionRef.current) {
-                recognitionRef.current.start()
+          console.log('🎤 AI finished speaking, restarting speech recognition...')
+          setTimeout(() => {
+            if (isRecording) {
+              console.log('🔄 Attempting to restart speech recognition')
+              try {
+                if ('webkitSpeechRecognition' in window) {
+                  const recognition = new (window as any).webkitSpeechRecognition()
+                  recognition.continuous = true
+                  recognition.interimResults = true
+                  recognition.lang = 'en-US'
+                  recognition.maxAlternatives = 1
+                  
+                  recognition.onresult = async (event: any) => {
+                    const result = event.results[event.results.length - 1]
+                    const transcript = result[0].transcript.trim()
+                    const isFinal = result.isFinal
+                    
+                    console.log('📝 New transcript:', transcript, 'Final:', isFinal)
+                    
+                    // Allow manual interruption if user speaks while AI is speaking (shouldn't happen with new logic)
+                    if (isSpeakingRef.current && transcript.length > 5) {
+                      console.log('🛑 Manual interruption detected:', transcript.substring(0, 20))
+                      speechSynthesis.cancel()
+                      setIsSpeaking(false)
+                      isSpeakingRef.current = false
+                      setWasInterrupted(true)
+                      if (utteranceRef.current) {
+                        utteranceRef.current = null
+                      }
+                    }
+                    
+                    if (isFinal && transcript.length > 0) {
+                      console.log('🗣️ User said (after restart):', transcript)
+                      await processVoiceInput(transcript)
+                    }
+                  }
+                  
+                  recognition.onerror = (event: any) => {
+                    console.error('❌ Restarted recognition error:', event.error)
+                  }
+                  
+                  recognition.onend = () => {
+                    console.log('🛑 Restarted recognition ended')
+                    if (isRecording && !isProcessing) {
+                      setTimeout(() => {
+                        if (isRecording) {
+                          recognition.start()
+                        }
+                      }, 100)
+                    }
+                  }
+                  
+                  recognitionRef.current = recognition
+                  recognition.start()
+                  console.log('✅ Speech recognition restarted successfully')
+                }
+              } catch (error) {
+                console.error('❌ Error restarting speech recognition:', error)
               }
-            }, 500) // 500ms delay to ensure clean restart
-          }
+            }
+          }, 500) // 500ms delay to ensure clean restart
         }
         
         utterance.onstart = () => {
