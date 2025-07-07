@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@clerk/nextjs'
+import { EVIWebAudioPlayer } from 'hume'
 
 export default function QuestHumeDebugPage() {
   const { userId, isLoaded } = useAuth()
@@ -20,6 +21,7 @@ export default function QuestHumeDebugPage() {
   // WebSocket refs for direct Hume connection
   const humeSocketRef = useRef<WebSocket | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
+  const audioPlayerRef = useRef<EVIWebAudioPlayer | null>(null)
 
   useEffect(() => {
     if (isLoaded && userId) {
@@ -103,11 +105,17 @@ export default function QuestHumeDebugPage() {
       const socket = new WebSocket(websocketUrl)
       humeSocketRef.current = socket
 
-      socket.onopen = () => {
+      socket.onopen = async () => {
         console.log('🎤 Connected to Hume EVI')
         setIsConnected(true)
         setHumeStatus('connected')
         setLastResponse('🎤 Connected to Hume EVI! Your CLM endpoint will be called for AI responses.')
+        
+        // Initialize audio player
+        const player = new EVIWebAudioPlayer()
+        await player.init()
+        audioPlayerRef.current = player
+        console.log('🎜️ Audio player initialized')
         
         // Configure audio format for Hume
         const sessionSettings = {
@@ -147,7 +155,7 @@ export default function QuestHumeDebugPage() {
         setLastResponse('Disconnected from Hume EVI')
       }
 
-      socket.onmessage = (event) => {
+      socket.onmessage = async (event) => {
         try {
           const data = JSON.parse(event.data)
           console.log('📥 Hume message:', data)
@@ -187,6 +195,10 @@ export default function QuestHumeDebugPage() {
             
           } else if (data.type === 'audio_output') {
             console.log('🔊 Hume streaming audio chunk:', data.index)
+            // Play the audio chunk using Hume's official player
+            if (audioPlayerRef.current) {
+              await audioPlayerRef.current.enqueue(data)
+            }
             // Keep speaking status true while audio chunks are streaming
             
           } else if (data.type === 'user_message' || data.type === 'user_interruption') {
@@ -258,6 +270,12 @@ export default function QuestHumeDebugPage() {
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(track => track.stop())
       mediaStreamRef.current = null
+    }
+    
+    // Stop audio player
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.stop()
+      audioPlayerRef.current = null
     }
     
     setIsConnected(false)

@@ -231,9 +231,15 @@ export default function HomePage() {
       const socket = new WebSocket(websocketUrl)
       humeSocketRef.current = socket
 
-      socket.onopen = () => {
+      socket.onopen = async () => {
         console.log('🎤 Connected to Hume EVI')
         setLastResponse('🎤 Connected! Start speaking...')
+        
+        // Initialize audio player
+        const player = new EVIWebAudioPlayer()
+        await player.init()
+        audioPlayerRef.current = player
+        console.log('🎜️ Audio player initialized')
         
         // Configure audio format for Hume
         const sessionSettings = {
@@ -287,6 +293,10 @@ export default function HomePage() {
             
           } else if (data.type === 'audio_output') {
             console.log('🔊 Hume streaming audio chunk')
+            // Play the audio chunk using Hume's official player
+            if (audioPlayerRef.current) {
+              await audioPlayerRef.current.enqueue(data)
+            }
             // Keep speaking status true while audio is being streamed
             
           } else if (data.type === 'user_message' || data.type === 'user_interruption') {
