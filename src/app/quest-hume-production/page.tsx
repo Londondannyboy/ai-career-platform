@@ -176,34 +176,27 @@ export default function QuestHumeProductionPage() {
   }
 
   const startAudioStreaming = (socket: WebSocket, stream: MediaStream, audioContext: AudioContext) => {
-    // Use MediaRecorder for proper audio encoding as recommended by Hume docs
-    const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'audio/webm;codecs=opus'
-    })
+    // Use the EXACT format from working quest-hume-real
+    const source = audioContext.createMediaStreamSource(stream)
+    const processor = audioContext.createScriptProcessor(4096, 1, 1)
     
-    // Store the MediaRecorder instance for cleanup
-    mediaRecorderRef.current = mediaRecorder
-    
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
-        // Convert Blob to base64 as required by Hume EVI
-        const reader = new FileReader()
-        reader.onload = () => {
-          const base64Audio = (reader.result as string).split(',')[1] // Remove data:audio/webm;base64, prefix
-          
-          const audioData = {
-            type: 'audio_input',
-            data: base64Audio
-          }
-          
-          socket.send(JSON.stringify(audioData))
+    processor.onaudioprocess = (event) => {
+      if (socket.readyState === WebSocket.OPEN) {
+        const inputBuffer = event.inputBuffer.getChannelData(0)
+        
+        // Convert to the format Hume expects (EXACT match from quest-hume-real)
+        const audioData = {
+          type: 'audio_input',
+          audio: Array.from(inputBuffer),
+          sample_rate: audioContext.sampleRate
         }
-        reader.readAsDataURL(event.data)
+        
+        socket.send(JSON.stringify(audioData))
       }
     }
     
-    // Start recording with small time slices for real-time streaming
-    mediaRecorder.start(100) // 100ms chunks
+    source.connect(processor)
+    processor.connect(audioContext.destination)
   }
 
   const playHumeAudio = (audioData: number[]) => {
@@ -355,12 +348,6 @@ export default function QuestHumeProductionPage() {
     setIsRecording(false)
     setIsConnected(false)
     setLastResponse('')
-    
-    // Stop MediaRecorder
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop()
-      mediaRecorderRef.current = null
-    }
     
     // Close Hume WebSocket
     if (humeSocketRef.current) {
