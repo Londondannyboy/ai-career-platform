@@ -291,24 +291,22 @@ export default function QuestHybridPage() {
           consecutiveVoiceFrames = 0
         }
 
-        // Only interrupt if we're sure it's user voice and AI is speaking
-        const now = Date.now()
-        if (consecutiveVoiceFrames >= 3 && isSpeakingRef.current && (now - lastInterruptTime) > 1000) {
-          console.log('🛑 USER INTERRUPTION DETECTED! Level:', combinedLevel, 'Frames:', consecutiveVoiceFrames, 'Frame:', frameCount)
-          
-          // Stop speech synthesis
-          if ('speechSynthesis' in window) {
-            speechSynthesis.cancel()
+        // COMPLETELY DISABLE voice interruption detection while AI is speaking
+        // Only allow interruption via speech recognition interim results
+        // This prevents the AI from hearing itself speak
+        if (isSpeakingRef.current) {
+          // Reset counters while AI is speaking to prevent false positives
+          consecutiveVoiceFrames = 0
+          voiceDetectionRef.current = false
+        } else {
+          // Only allow interruption detection when AI is NOT speaking
+          const now = Date.now()
+          if (consecutiveVoiceFrames >= 3 && (now - lastInterruptTime) > 1000) {
+            console.log('🛑 USER VOICE DETECTED (AI not speaking)! Level:', combinedLevel, 'Frames:', consecutiveVoiceFrames)
+            // Don't interrupt here since AI isn't speaking
+            consecutiveVoiceFrames = 0
+            lastInterruptTime = now
           }
-          setIsSpeaking(false)
-          isSpeakingRef.current = false
-          setWasInterrupted(true) // Mark that an interruption occurred
-          if (utteranceRef.current) {
-            utteranceRef.current = null
-          }
-          
-          consecutiveVoiceFrames = 0 // Reset
-          lastInterruptTime = now
         }
 
         // Continue monitoring at 60fps
@@ -359,9 +357,10 @@ export default function QuestHybridPage() {
           const transcript = result[0].transcript.trim()
           const isFinal = result.isFinal
           
-          // Immediate interruption on ANY voice activity (even interim results)
+          // PRIMARY INTERRUPTION METHOD: Speech recognition interim results
+          // This is more reliable than voice activity detection
           if (isSpeakingRef.current && 'speechSynthesis' in window && transcript.length > 2) {
-            console.log('🛑 Auto-interrupting AI speech - user voice detected via speech recognition')
+            console.log('🛑 SPEECH RECOGNITION INTERRUPTION! Transcript:', transcript.substring(0, 20) + '...')
             speechSynthesis.cancel()
             setIsSpeaking(false)
             isSpeakingRef.current = false
@@ -591,10 +590,11 @@ export default function QuestHybridPage() {
                   <div>AI Speaking (state): {isSpeaking ? '🟢 YES' : '🔴 NO'}</div>
                   <div>AI Speaking (ref): {isSpeakingRef.current ? '🟢 YES' : '🔴 NO'}</div>
                   <div>Was Interrupted: {wasInterrupted ? '🟡 YES' : '🔴 NO'}</div>
-                  <div>Should Interrupt: {voiceLevel > 20 && isSpeakingRef.current ? '🟢 YES' : '🔴 NO'}</div>
+                  <div>Interruption Enabled: {!isSpeakingRef.current ? '🟢 YES' : '🔴 DISABLED'}</div>
+                  <div>Should Interrupt: {voiceLevel > 20 && !isSpeakingRef.current ? '🟢 YES' : '🔴 NO'}</div>
                 </div>
                 <div className="mt-2 text-xs text-yellow-700">
-                  Speak now to test voice detection - level should go above 20
+                  Interruption via speech recognition when AI is speaking. Voice detection disabled during AI speech to prevent feedback.
                 </div>
               </div>
             )}
