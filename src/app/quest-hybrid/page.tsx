@@ -19,6 +19,7 @@ export default function QuestHybridPage() {
   const [voiceLevel, setVoiceLevel] = useState(0)
   const [debugMode, setDebugMode] = useState(false)
   const [wasInterrupted, setWasInterrupted] = useState(false)
+  const [canInterrupt, setCanInterrupt] = useState(true)
   
   // Voice recognition refs
   const recognitionRef = useRef<any>(null)
@@ -179,6 +180,12 @@ export default function QuestHybridPage() {
         utterance.onstart = () => {
           setIsSpeaking(true)
           isSpeakingRef.current = true // Update ref
+          
+          // Disable interruptions briefly when AI starts speaking to prevent self-interruption
+          setCanInterrupt(false)
+          setTimeout(() => {
+            setCanInterrupt(true)
+          }, 1000) // 1 second delay before allowing interruptions
         }
         
         utterance.onerror = () => {
@@ -311,8 +318,8 @@ export default function QuestHybridPage() {
           const isFinal = result.isFinal
           
           // PRIMARY INTERRUPTION METHOD: Speech recognition interim results
-          // This is more reliable than voice activity detection
-          if (isSpeakingRef.current && 'speechSynthesis' in window && transcript.length > 2) {
+          // Only interrupt if we're allowing interruptions (prevents AI from hearing itself initially)
+          if (isSpeakingRef.current && canInterrupt && 'speechSynthesis' in window && transcript.length > 2) {
             console.log('🛑 SPEECH RECOGNITION INTERRUPTION! Transcript:', transcript.substring(0, 20) + '...')
             speechSynthesis.cancel()
             setIsSpeaking(false)
@@ -539,11 +546,12 @@ export default function QuestHybridPage() {
                   <div>Recognition Active: {isRecording ? '🟢 YES' : '🔴 NO'}</div>
                   <div>AI Speaking (state): {isSpeaking ? '🟢 YES' : '🔴 NO'}</div>
                   <div>AI Speaking (ref): {isSpeakingRef.current ? '🟢 YES' : '🔴 NO'}</div>
+                  <div>Can Interrupt: {canInterrupt ? '🟢 YES' : '🔴 NO (cooldown)'}</div>
                   <div>Was Interrupted: {wasInterrupted ? '🟡 YES' : '🔴 NO'}</div>
                   <div>Processing: {isProcessing ? '🟡 YES' : '🔴 NO'}</div>
                 </div>
                 <div className="mt-2 text-xs text-yellow-700">
-                  Voice detection for UI feedback only. Speech recognition handles all interruptions.
+                  1-second interruption cooldown when AI starts speaking to prevent self-interruption.
                 </div>
               </div>
             )}
