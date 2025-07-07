@@ -19,13 +19,15 @@ export default function QuestHumeProductionPage() {
   const [debugMode, setDebugMode] = useState(false)
   const [wasInterrupted, setWasInterrupted] = useState(false)
   
-  // Production voice refs - using working approach from enhanced version
+  // Hume EVI WebSocket refs for authentic voice
   const recognitionRef = useRef<any>(null)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const voiceDetectionRef = useRef<boolean>(false)
   const isSpeakingRef = useRef<boolean>(false)
+  const humeSocketRef = useRef<WebSocket | null>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
 
   useEffect(() => {
     if (isLoaded && userId) {
@@ -73,205 +75,208 @@ export default function QuestHumeProductionPage() {
     }
   }
 
-  const processVoiceInput = async (transcript: string) => {
-    if (!userProfile) return
-    
-    setIsProcessing(true)
+  const sendMessageToHume = (transcript: string) => {
+    if (!humeSocketRef.current || humeSocketRef.current.readyState !== WebSocket.OPEN) {
+      setLastResponse('❌ Hume WebSocket not connected')
+      return
+    }
+
+    console.log('📤 Sending message to Hume EVI:', transcript)
     setLastResponse(`You: "${transcript}"\n\n🧠 Quest AI is thinking...`)
     
-    // Stop any ongoing speech
-    if ('speechSynthesis' in window) {
-      speechSynthesis.cancel()
-      setIsSpeaking(false)
-      isSpeakingRef.current = false
+    // Send user message to Hume EVI with your user context
+    const userMessage = {
+      type: 'user_input',
+      text: transcript,
+      user_id: userId,
+      session_metadata: {
+        platform: 'quest_hume_production',
+        wasInterrupted: wasInterrupted,
+        conversation_mode: 'authentic_hume_voice'
+      }
     }
     
-    try {
-      // Load custom prompts with production Hume voice instructions
-      const savedPrompts = localStorage.getItem('questCoachPrompts')
-      const prompts: CoachPrompts = savedPrompts ? JSON.parse(savedPrompts) : defaultCoachPrompts
-      
-      const scenario = wasInterrupted ? 'interrupted' : null
-      const systemPrompt = getContextualPrompt(
-        prompts, 
-        scenario, 
-        wasInterrupted ? 'User just interrupted you. Acknowledge this naturally and respond to their new input.' : undefined
-      ) + `\n\nIMPORTANT: You are using Hume AI's authentic voice synthesis. Speak naturally and conversationally as your voice quality is professional and expressive.`
-      
-      console.log('🤖 Using production prompt for Hume voice')
-      if (wasInterrupted) {
-        console.log('🔄 Handling interruption with Hume voice')
-        setWasInterrupted(false)
-      }
-      
-      const response = await fetch('/api/hume-clm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: transcript }
-          ],
-          user_id: userId,
-          custom_session_id: `quest_hume_production_${userId}_${Date.now()}`,
-          emotional_context: { 
-            engagement: 0.9, 
-            conversation_mode: 'hume_voice',
-            platform: 'quest_hume_production',
-            wasInterrupted: wasInterrupted,
-            voice_quality: 'professional'
-          }
-        })
-      })
+    humeSocketRef.current.send(JSON.stringify(userMessage))
+    
+    if (wasInterrupted) {
+      console.log('🔄 Handling interruption with authentic Hume voice')
+      setWasInterrupted(false)
+    }
+  }
 
-      const reader = response.body?.getReader()
-      let result = ''
+  const initializeHumeEVI = async () => {
+    try {
+      // Check for Hume API key
+      const apiKey = process.env.NEXT_PUBLIC_HUME_API_KEY
+      if (!apiKey) {
+        setLastResponse('❌ Hume API key not configured. Please add NEXT_PUBLIC_HUME_API_KEY to environment variables.')
+        return
+      }
+
+      setLastResponse('🔄 Connecting to authentic Hume EVI for aura voice...')
+
+      // Get microphone access with proper echo cancellation
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,   // Required for Hume EVI
+          noiseSuppression: true,   // Required for Hume EVI  
+          autoGainControl: true,    // Required for Hume EVI
+          sampleRate: 16000
+        } 
+      })
+      mediaStreamRef.current = stream
+
+      // Initialize AudioContext for audio streaming
+      const audioContext = new AudioContext({ sampleRate: 16000 })
+      audioContextRef.current = audioContext
+
+      // Use your Hume EVI config with "aura" voice
+      const configId = process.env.NEXT_PUBLIC_HUME_CONFIG_ID || '8f16326f-a45d-4433-9a12-890120244ec3'
+      const websocketUrl = `wss://api.hume.ai/v0/evi/chat?api_key=${apiKey}&config_id=${configId}`
       
-      if (reader) {
-        const decoder = new TextDecoder()
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          
-          const chunk = decoder.decode(value)
-          const lines = chunk.split('\n')
-          
-          for (const line of lines) {
-            if (line.startsWith('0:')) {
-              const match = line.match(/0:"([^"]*)"/)
-              if (match) {
-                result += match[1]
-              }
-            }
+      console.log('🔄 Connecting to Hume EVI WebSocket for authentic voice...')
+      const socket = new WebSocket(websocketUrl)
+      humeSocketRef.current = socket
+
+      socket.onopen = () => {
+        console.log('🎤 Connected to authentic Hume EVI with aura voice')
+        setIsConnected(true)
+        
+        // Initialize session with user context
+        const initMessage = {
+          type: 'session_settings',
+          metadata: {
+            user_id: userId,
+            session_type: 'quest_production_hume',
+            platform: 'quest_hume_production',
+            voice_config: 'aura',
+            user_profile: userProfile
           }
         }
+        
+        socket.send(JSON.stringify(initMessage))
+        setLastResponse('🎤 Authentic Hume EVI connected with aura voice and enhanced interruption handling!')
       }
-      
-      setLastResponse(`You: "${transcript}"\n\nQuest AI: ${result}`)
-      setIsProcessing(false)
-      
-      // Enhanced speech synthesis with Hume-quality voice selection
-      if ('speechSynthesis' in window && result) {
-        setIsSpeaking(true)
-        isSpeakingRef.current = true
-        
-        // Use conservative voice selection with proper echo cancellation
-        const voices = speechSynthesis.getVoices()
-        console.log('🎙️ Available voices:', voices.map(v => `${v.name} (${v.lang}) ${v.localService ? 'LOCAL' : 'REMOTE'}`))
-        
-        // Prioritize LOCAL voices as they work better with echo cancellation
-        const localVoice = voices.find(voice => 
-          voice.lang.includes('en-US') && voice.localService === true
-        )
-        
-        const utterance = new SpeechSynthesisUtterance(result)
-        utterance.voice = localVoice || voices.find(v => v.lang.includes('en-US')) || voices[0]
-        console.log('🎤 Selected voice:', utterance.voice?.name, 'Local:', utterance.voice?.localService)
-        console.log('🔊 Echo cancellation should prevent feedback with proper audio setup')
-        utterance.rate = 0.92  // Slightly slower for more natural delivery
-        utterance.pitch = 1.05 // Slightly higher for more engaging tone
-        utterance.volume = 0.9
-        
-        utterance.onend = () => {
-          setIsSpeaking(false)
-          isSpeakingRef.current = false
-          utteranceRef.current = null
+
+      socket.onerror = (error) => {
+        console.error('❌ Hume WebSocket error:', error)
+        setLastResponse('❌ Connection error with Hume EVI. Check API key and config ID.')
+        setIsConnected(false)
+      }
+
+      socket.onclose = (event) => {
+        console.log('🔌 Hume WebSocket closed:', event.code, event.reason)
+        setIsConnected(false)
+        setIsRecording(false)
+      }
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          console.log('📥 Hume EVI response:', data)
           
-          // CRITICAL: Restart speech recognition after AI finishes speaking
-          // This allows user to speak again without the AI hearing itself
-          console.log('🎤 AI finished speaking, restarting speech recognition...')
-          setTimeout(() => {
-            if (isRecording) {
-              console.log('🔄 Attempting to restart speech recognition')
-              try {
-                if ('webkitSpeechRecognition' in window) {
-                  const recognition = new (window as any).webkitSpeechRecognition()
-                  recognition.continuous = true
-                  recognition.interimResults = true
-                  recognition.lang = 'en-US'
-                  recognition.maxAlternatives = 1
+          if (data.type === 'user_message') {
+            // User's transcribed speech from Hume
+            setLastResponse(`You: "${data.message?.content || 'Listening...'}"`)
+          } else if (data.type === 'assistant_message') {
+            // AI response with authentic Hume voice
+            setLastResponse(`Quest AI: ${data.message?.content || 'Responding...'}`)
+            setIsSpeaking(true)
+            isSpeakingRef.current = true
+            
+            // CRITICAL: Pause speech recognition when Hume starts speaking
+            if (recognitionRef.current) {
+              console.log('🔇 Pausing speech recognition - Hume is speaking with aura voice')
+              recognitionRef.current.stop()
+            }
+            
+            // Hume handles voice playback automatically with your aura voice
+          } else if (data.type === 'audio_output') {
+            // Hume voice finished speaking
+            console.log('🎤 Hume aura voice finished, restarting speech recognition...')
+            setIsSpeaking(false)
+            isSpeakingRef.current = false
+            
+            // Restart speech recognition after Hume finishes
+            setTimeout(() => {
+              if (isRecording && 'webkitSpeechRecognition' in window) {
+                const recognition = new (window as any).webkitSpeechRecognition()
+                recognition.continuous = true
+                recognition.interimResults = true
+                recognition.lang = 'en-US'
+                recognition.maxAlternatives = 1
+                
+                recognition.onresult = (event: any) => {
+                  const result = event.results[event.results.length - 1]
+                  const transcript = result[0].transcript.trim()
+                  const isFinal = result.isFinal
                   
-                  recognition.onresult = (event: any) => {
-                    const result = event.results[event.results.length - 1]
-                    const transcript = result[0].transcript.trim()
-                    const isFinal = result.isFinal
-                    
-                    console.log('📝 New transcript:', transcript, 'Final:', isFinal)
-                    
-                    // Allow manual interruption if user speaks while AI is speaking (shouldn't happen with new logic)
-                    if (isSpeakingRef.current && transcript.length > 5) {
-                      console.log('🛑 Manual interruption detected:', transcript.substring(0, 20))
-                      speechSynthesis.cancel()
-                      setIsSpeaking(false)
-                      isSpeakingRef.current = false
-                      setWasInterrupted(true)
-                      if (utteranceRef.current) {
-                        utteranceRef.current = null
-                      }
-                    }
-                    
-                    if (isFinal && transcript.length > 0) {
-                      console.log('🗣️ User said (after restart):', transcript)
-                      // Use setTimeout to ensure async call works properly
-                      setTimeout(() => {
-                        processVoiceInput(transcript)
-                      }, 0)
-                    }
+                  if (isFinal && transcript.length > 0) {
+                    console.log('🗣️ User said (to Hume):', transcript)
+                    sendMessageToHume(transcript)
                   }
-                  
-                  recognition.onerror = (event: any) => {
-                    console.error('❌ Restarted recognition error:', event.error)
-                  }
-                  
-                  recognition.onend = () => {
-                    console.log('🛑 Restarted recognition ended')
-                    if (isRecording && !isProcessing) {
-                      setTimeout(() => {
-                        if (isRecording) {
-                          recognition.start()
-                        }
-                      }, 100)
-                    }
-                  }
-                  
-                  recognitionRef.current = recognition
-                  recognition.start()
-                  console.log('✅ Speech recognition restarted successfully')
                 }
-              } catch (error) {
-                console.error('❌ Error restarting speech recognition:', error)
+                
+                recognition.onerror = (event: any) => {
+                  console.error('❌ Speech recognition error:', event.error)
+                }
+                
+                recognition.onend = () => {
+                  if (isRecording && !isProcessing) {
+                    setTimeout(() => {
+                      if (isRecording) recognition.start()
+                    }, 100)
+                  }
+                }
+                
+                recognitionRef.current = recognition
+                recognition.start()
               }
-            }
-          }, 500) // 500ms delay to ensure clean restart
-        }
-        
-        utterance.onstart = () => {
-          setIsSpeaking(true)
-          isSpeakingRef.current = true
-          
-          // CRITICAL: Pause speech recognition when AI starts speaking
-          // This prevents the AI from hearing itself and interrupting
-          if (recognitionRef.current) {
-            console.log('🔇 Pausing speech recognition while AI speaks to prevent self-interruption')
-            recognitionRef.current.stop()
+            }, 500)
+          } else if (data.type === 'session_settings') {
+            console.log('✅ Hume session configured with aura voice:', data)
+          } else if (data.type === 'error') {
+            console.error('❌ Hume EVI error:', data)
+            setLastResponse(`❌ Error: ${data.message || 'Unknown error'}`)
           }
+        } catch (error) {
+          console.error('❌ Error parsing Hume message:', error)
         }
-        
-        utterance.onerror = () => {
-          setIsSpeaking(false)
-          isSpeakingRef.current = false
-          utteranceRef.current = null
-        }
-        
-        utteranceRef.current = utterance
-        speechSynthesis.speak(utterance)
       }
+
+      // Start audio streaming to Hume for voice recognition
+      startAudioStreamingToHume(socket, stream, audioContext)
       
     } catch (error) {
-      console.error('❌ Error processing voice input:', error)
-      setLastResponse('Error processing voice input: ' + error)
-      setIsProcessing(false)
+      console.error('❌ Error initializing Hume EVI:', error)
+      setLastResponse('Failed to initialize authentic Hume EVI: ' + error)
     }
+  }
+
+  const startAudioStreamingToHume = (socket: WebSocket, stream: MediaStream, audioContext: AudioContext) => {
+    // Use ScriptProcessor for real-time audio streaming to Hume
+    const source = audioContext.createMediaStreamSource(stream)
+    const processor = audioContext.createScriptProcessor(4096, 1, 1)
+    
+    processor.onaudioprocess = (event) => {
+      if (socket.readyState === WebSocket.OPEN) {
+        const inputBuffer = event.inputBuffer.getChannelData(0)
+        
+        // Send audio in Hume's expected format
+        const audioData = {
+          type: 'audio_input',
+          audio: Array.from(inputBuffer),
+          sample_rate: audioContext.sampleRate
+        }
+        
+        socket.send(JSON.stringify(audioData))
+      }
+    }
+    
+    source.connect(processor)
+    processor.connect(audioContext.destination)
+    
+    console.log('🎙️ Audio streaming to Hume EVI started for aura voice synthesis')
   }
 
   const setupVoiceActivityDetection = async (existingStream?: MediaStream) => {
@@ -370,8 +375,11 @@ export default function QuestHumeProductionPage() {
 
     try {
       setIsRecording(true)
-      setIsConnected(true)
       
+      // Initialize authentic Hume EVI with aura voice
+      await initializeHumeEVI()
+      
+      // Setup initial speech recognition for user input
       if ('webkitSpeechRecognition' in window) {
         const recognition = new (window as any).webkitSpeechRecognition()
         recognition.continuous = true
@@ -380,42 +388,37 @@ export default function QuestHumeProductionPage() {
         recognition.maxAlternatives = 1
         
         recognition.onstart = async () => {
-          console.log('🎤 Production voice recognition started')
-          setLastResponse('🎤 Quest AI with Hume production voice is listening... speak naturally!')
+          console.log('🎤 Speech recognition started for Hume EVI input')
           
+          // Setup voice activity detection for debug monitoring
           await setupVoiceActivityDetection()
         }
         
-        recognition.onresult = async (event: any) => {
+        recognition.onresult = (event: any) => {
           const result = event.results[event.results.length - 1]
           const transcript = result[0].transcript.trim()
           const isFinal = result.isFinal
           
-          // Speech recognition is paused when AI speaks, so this should not trigger false interruptions
-          console.log('📝 Interim transcript:', transcript, 'Final:', isFinal)
+          console.log('📝 Speech input:', transcript, 'Final:', isFinal)
           
           if (isFinal && transcript.length > 0) {
-            console.log('🗣️ User said (production):', transcript)
-            await processVoiceInput(transcript)
+            console.log('🗣️ Sending to Hume EVI:', transcript)
+            sendMessageToHume(transcript)
           }
         }
         
         recognition.onerror = (event: any) => {
-          console.error('❌ Production speech recognition error:', event.error)
-          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          console.error('❌ Speech recognition error:', event.error)
+          if (event.error === 'not-allowed') {
             setLastResponse('❌ Microphone access denied. Please allow microphone access and try again.')
-          } else {
-            setLastResponse(`❌ Voice recognition error: ${event.error}`)
           }
         }
         
         recognition.onend = () => {
-          console.log('🛑 Production voice recognition ended')
+          console.log('🛑 Speech recognition ended')
           if (isRecording && !isProcessing) {
             setTimeout(() => {
-              if (isRecording && recognitionRef.current) {
-                recognition.start()
-              }
+              if (isRecording) recognition.start()
             }, 100)
           }
         }
@@ -428,7 +431,7 @@ export default function QuestHumeProductionPage() {
       }
       
     } catch (error) {
-      console.error('❌ Error starting production voice conversation:', error)
+      console.error('❌ Error starting Hume EVI conversation:', error)
       setIsRecording(false)
       setIsConnected(false)
     }
@@ -439,37 +442,50 @@ export default function QuestHumeProductionPage() {
     setIsConnected(false)
     setLastResponse('')
     
+    // Stop speech recognition
     if (recognitionRef.current) {
       recognitionRef.current.stop()
+      recognitionRef.current = null
     }
     
+    // Close Hume WebSocket
+    if (humeSocketRef.current) {
+      humeSocketRef.current.close()
+      humeSocketRef.current = null
+    }
+    
+    // Stop media stream
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop())
+      mediaStreamRef.current = null
+    }
+    
+    // Close audio context
     if (audioContextRef.current) {
       audioContextRef.current.close()
       audioContextRef.current = null
     }
     analyserRef.current = null
     
-    if ('speechSynthesis' in window) {
-      speechSynthesis.cancel()
-    }
     setIsSpeaking(false)
     isSpeakingRef.current = false
     setIsProcessing(false)
   }
 
   const interruptConversation = () => {
-    if ('speechSynthesis' in window) {
-      speechSynthesis.cancel()
-    }
-    
-    if (utteranceRef.current) {
-      utteranceRef.current = null
+    // Send interrupt signal to Hume EVI
+    if (humeSocketRef.current && humeSocketRef.current.readyState === WebSocket.OPEN) {
+      const interrupt = {
+        type: 'interrupt',
+        action: 'stop_speaking'
+      }
+      humeSocketRef.current.send(JSON.stringify(interrupt))
     }
     
     setIsSpeaking(false)
     isSpeakingRef.current = false
     setIsProcessing(false)
-    setLastResponse('🔄 Production conversation interrupted. Listening for new input...')
+    setLastResponse('🔄 Hume EVI conversation interrupted. Listening for new input...')
   }
 
   return (
