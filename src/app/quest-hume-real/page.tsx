@@ -155,6 +155,7 @@ export default function QuestHumeRealPage() {
         } catch (error) {
           console.error('❌ Error parsing Hume message:', error)
         }
+      }
 
       // Start audio streaming to Hume
       startAudioStreaming(socket, stream, audioContext)
