@@ -50,18 +50,14 @@ function QuestFreshIntegrationContent() {
       if (latestMessage.type === 'user_message') {
         const userText = (latestMessage as any).content || (latestMessage as any).text || ''
         if (userText) {
-          setLastResponse(`You: "${userText}"\n\n🧠 Quest AI is thinking...`)
-          // Process through your CLM API for database integration
+          console.log('👤 User said:', userText)
+          setLastResponse(`You: "${userText}"\n\n🧠 Quest AI is thinking with your database context...`)
+          // CRITICAL: Process through your CLM API for database integration
           processUserInputThroughCLM(userText)
         }
       } else if (latestMessage.type === 'assistant_message') {
-        const aiText = (latestMessage as any).content || (latestMessage as any).text || ''
-        if (aiText) {
-          setLastResponse(prev => {
-            const userPart = prev.split('\n\n🧠')[0]
-            return `${userPart}\n\nQuest AI: ${aiText}`
-          })
-        }
+        // This is Hume's direct response - we want to bypass this and use our CLM API instead
+        console.log('🤖 Hume direct response (bypassing for CLM):', latestMessage)
       }
     }
   }, [messages])
@@ -122,6 +118,8 @@ function QuestFreshIntegrationContent() {
       ) + `\n\nIMPORTANT: You are using authentic Hume AI voice synthesis. Speak naturally and conversationally as your voice quality is professional and expressive with emotional intelligence.`
       
       console.log('🤖 Processing through CLM API with fresh integration')
+      console.log('👤 User Profile for Database Context:', userProfile)
+      console.log('🆔 User ID:', userId)
       if (wasInterrupted) {
         console.log('🔄 Handling interruption with fresh integration')
         setWasInterrupted(false)
@@ -171,11 +169,18 @@ function QuestFreshIntegrationContent() {
         }
       }
       
-      console.log('🎯 CLM API response:', result)
+      console.log('🎯 CLM API response with database context:', result)
       
-      // Send the AI response back to Hume EVI for voice synthesis
+      // Update the UI with the database-aware response
+      setLastResponse(prev => {
+        const userPart = prev.split('\n\n🧠')[0]
+        return `${userPart}\n\nQuest AI (with your data): ${result}`
+      })
+      
+      // Send the database-aware AI response back to Hume EVI for voice synthesis
       if (result && status.value === 'connected') {
-        console.log('🎤 Sending AI response to Hume for authentic voice synthesis')
+        console.log('🎤 Sending database-aware response to Hume for authentic voice synthesis')
+        console.log('👤 User Profile Context:', userProfile)
         sendUserInput(result)
       }
       
@@ -468,6 +473,7 @@ export default function QuestFreshIntegrationPage() {
       configId={HUME_CONFIG_ID}
       onMessage={(message) => {
         console.log('🎤 Hume Voice Message:', message)
+        console.log('🔄 Message will be processed through your CLM API for database context')
       }}
       onError={(error) => {
         console.error('❌ Hume Voice Error:', error)
