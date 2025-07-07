@@ -235,6 +235,18 @@ export default function HomePage() {
         console.log('🎤 Connected to Hume EVI')
         setLastResponse('🎤 Connected! Start speaking...')
         
+        // Configure audio format for Hume
+        const sessionSettings = {
+          type: 'session_settings',
+          audio: {
+            encoding: 'linear16',
+            sample_rate: 16000,
+            channels: 1
+          }
+        }
+        socket.send(JSON.stringify(sessionSettings))
+        console.log('🔊 Sent audio format configuration:', sessionSettings)
+        
         // Start audio streaming to Hume
         startAudioStreaming(socket, stream)
       }

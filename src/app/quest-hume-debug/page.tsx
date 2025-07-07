@@ -109,6 +109,18 @@ export default function QuestHumeDebugPage() {
         setHumeStatus('connected')
         setLastResponse('🎤 Connected to Hume EVI! Your CLM endpoint will be called for AI responses.')
         
+        // Configure audio format for Hume
+        const sessionSettings = {
+          type: 'session_settings',
+          audio: {
+            encoding: 'linear16',
+            sample_rate: 16000,
+            channels: 1
+          }
+        }
+        socket.send(JSON.stringify(sessionSettings))
+        console.log('🔊 Sent audio format configuration:', sessionSettings)
+        
         // Log CLM configuration info
         console.log('🔗 CLM Configuration Active - Hume will call your endpoint for responses')
         setClmRequests(prev => [...prev, {
@@ -116,6 +128,9 @@ export default function QuestHumeDebugPage() {
           type: 'connection',
           message: 'Connected to Hume EVI with CLM configuration'
         }])
+        
+        // Start audio streaming to Hume
+        startAudioStreaming(socket, stream)
       }
 
       socket.onerror = (error) => {
@@ -175,8 +190,7 @@ export default function QuestHumeDebugPage() {
         }
       }
 
-      // Start audio streaming
-      startAudioStreaming(socket, stream)
+      // Audio streaming will be started in onopen handler
       
     } catch (error) {
       console.error('❌ Error connecting to Hume:', error)
