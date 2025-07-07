@@ -155,21 +155,20 @@ export default function QuestHumeProductionPage() {
         setIsSpeaking(true)
         isSpeakingRef.current = true
         
-        // Select highest quality voice available
+        // Debug voice selection to find stuttering issue
         const voices = speechSynthesis.getVoices()
-        const premiumVoices = voices.filter(voice => 
-          voice.name.includes('Premium') || 
-          voice.name.includes('Enhanced') ||
-          voice.name.includes('Neural') ||
+        console.log('🎙️ Available voices:', voices.map(v => `${v.name} (${v.lang}) ${v.localService ? 'LOCAL' : 'REMOTE'}`))
+        
+        // Try to use same safe voice as working versions
+        const safeVoice = voices.find(voice => 
           voice.name.includes('Samantha') || 
-          voice.name.includes('Karen') || 
-          voice.name.includes('Serena') ||
-          voice.name.includes('Allison') ||
-          (voice.lang.includes('en-US') && voice.localService === false)
+          voice.name.includes('Alex') ||
+          (voice.lang.includes('en-US') && voice.localService === true)
         )
         
         const utterance = new SpeechSynthesisUtterance(result)
-        utterance.voice = premiumVoices[0] || voices.find(v => v.lang.includes('en-US')) || voices[0]
+        utterance.voice = safeVoice || voices.find(v => v.lang.includes('en-US')) || voices[0]
+        console.log('🎤 Selected voice:', utterance.voice?.name, utterance.voice?.localService ? 'LOCAL' : 'REMOTE')
         utterance.rate = 0.92  // Slightly slower for more natural delivery
         utterance.pitch = 1.05 // Slightly higher for more engaging tone
         utterance.volume = 0.9
