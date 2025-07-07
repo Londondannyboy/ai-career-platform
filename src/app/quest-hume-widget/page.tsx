@@ -89,6 +89,7 @@ export default function QuestHumeWidgetPage() {
                       setWidgetReady(true)
                     }}
                   />
+                  {/* @ts-ignore - Hume custom element */}
                   <hume-ai-voice 
                     auth-type="apiKey"
                     api-key={process.env.NEXT_PUBLIC_HUME_API_KEY}
