@@ -24,6 +24,7 @@ export default function QuestHybridPage() {
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const voiceDetectionRef = useRef<boolean>(false)
+  const isSpeakingRef = useRef<boolean>(false) // Track speaking state for voice detection
 
   useEffect(() => {
     if (isLoaded && userId) {
@@ -130,6 +131,7 @@ export default function QuestHybridPage() {
       // Enhanced speech synthesis
       if ('speechSynthesis' in window && result) {
         setIsSpeaking(true)
+        isSpeakingRef.current = true // Update ref
         
         // Find a good voice for Quest AI
         const voices = speechSynthesis.getVoices()
@@ -149,15 +151,18 @@ export default function QuestHybridPage() {
         
         utterance.onend = () => {
           setIsSpeaking(false)
+          isSpeakingRef.current = false // Update ref
           utteranceRef.current = null
         }
         
         utterance.onstart = () => {
           setIsSpeaking(true)
+          isSpeakingRef.current = true // Update ref
         }
         
         utterance.onerror = () => {
           setIsSpeaking(false)
+          isSpeakingRef.current = false // Update ref
           utteranceRef.current = null
         }
         
@@ -172,20 +177,25 @@ export default function QuestHybridPage() {
     }
   }
 
-  const setupVoiceActivityDetection = async () => {
+  const setupVoiceActivityDetection = async (existingStream?: MediaStream) => {
     try {
       console.log('🔧 Setting up voice activity detection...')
       
-      // Get microphone access for voice activity detection
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: false, // We want to detect ALL audio including user voice
-          noiseSuppression: false,
-          autoGainControl: false
-        } 
-      })
-
-      console.log('🎤 Microphone access granted for voice detection')
+      // Use existing stream if provided, otherwise get new microphone access
+      let stream: MediaStream
+      if (existingStream) {
+        stream = existingStream
+        console.log('🎤 Using existing microphone stream for voice detection')
+      } else {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: false, // We want to detect ALL audio including user voice
+            noiseSuppression: false,
+            autoGainControl: false
+          } 
+        })
+        console.log('🎤 New microphone access granted for voice detection')
+      }
 
       // Create audio context and analyser
       const audioContext = new AudioContext()
@@ -203,6 +213,7 @@ export default function QuestHybridPage() {
 
       // Start voice activity monitoring
       let consecutiveVoiceFrames = 0
+      let lastInterruptTime = 0
       const monitorVoiceActivity = () => {
         if (!analyserRef.current || !isRecording) return
 
@@ -230,6 +241,15 @@ export default function QuestHybridPage() {
         // Update voice level for UI feedback
         setVoiceLevel(Math.round(combinedLevel))
 
+        // Log when voice is detected
+        if (isVoiceActive && !voiceDetectionRef.current) {
+          console.log('🎤 Voice activity started! Level:', combinedLevel)
+          voiceDetectionRef.current = true
+        } else if (!isVoiceActive && voiceDetectionRef.current) {
+          console.log('🤫 Voice activity stopped')
+          voiceDetectionRef.current = false
+        }
+
         // Count consecutive frames of voice activity for stability
         if (isVoiceActive) {
           consecutiveVoiceFrames++
@@ -238,16 +258,23 @@ export default function QuestHybridPage() {
         }
 
         // If voice is detected for multiple frames and AI is speaking, interrupt immediately
-        if (consecutiveVoiceFrames >= 2 && isSpeaking) {
-          console.log('🛑 VOICE INTERRUPTION! Level:', combinedLevel, 'Frames:', consecutiveVoiceFrames)
+        // But prevent rapid successive interruptions
+        const now = Date.now()
+        if (consecutiveVoiceFrames >= 2 && isSpeakingRef.current && (now - lastInterruptTime) > 500) {
+          console.log('🛑 VOICE INTERRUPTION! Level:', combinedLevel, 'Frames:', consecutiveVoiceFrames, 'Speaking:', isSpeakingRef.current)
+          
+          // Stop speech synthesis
           if ('speechSynthesis' in window) {
             speechSynthesis.cancel()
           }
           setIsSpeaking(false)
+          isSpeakingRef.current = false
           if (utteranceRef.current) {
             utteranceRef.current = null
           }
+          
           consecutiveVoiceFrames = 0 // Reset
+          lastInterruptTime = now
         }
 
         // Continue monitoring at 60fps
@@ -276,10 +303,7 @@ export default function QuestHybridPage() {
       setIsRecording(true)
       setIsConnected(true)
       
-      // Setup voice activity detection for interruption
-      await setupVoiceActivityDetection()
-      
-      // Initialize Web Speech API with enhanced settings
+      // Initialize Web Speech API first to get the microphone stream
       if ('webkitSpeechRecognition' in window) {
         const recognition = new (window as any).webkitSpeechRecognition()
         recognition.continuous = true
@@ -287,9 +311,13 @@ export default function QuestHybridPage() {
         recognition.lang = 'en-US'
         recognition.maxAlternatives = 1
         
-        recognition.onstart = () => {
+        recognition.onstart = async () => {
           console.log('🎤 Voice recognition started')
           setLastResponse('🎤 Quest AI is listening... speak naturally!')
+          
+          // Setup voice activity detection after speech recognition starts
+          // This avoids microphone conflicts
+          await setupVoiceActivityDetection()
         }
         
         recognition.onresult = async (event: any) => {
@@ -298,10 +326,11 @@ export default function QuestHybridPage() {
           const isFinal = result.isFinal
           
           // Immediate interruption on ANY voice activity (even interim results)
-          if (isSpeaking && 'speechSynthesis' in window && transcript.length > 2) {
-            console.log('🛑 Auto-interrupting AI speech - user voice detected')
+          if (isSpeakingRef.current && 'speechSynthesis' in window && transcript.length > 2) {
+            console.log('🛑 Auto-interrupting AI speech - user voice detected via speech recognition')
             speechSynthesis.cancel()
             setIsSpeaking(false)
+            isSpeakingRef.current = false
             if (utteranceRef.current) {
               utteranceRef.current = null
             }
@@ -371,6 +400,7 @@ export default function QuestHybridPage() {
       speechSynthesis.cancel()
     }
     setIsSpeaking(false)
+    isSpeakingRef.current = false
     setIsProcessing(false)
   }
 
@@ -385,6 +415,7 @@ export default function QuestHybridPage() {
     }
     
     setIsSpeaking(false)
+    isSpeakingRef.current = false
     setIsProcessing(false)
     setLastResponse('🔄 Conversation interrupted. Listening for new input...')
   }
@@ -513,8 +544,9 @@ export default function QuestHybridPage() {
                   <div>Analyser: {analyserRef.current ? '🟢 Connected' : '🔴 None'}</div>
                   <div>Voice Level: {voiceLevel} (threshold: 15)</div>
                   <div>Detection Active: {voiceLevel > 15 ? '🟢 YES' : '🔴 NO'}</div>
-                  <div>AI Speaking: {isSpeaking ? '🟢 YES' : '🔴 NO'}</div>
-                  <div>Should Interrupt: {voiceLevel > 15 && isSpeaking ? '🟢 YES' : '🔴 NO'}</div>
+                  <div>AI Speaking (state): {isSpeaking ? '🟢 YES' : '🔴 NO'}</div>
+                  <div>AI Speaking (ref): {isSpeakingRef.current ? '🟢 YES' : '🔴 NO'}</div>
+                  <div>Should Interrupt: {voiceLevel > 15 && isSpeakingRef.current ? '🟢 YES' : '🔴 NO'}</div>
                 </div>
                 <div className="mt-2 text-xs text-yellow-700">
                   Speak now to test voice detection - level should go above 15
