@@ -280,6 +280,12 @@ export default function HomePage() {
           if (data.type === 'user_message') {
             const userText = data.message?.content || ''
             setLastResponse(`You: "${userText}"`)
+            
+            // Stop any current audio playback when user speaks
+            if (audioPlayerRef.current) {
+              audioPlayerRef.current.stop()
+            }
+            setIsSpeaking(false)
             setIsListening(false)
             
           } else if (data.type === 'assistant_message') {
@@ -303,6 +309,10 @@ export default function HomePage() {
             
           } else if (data.type === 'user_message' || data.type === 'user_interruption') {
             console.log('👤 User speaking - stopping AI speech')
+            // Stop the audio player immediately
+            if (audioPlayerRef.current) {
+              audioPlayerRef.current.stop()
+            }
             setIsSpeaking(false)
             setIsListening(true)
           }

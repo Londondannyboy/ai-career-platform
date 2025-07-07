@@ -166,6 +166,12 @@ export default function QuestHumeDebugPage() {
             const userText = data.message?.content || ''
             setLastResponse(`You: "${userText}"\n\n🧠 Hume is calling your CLM endpoint...`)
             
+            // Stop any current audio playback when user speaks
+            if (audioPlayerRef.current) {
+              audioPlayerRef.current.stop()
+            }
+            setIsSpeaking(false)
+            
             // Log CLM request
             setClmRequests(prev => [...prev, {
               timestamp: new Date().toISOString(),
@@ -203,6 +209,10 @@ export default function QuestHumeDebugPage() {
             
           } else if (data.type === 'user_message' || data.type === 'user_interruption') {
             console.log('👤 User speaking - stopping AI speech')
+            // Stop the audio player immediately
+            if (audioPlayerRef.current) {
+              audioPlayerRef.current.stop()
+            }
             setIsSpeaking(false)
           }
           
