@@ -184,24 +184,11 @@ export default function QuestHumeProductionPage() {
       if (socket.readyState === WebSocket.OPEN) {
         const inputBuffer = event.inputBuffer.getChannelData(0)
         
-        // Convert Float32Array to base64 string as expected by Hume EVI
-        const buffer = new ArrayBuffer(inputBuffer.length * 4)
-        const view = new Float32Array(buffer)
-        for (let i = 0; i < inputBuffer.length; i++) {
-          view[i] = inputBuffer[i]
-        }
-        
-        // Convert to base64 string
-        const bytes = new Uint8Array(buffer)
-        let binary = ''
-        for (let i = 0; i < bytes.byteLength; i++) {
-          binary += String.fromCharCode(bytes[i])
-        }
-        const base64Audio = btoa(binary)
-        
+        // Use EXACT format from working quest-hume-real - this should work
         const audioData = {
           type: 'audio_input',
-          data: base64Audio
+          audio: Array.from(inputBuffer),
+          sample_rate: audioContext.sampleRate
         }
         
         socket.send(JSON.stringify(audioData))
