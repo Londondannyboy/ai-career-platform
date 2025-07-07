@@ -198,33 +198,25 @@ export default function QuestHybridPage() {
     }
   }
 
-  const setupVoiceActivityDetection = async (existingStream?: MediaStream) => {
+  const setupVoiceActivityDetection = async () => {
     try {
-      console.log('🔧 Setting up voice activity detection...')
+      console.log('🔧 Setting up voice activity detection (echo cancellation DISABLED)...')
       
-      // Use existing stream if provided, otherwise get new microphone access
-      let stream: MediaStream
-      if (existingStream) {
-        stream = existingStream
-        console.log('🎤 Using existing microphone stream for voice detection')
-      } else {
-        stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: {
-            echoCancellation: true,  // CRITICAL: Prevent AI speech from triggering interruption
-            noiseSuppression: true,  // Filter out background noise
-            autoGainControl: true    // Normalize user voice levels
-          } 
-        })
-        console.log('🎤 New microphone access granted for voice detection')
-      }
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: false,  // CRITICAL: Disable echo cancellation like working enhanced version
+          noiseSuppression: false,  // Disable to match enhanced version
+          autoGainControl: false    // Disable to match enhanced version
+        } 
+      })
+      console.log('🎤 Microphone access granted for voice detection')
 
-      // Create audio context and analyser
       const audioContext = new AudioContext()
       const analyser = audioContext.createAnalyser()
       const microphone = audioContext.createMediaStreamSource(stream)
       
-      analyser.fftSize = 512  // Increased for better detection
-      analyser.smoothingTimeConstant = 0.3  // More responsive
+      analyser.fftSize = 1024
+      analyser.smoothingTimeConstant = 0.2
       microphone.connect(analyser)
       
       audioContextRef.current = audioContext
@@ -232,90 +224,68 @@ export default function QuestHybridPage() {
 
       console.log('🔊 Audio analysis setup complete')
 
-      // Start voice activity monitoring
       let consecutiveVoiceFrames = 0
       let lastInterruptTime = 0
-      let ignoreInitialFrames = 30 // Ignore first 30 frames to prevent AI speech detection
-      let frameCount = 0
       
       const monitorVoiceActivity = () => {
         if (!analyserRef.current || !isRecording) return
 
-        frameCount++
-        
         const bufferLength = analyserRef.current.frequencyBinCount
         const dataArray = new Uint8Array(bufferLength)
         analyserRef.current.getByteFrequencyData(dataArray)
 
-        // Calculate audio level (more sensitive calculation)
         const sum = dataArray.reduce((a, b) => a + b, 0)
         const average = sum / bufferLength
         
-        // Also check for peaks in specific frequency ranges
         const midFreqStart = Math.floor(bufferLength * 0.2)
         const midFreqEnd = Math.floor(bufferLength * 0.8)
         const midFreqSum = dataArray.slice(midFreqStart, midFreqEnd).reduce((a, b) => a + b, 0)
         const midFreqAverage = midFreqSum / (midFreqEnd - midFreqStart)
         
-        // Use both overall and mid-frequency levels
         const combinedLevel = Math.max(average, midFreqAverage * 0.8)
-        
-        // Higher threshold to prevent false positives from AI speech
-        const voiceThreshold = 20 // Increased threshold to be more selective
+        const voiceThreshold = 12  // Match enhanced version threshold
         const isVoiceActive = combinedLevel > voiceThreshold
         
-        // Update voice level for UI feedback
         setVoiceLevel(Math.round(combinedLevel))
 
-        // Skip detection during initial frames to prevent AI speech pickup
-        if (frameCount <= ignoreInitialFrames) {
-          if (isRecording) {
-            requestAnimationFrame(monitorVoiceActivity)
-          }
-          return
-        }
-
-        // Log when voice is detected (only after initial period)
         if (isVoiceActive && !voiceDetectionRef.current) {
-          console.log('🎤 User voice activity detected! Level:', combinedLevel, 'Frame:', frameCount)
+          console.log('🎤 Voice activity detected! Level:', combinedLevel)
           voiceDetectionRef.current = true
         } else if (!isVoiceActive && voiceDetectionRef.current) {
-          console.log('🤫 User voice activity stopped')
+          console.log('🤫 Voice activity stopped')
           voiceDetectionRef.current = false
         }
 
-        // Count consecutive frames of voice activity for stability
         if (isVoiceActive) {
           consecutiveVoiceFrames++
         } else {
           consecutiveVoiceFrames = 0
         }
 
-        // COMPLETELY DISABLE voice interruption detection while AI is speaking
-        // Only allow interruption via speech recognition interim results
-        // This prevents the AI from hearing itself speak
-        if (isSpeakingRef.current) {
-          // Reset counters while AI is speaking to prevent false positives
-          consecutiveVoiceFrames = 0
-          voiceDetectionRef.current = false
-        } else {
-          // Only allow interruption detection when AI is NOT speaking
-          const now = Date.now()
-          if (consecutiveVoiceFrames >= 3 && (now - lastInterruptTime) > 1000) {
-            console.log('🛑 USER VOICE DETECTED (AI not speaking)! Level:', combinedLevel, 'Frames:', consecutiveVoiceFrames)
-            // Don't interrupt here since AI isn't speaking
-            consecutiveVoiceFrames = 0
-            lastInterruptTime = now
+        // Only interrupt when AI is actually speaking (like enhanced version)
+        const now = Date.now()
+        if (consecutiveVoiceFrames >= 2 && isSpeakingRef.current && (now - lastInterruptTime) > 300) {
+          console.log('🛑 VOICE INTERRUPTION! Level:', combinedLevel, 'Frames:', consecutiveVoiceFrames)
+          
+          if ('speechSynthesis' in window) {
+            speechSynthesis.cancel()
           }
+          setIsSpeaking(false)
+          isSpeakingRef.current = false
+          setWasInterrupted(true)
+          if (utteranceRef.current) {
+            utteranceRef.current = null
+          }
+          
+          consecutiveVoiceFrames = 0
+          lastInterruptTime = now
         }
 
-        // Continue monitoring at 60fps
         if (isRecording) {
           requestAnimationFrame(monitorVoiceActivity)
         }
       }
 
-      // Start monitoring immediately
       console.log('▶️ Starting voice activity monitoring')
       monitorVoiceActivity()
 
@@ -347,8 +317,7 @@ export default function QuestHybridPage() {
           console.log('🎤 Voice recognition started')
           setLastResponse('🎤 Quest AI is listening... speak naturally!')
           
-          // Setup voice activity detection after speech recognition starts
-          // This avoids microphone conflicts
+          // Setup voice activity detection with echo cancellation DISABLED
           await setupVoiceActivityDetection()
         }
         
@@ -570,8 +539,8 @@ export default function QuestHybridPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Voice Level:</span>
-                    <span className={voiceLevel > 20 ? 'text-green-600 font-medium' : 'text-gray-400'}>
-                      {voiceLevel} {voiceLevel > 20 ? '🟢' : '🔇'} {voiceLevel > 35 ? '🔊' : ''}
+                    <span className={voiceLevel > 12 ? 'text-green-600 font-medium' : 'text-gray-400'}>
+                      {voiceLevel} {voiceLevel > 12 ? '🟢' : '🔇'} {voiceLevel > 25 ? '🔊' : ''}
                     </span>
                   </div>
                 </div>
@@ -581,20 +550,16 @@ export default function QuestHybridPage() {
             {/* Debug Info */}
             {debugMode && (
               <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
-                <div className="text-sm font-medium mb-2">🔍 Voice Detection Debug</div>
+                <div className="text-sm font-medium mb-2">🔍 Speech Recognition Debug</div>
                 <div className="space-y-1 text-xs">
-                  <div>Audio Context: {audioContextRef.current ? '🟢 Active' : '🔴 None'}</div>
-                  <div>Analyser: {analyserRef.current ? '🟢 Connected' : '🔴 None'}</div>
-                  <div>Voice Level: {voiceLevel} (threshold: 20)</div>
-                  <div>Detection Active: {voiceLevel > 20 ? '🟢 YES' : '🔴 NO'}</div>
+                  <div>Recognition Active: {isRecording ? '🟢 YES' : '🔴 NO'}</div>
                   <div>AI Speaking (state): {isSpeaking ? '🟢 YES' : '🔴 NO'}</div>
                   <div>AI Speaking (ref): {isSpeakingRef.current ? '🟢 YES' : '🔴 NO'}</div>
                   <div>Was Interrupted: {wasInterrupted ? '🟡 YES' : '🔴 NO'}</div>
-                  <div>Interruption Enabled: {!isSpeakingRef.current ? '🟢 YES' : '🔴 DISABLED'}</div>
-                  <div>Should Interrupt: {voiceLevel > 20 && !isSpeakingRef.current ? '🟢 YES' : '🔴 NO'}</div>
+                  <div>Processing: {isProcessing ? '🟡 YES' : '🔴 NO'}</div>
                 </div>
                 <div className="mt-2 text-xs text-yellow-700">
-                  Interruption via speech recognition when AI is speaking. Voice detection disabled during AI speech to prevent feedback.
+                  Clean speech recognition approach - no conflicting voice detection.
                 </div>
               </div>
             )}
