@@ -24,6 +24,7 @@ import {
   User,
   Briefcase
 } from 'lucide-react'
+import { EVIWebAudioPlayer } from 'hume'
 
 // Voice circle component
 function VoiceCircle({ 
@@ -198,6 +199,7 @@ export default function HomePage() {
   // WebSocket refs for Hume connection
   const humeSocketRef = useRef<WebSocket | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
+  const audioPlayerRef = useRef<EVIWebAudioPlayer | null>(null)
 
   const startConversation = async () => {
     try {
@@ -327,6 +329,12 @@ export default function HomePage() {
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(track => track.stop())
       mediaStreamRef.current = null
+    }
+
+    // Stop audio player
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.stop()
+      audioPlayerRef.current = null
     }
 
     setIsConnected(false)
