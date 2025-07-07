@@ -184,10 +184,24 @@ export default function QuestHumeProductionPage() {
       if (socket.readyState === WebSocket.OPEN) {
         const inputBuffer = event.inputBuffer.getChannelData(0)
         
-        // Convert to the format Hume expects - use 'data' field as required by API
+        // Convert Float32Array to base64 string as expected by Hume EVI
+        const buffer = new ArrayBuffer(inputBuffer.length * 4)
+        const view = new Float32Array(buffer)
+        for (let i = 0; i < inputBuffer.length; i++) {
+          view[i] = inputBuffer[i]
+        }
+        
+        // Convert to base64 string
+        const bytes = new Uint8Array(buffer)
+        let binary = ''
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i])
+        }
+        const base64Audio = btoa(binary)
+        
         const audioData = {
           type: 'audio_input',
-          data: Array.from(inputBuffer)
+          data: base64Audio
         }
         
         socket.send(JSON.stringify(audioData))
