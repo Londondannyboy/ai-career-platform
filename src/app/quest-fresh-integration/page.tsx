@@ -48,14 +48,14 @@ function QuestFreshIntegrationContent() {
       console.log('📥 Latest Hume message:', latestMessage)
       
       if (latestMessage.type === 'user_message') {
-        const userText = latestMessage.message?.content || ''
+        const userText = (latestMessage as any).content || (latestMessage as any).text || ''
         if (userText) {
           setLastResponse(`You: "${userText}"\n\n🧠 Quest AI is thinking...`)
           // Process through your CLM API for database integration
           processUserInputThroughCLM(userText)
         }
       } else if (latestMessage.type === 'assistant_message') {
-        const aiText = latestMessage.message?.content || ''
+        const aiText = (latestMessage as any).content || (latestMessage as any).text || ''
         if (aiText) {
           setLastResponse(prev => {
             const userPart = prev.split('\n\n🧠')[0]
@@ -398,7 +398,7 @@ function QuestFreshIntegrationContent() {
                       <span className="font-medium">
                         {msg.type === 'user_message' ? '👤 You:' : '🤖 Hume:'}
                       </span>
-                      <span className="ml-2">{msg.message?.content || 'Processing...'}</span>
+                      <span className="ml-2">{(msg as any).content || (msg as any).text || 'Processing...'}</span>
                     </div>
                   ))}
                 </div>
