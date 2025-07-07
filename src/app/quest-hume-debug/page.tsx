@@ -194,20 +194,30 @@ export default function QuestHumeDebugPage() {
       if (socket.readyState === WebSocket.OPEN) {
         const inputBuffer = event.inputBuffer.getChannelData(0)
         
-        // Send audio to Hume
+        // Convert Float32Array to base64 for Hume
+        const audioArray = new Float32Array(inputBuffer)
+        const audioBytes = new Uint8Array(audioArray.buffer)
+        const base64Audio = btoa(String.fromCharCode.apply(null, Array.from(audioBytes)))
+        
+        // Send audio in Hume's expected format
         const audioData = {
           type: 'audio_input',
-          data: btoa(String.fromCharCode(...new Uint8Array(inputBuffer.buffer)))
+          data: base64Audio
         }
         
         socket.send(JSON.stringify(audioData))
+        
+        // Log audio activity
+        if (Math.max(...Array.from(inputBuffer.map(Math.abs))) > 0.01) {
+          console.log('🎙️ Audio detected, level:', Math.max(...Array.from(inputBuffer.map(Math.abs))))
+        }
       }
     }
     
     source.connect(processor)
     processor.connect(audioContext.destination)
     
-    console.log('🎙️ Audio streaming to Hume started')
+    console.log('🎙️ Audio streaming to Hume started with proper format')
   }
 
   const disconnect = () => {
