@@ -28,17 +28,44 @@ export async function POST(req: NextRequest) {
       lastMessage: body.messages[body.messages.length - 1]?.content?.substring(0, 50) + '...'
     })
 
+    // Extract user ID (default to Dan's ID for now)
+    const userId = body.user_id || 'user_2z5UB58sfZFnapkymfEkFzGIlzK'
+    
+    // Get Dan's profile from database
+    let userContext = null
+    try {
+      const userQuery = await sql`
+        SELECT * FROM users WHERE id = ${userId} LIMIT 1
+      `
+      if (userQuery.rows.length > 0) {
+        userContext = userQuery.rows[0]
+      }
+    } catch (error) {
+      console.error('Database error:', error)
+    }
+    
     // Extract user message
     const userMessage = body.messages[body.messages.length - 1]?.content || ''
     
-    // For now, let's do a simple response to test the format
-    // We'll add database integration once the format works
+    // Build enhanced system prompt with user context
+    let systemPrompt = 'You are Quest AI, an empathetic career coach. Keep responses under 150 words for voice synthesis. Be warm and conversational.'
+    
+    if (userContext) {
+      systemPrompt += `\n\nUser Profile:
+- Name: ${userContext.name || 'Dan Keegan'}
+- Company: ${userContext.company || 'CKDelta'}
+- Role: ${userContext.current_role || 'Entrepreneur/Consultant'}
+- Experience: ${userContext.years_experience || 15} years
+
+Address them by name and reference their background when relevant.`
+    }
+    
     const response = await generateText({
       model: openai('gpt-4'),
       messages: [
         { 
           role: 'system', 
-          content: 'You are Quest AI, an empathetic career coach. Keep responses under 150 words for voice synthesis. Be warm and conversational.'
+          content: systemPrompt
         },
         { 
           role: 'user', 
