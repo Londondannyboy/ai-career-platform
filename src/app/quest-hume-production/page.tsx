@@ -270,23 +270,9 @@ export default function QuestHumeProductionPage() {
           consecutiveVoiceFrames = 0
         }
 
-        const now = Date.now()
-        if (consecutiveVoiceFrames >= 2 && isSpeakingRef.current && (now - lastInterruptTime) > 300) {
-          console.log('🛑 PRODUCTION VOICE INTERRUPTION! Level:', combinedLevel, 'Frames:', consecutiveVoiceFrames)
-          
-          if ('speechSynthesis' in window) {
-            speechSynthesis.cancel()
-          }
-          setIsSpeaking(false)
-          isSpeakingRef.current = false
-          setWasInterrupted(true)
-          if (utteranceRef.current) {
-            utteranceRef.current = null
-          }
-          
-          consecutiveVoiceFrames = 0
-          lastInterruptTime = now
-        }
+        // DISABLE voice activity interruption - let Web Speech API handle all interruptions
+        // This prevents false interruptions that cause stuttering
+        console.log('🔇 Voice activity detection for UI only - no interruption logic')
 
         if (isRecording) {
           requestAnimationFrame(monitorVoiceActivity)
@@ -331,8 +317,9 @@ export default function QuestHumeProductionPage() {
           const transcript = result[0].transcript.trim()
           const isFinal = result.isFinal
           
-          if (isSpeakingRef.current && 'speechSynthesis' in window && transcript.length > 2) {
-            console.log('🛑 Auto-interrupting production voice - user voice detected')
+          // More conservative interruption - only on longer utterances to avoid false triggers
+          if (isSpeakingRef.current && 'speechSynthesis' in window && transcript.length > 5) {
+            console.log('🛑 Web Speech interruption - user spoke:', transcript.substring(0, 20))
             speechSynthesis.cancel()
             setIsSpeaking(false)
             isSpeakingRef.current = false
