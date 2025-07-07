@@ -439,13 +439,29 @@ export default function HomePage() {
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full"></div>
             <span className="text-xl font-bold text-gray-900">Quest Dashboard</span>
           </div>
-          <Button
-            onClick={() => setViewMode('conversation')}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-          >
-            <MessageCircle className="w-4 h-4 mr-2" />
-            Voice Chat
-          </Button>
+          
+          {/* Navigation Links */}
+          <div className="flex items-center space-x-4">
+            <Link href="/profile">
+              <Button variant="ghost" size="sm">
+                <User className="w-4 h-4 mr-2" />
+                Complete Profile
+              </Button>
+            </Link>
+            <Link href="/network">
+              <Button variant="ghost" size="sm">
+                <Users className="w-4 h-4 mr-2" />
+                Network
+              </Button>
+            </Link>
+            <Button
+              onClick={() => setViewMode('conversation')}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Voice Chat
+            </Button>
+          </div>
         </div>
         
         <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -480,43 +496,47 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card className="cursor-pointer transition-shadow hover:shadow-md">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center text-sm font-medium">
-                  <div className="rounded-lg bg-green-100 p-2 mr-3">
-                    <Users className="h-4 w-4 text-green-600" />
-                  </div>
-                  Find Connections
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-gray-600 mb-3">
-                  Discover and connect with professionals
-                </p>
-                <Button size="sm" variant="outline" className="w-full">
-                  Browse Network
-                </Button>
-              </CardContent>
-            </Card>
+            <Link href="/profile">
+              <Card className="cursor-pointer transition-shadow hover:shadow-md">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center text-sm font-medium">
+                    <div className="rounded-lg bg-green-100 p-2 mr-3">
+                      <User className="h-4 w-4 text-green-600" />
+                    </div>
+                    Complete Profile
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-gray-600 mb-3">
+                    Build your professional story and goals
+                  </p>
+                  <Button size="sm" className="w-full bg-green-600 hover:bg-green-700">
+                    Complete Repo
+                  </Button>
+                </CardContent>
+              </Card>
+            </Link>
 
-            <Card className="cursor-pointer transition-shadow hover:shadow-md">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center text-sm font-medium">
-                  <div className="rounded-lg bg-purple-100 p-2 mr-3">
-                    <Briefcase className="h-4 w-4 text-purple-600" />
-                  </div>
-                  Search Jobs
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-gray-600 mb-3">
-                  Use AI to find your perfect role
-                </p>
-                <Button size="sm" variant="outline" className="w-full">
-                  Voice Search
-                </Button>
-              </CardContent>
-            </Card>
+            <Link href="/network">
+              <Card className="cursor-pointer transition-shadow hover:shadow-md">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center text-sm font-medium">
+                    <div className="rounded-lg bg-purple-100 p-2 mr-3">
+                      <Users className="h-4 w-4 text-purple-600" />
+                    </div>
+                    Connect Network
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-gray-600 mb-3">
+                    Connect with colleagues and expand network
+                  </p>
+                  <Button size="sm" className="w-full bg-purple-600 hover:bg-purple-700">
+                    View Colleagues
+                  </Button>
+                </CardContent>
+              </Card>
+            </Link>
 
             <Card className="cursor-pointer transition-shadow hover:shadow-md">
               <CardHeader className="pb-3">
