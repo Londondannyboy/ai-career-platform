@@ -155,20 +155,19 @@ export default function QuestHumeProductionPage() {
         setIsSpeaking(true)
         isSpeakingRef.current = true
         
-        // Debug voice selection to find stuttering issue
+        // Use conservative voice selection with proper echo cancellation
         const voices = speechSynthesis.getVoices()
         console.log('🎙️ Available voices:', voices.map(v => `${v.name} (${v.lang}) ${v.localService ? 'LOCAL' : 'REMOTE'}`))
         
-        // Try to use same safe voice as working versions
-        const safeVoice = voices.find(voice => 
-          voice.name.includes('Samantha') || 
-          voice.name.includes('Alex') ||
-          (voice.lang.includes('en-US') && voice.localService === true)
+        // Prioritize LOCAL voices as they work better with echo cancellation
+        const localVoice = voices.find(voice => 
+          voice.lang.includes('en-US') && voice.localService === true
         )
         
         const utterance = new SpeechSynthesisUtterance(result)
-        utterance.voice = safeVoice || voices.find(v => v.lang.includes('en-US')) || voices[0]
-        console.log('🎤 Selected voice:', utterance.voice?.name, utterance.voice?.localService ? 'LOCAL' : 'REMOTE')
+        utterance.voice = localVoice || voices.find(v => v.lang.includes('en-US')) || voices[0]
+        console.log('🎤 Selected voice:', utterance.voice?.name, 'Local:', utterance.voice?.localService)
+        console.log('🔊 Echo cancellation should prevent feedback with proper audio setup')
         utterance.rate = 0.92  // Slightly slower for more natural delivery
         utterance.pitch = 1.05 // Slightly higher for more engaging tone
         utterance.volume = 0.9
@@ -203,7 +202,8 @@ export default function QuestHumeProductionPage() {
 
   const setupVoiceActivityDetection = async (existingStream?: MediaStream) => {
     try {
-      console.log('🔧 Setting up production voice activity detection...')
+      console.log('🔧 Setting up production voice activity detection with proper echo cancellation...')
+      console.log('📋 Hume guidance: Enable echo cancellation on BOTH input and output to prevent AI hearing itself')
       
       let stream: MediaStream
       if (existingStream) {
@@ -212,9 +212,9 @@ export default function QuestHumeProductionPage() {
       } else {
         stream = await navigator.mediaDevices.getUserMedia({ 
           audio: {
-            echoCancellation: false,  // CRITICAL: Disable to prevent stuttering
-            noiseSuppression: false,
-            autoGainControl: false
+            echoCancellation: true,   // CRITICAL: Enable to prevent AI hearing itself
+            noiseSuppression: true,   // Enable for better audio quality
+            autoGainControl: true     // Enable for consistent levels
           } 
         })
         console.log('🎤 New microphone access granted for voice detection')
