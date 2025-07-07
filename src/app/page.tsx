@@ -1,130 +1,249 @@
 'use client'
 
+/**
+ * Quest Home Page - Conversation First
+ * Default to voice conversation with simple circular interface
+ * Toggle to dashboard view, colleague suggestions
+ */
+
 // Force this page to be dynamically rendered
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useUser, SignInButton } from '@clerk/nextjs'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
-import { User as DatabaseUser } from '@/types/database'
-import Navigation from '@/components/Navigation'
-import CompanyCard from '@/components/CompanyCard'
-import CreateCompanyModal from '@/components/CreateCompanyModal'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 import { 
-  Mic, 
-  Users, 
-  Briefcase, 
   MessageCircle, 
+  BarChart3, 
+  Users, 
   Plus,
-  TrendingUp,
-  Shield,
   Building2,
-  Upload
+  Mic,
+  User
 } from 'lucide-react'
-import { CompanyWorkspace } from '@/lib/documents/workspaceService'
 
-export default function Dashboard() {
-  const { user, isLoaded } = useUser()
-  const [profile, setProfile] = useState<DatabaseUser | null>(null)
-  const [workspaces, setWorkspaces] = useState<(CompanyWorkspace & { stats?: any })[]>([])
-  const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false)
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const supabase = createClient()
-
-  // Comprehensive logout cleanup when user is not authenticated
-  useEffect(() => {
-    if (isLoaded && !user) {
-      // User has been signed out, perform cleanup
-      const performLogoutCleanup = async () => {
-        try {
-          // Call our comprehensive logout API
-          await fetch('/api/auth/logout', { method: 'POST' });
-          
-          // Clear local storage and session storage
-          localStorage.clear();
-          sessionStorage.clear();
-        } catch (error) {
-          console.error('Logout cleanup error:', error);
-        }
-      };
-      
-      performLogoutCleanup();
-    }
-  }, [isLoaded, user]);
-
-  // Load user profile
-  useEffect(() => {
-    const getProfile = async () => {
-      if (user?.id) {
-        // Get user profile from Supabase
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single()
+// Voice circle component
+function VoiceCircle({ 
+  isListening, 
+  isSpeaking, 
+  isConnected, 
+  onClick,
+  userName
+}: {
+  isListening: boolean
+  isSpeaking: boolean
+  isConnected: boolean
+  onClick: () => void
+  userName: string
+}) {
+  return (
+    <div className="flex flex-col items-center space-y-6">
+      {/* Main voice circle */}
+      <div
+        onClick={onClick}
+        className={`relative w-40 h-40 md:w-56 md:h-56 rounded-full cursor-pointer transition-all duration-500 ${
+          isConnected 
+            ? 'bg-gradient-to-br from-blue-500 via-purple-600 to-blue-700 shadow-2xl shadow-blue-500/25' 
+            : 'bg-gradient-to-br from-gray-600 to-gray-700 shadow-lg hover:shadow-xl'
+        } ${
+          isSpeaking 
+            ? 'animate-pulse scale-110 shadow-2xl shadow-purple-500/40' 
+            : isListening 
+            ? 'animate-bounce scale-105' 
+            : 'hover:scale-105'
+        }`}
+      >
+        {/* Center icon */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <MessageCircle className="w-16 h-16 md:w-20 md:h-20 text-white drop-shadow-lg" />
+        </div>
         
-        setProfile(profile)
-      }
-    }
+        {/* Pulse rings when speaking */}
+        {isSpeaking && (
+          <>
+            <div className="absolute inset-0 rounded-full bg-blue-400 opacity-30 animate-ping"></div>
+            <div className="absolute inset-0 rounded-full bg-purple-400 opacity-20 animate-ping delay-100"></div>
+            <div className="absolute inset-0 rounded-full bg-blue-300 opacity-10 animate-ping delay-200"></div>
+          </>
+        )}
+        
+        {/* Listening indicator */}
+        {isListening && (
+          <div className="absolute inset-0 rounded-full border-4 border-white opacity-60 animate-pulse"></div>
+        )}
+        
+        {/* Connection status indicator */}
+        <div className={`absolute top-4 right-4 w-5 h-5 rounded-full border-2 border-white ${
+          isConnected ? 'bg-green-400' : 'bg-red-400'
+        }`}></div>
+      </div>
+      
+      {/* Status text */}
+      <div className="text-center space-y-2">
+        <h2 className="text-2xl md:text-3xl font-bold text-white">
+          {!isConnected ? `Hi ${userName}!` : 
+           isSpeaking ? 'Speaking...' : 
+           isListening ? 'Listening...' : 
+           'Ready to chat'}
+        </h2>
+        <p className="text-lg text-gray-300">
+          {!isConnected ? 'Tap to start your career coaching session' : 
+           'Your AI career coach is active'}
+        </p>
+      </div>
+    </div>
+  )
+}
 
-    if (user) {
-      getProfile()
+// Colleague suggestion component
+function ColleagueSuggestions({ userName }: { userName: string }) {
+  const [colleagues] = useState([
+    {
+      id: 1,
+      name: 'Phil Agafangelo',
+      title: 'Senior Developer',
+      department: 'Engineering',
+      avatar: 'PA'
+    },
+    {
+      id: 2,
+      name: 'Sarah Chen',
+      title: 'Product Manager', 
+      department: 'Product',
+      avatar: 'SC'
+    },
+    {
+      id: 3,
+      name: 'Marcus Rodriguez',
+      title: 'UX Designer',
+      department: 'Design',
+      avatar: 'MR'
     }
-  }, [user, supabase])
+  ])
 
-  // Load user workspaces
-  const loadWorkspaces = async () => {
-    if (!user) return
-    
-    setIsLoadingWorkspaces(true)
+  const [currentPrompt, setCurrentPrompt] = useState('')
+
+  useEffect(() => {
+    const prompts = [
+      `Do you know ${colleagues[0].name} from the engineering team?`,
+      `Have you connected with ${colleagues[1].name} in product?`,
+      `${colleagues[2].name} in design might be good to know for your projects`
+    ]
+    setCurrentPrompt(prompts[Math.floor(Math.random() * prompts.length)])
+  }, [colleagues])
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-center space-x-2 mb-6">
+        <Building2 className="w-5 h-5 text-blue-400" />
+        <h3 className="text-lg font-semibold text-white">CKDelta Team</h3>
+      </div>
+      
+      {/* Conversation prompt */}
+      {currentPrompt && (
+        <Card className="bg-gray-800/50 border-gray-700 backdrop-blur-sm">
+          <CardContent className="p-4">
+            <p className="text-gray-300 text-center">
+              <span className="text-blue-400">💬 Try asking:</span> "{currentPrompt}"
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Colleague cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {colleagues.map((colleague) => (
+          <Card 
+            key={colleague.id} 
+            className="bg-gray-800/70 border-gray-700 hover:bg-gray-800/90 transition-all backdrop-blur-sm"
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                  <span className="text-white font-semibold text-sm">
+                    {colleague.avatar}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-white font-medium text-sm">{colleague.name}</p>
+                  <p className="text-gray-400 text-xs">{colleague.title}</p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-xs"
+                onClick={() => {
+                  console.log(`Ask about ${colleague.name}`)
+                }}
+              >
+                <User className="w-3 h-3 mr-1" />
+                Ask about {colleague.name.split(' ')[0]}
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function HomePage() {
+  const { user, isLoaded } = useUser()
+  const [viewMode, setViewMode] = useState<'conversation' | 'dashboard'>('conversation')
+  const [isConnected, setIsConnected] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+
+  const startConversation = async () => {
     try {
-      const response = await fetch('/api/workspace/list')
-      if (response.ok) {
-        const data = await response.json()
-        setWorkspaces(data.workspaces || [])
-      } else {
-        console.error('Failed to load workspaces:', response.status)
-      }
+      setIsConnected(true)
+      setIsListening(true)
+      
+      // Navigate to the working quest-hume-debug interface
+      window.location.href = '/quest-hume-debug'
     } catch (error) {
-      console.error('Error loading workspaces:', error)
-    } finally {
-      setIsLoadingWorkspaces(false)
+      console.error('Failed to start conversation:', error)
+      setIsConnected(false)
     }
   }
 
-  useEffect(() => {
-    if (user) {
-      loadWorkspaces()
-    }
-  }, [user])
+  const stopConversation = () => {
+    setIsConnected(false)
+    setIsListening(false)
+    setIsSpeaking(false)
+  }
 
   if (!isLoaded) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+          <p className="text-gray-400">Loading Quest...</p>
+        </div>
       </div>
     )
   }
 
-  // If not signed in, show landing page with sign-in option
+  // If not signed in, show landing page
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="flex min-h-screen items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <div className="flex min-h-screen items-center justify-center px-6">
+          <div className="text-center max-w-md">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mx-auto mb-8 flex items-center justify-center">
+              <MessageCircle className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-6">
               Welcome to Quest
             </h1>
-            <p className="text-xl text-gray-600 mb-8">
-              Your AI-powered journey to career success through intelligent conversations
+            <p className="text-xl text-gray-300 mb-8 leading-relaxed">
+              Your AI-powered career coach that knows your background and helps you grow through intelligent voice conversations
             </p>
             <SignInButton mode="modal">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                Get Started - Sign In
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-3">
+                Start Your Journey
               </Button>
             </SignInButton>
           </div>
@@ -133,310 +252,96 @@ export default function Dashboard() {
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Welcome back, {user.firstName || profile?.name || 'there'}!
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Build your career story, connect with professionals, and discover opportunities.
-          </p>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Card className="cursor-pointer transition-shadow hover:shadow-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center text-sm font-medium">
-                <div className="rounded-lg bg-blue-100 p-2 mr-3">
-                  <Mic className="h-4 w-4 text-blue-600" />
-                </div>
-                Start Repo Session
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-gray-600 mb-3">
-                Record a new career conversation with AI
-              </p>
-              <Link href="/repo">
-                <Button size="sm" className="w-full">
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Session
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer transition-shadow hover:shadow-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center text-sm font-medium">
-                <div className="rounded-lg bg-green-100 p-2 mr-3">
-                  <Users className="h-4 w-4 text-green-600" />
-                </div>
-                Find Connections
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-gray-600 mb-3">
-                Discover and connect with professionals
-              </p>
-              <Button size="sm" variant="outline" className="w-full">
-                Browse Network
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer transition-shadow hover:shadow-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center text-sm font-medium">
-                <div className="rounded-lg bg-purple-100 p-2 mr-3">
-                  <Briefcase className="h-4 w-4 text-purple-600" />
-                </div>
-                Search Jobs
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-gray-600 mb-3">
-                Use AI to find your perfect role
-              </p>
-              <Button size="sm" variant="outline" className="w-full">
-                Voice Search
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer transition-shadow hover:shadow-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center text-sm font-medium">
-                <div className="rounded-lg bg-orange-100 p-2 mr-3">
-                  <Building2 className="h-4 w-4 text-orange-600" />
-                </div>
-                Company Repository
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-gray-600 mb-3">
-                AI-powered company intelligence and network analysis
-              </p>
-              <Link href="/admin/companies">
-                <Button size="sm" className="w-full bg-orange-600 hover:bg-orange-700">
-                  Browse Companies
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer transition-shadow hover:shadow-md border-2 border-purple-200 bg-gradient-to-br from-blue-50 to-purple-50">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center text-sm font-medium">
-                <div className="rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 p-2 mr-3">
-                  <MessageCircle className="h-4 w-4 text-white" />
-                </div>
-                Start Your Quest
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-gray-600 mb-3">
-                AI-powered career journey with smart playbooks
-              </p>
-              <Link href="/quest">
-                <Button size="sm" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                  Begin Quest
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Company Workspaces Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Your Company Workspaces</h2>
+  // Dashboard view
+  if (viewMode === 'dashboard') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full"></div>
+              <span className="text-xl font-bold">Quest Dashboard</span>
+            </div>
             <Button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-orange-600 hover:bg-orange-700"
+              onClick={() => setViewMode('conversation')}
+              className="bg-blue-600 hover:bg-blue-700"
             >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Workspace
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Voice Chat
             </Button>
           </div>
-
-          {isLoadingWorkspaces ? (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="rounded-lg bg-gray-200 p-2 w-9 h-9"></div>
-                      <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-32"></div>
-                        <div className="h-3 bg-gray-200 rounded w-24"></div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="h-3 bg-gray-200 rounded"></div>
-                      <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+          
+          <div className="text-center py-20">
+            <BarChart3 className="w-24 h-24 mx-auto text-gray-400 mb-6" />
+            <h2 className="text-2xl font-bold text-gray-300 mb-4">Dashboard Coming Soon</h2>
+            <p className="text-gray-400 mb-8">Advanced analytics and insights for your career journey</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6 text-center">
+                  <Users className="w-8 h-8 mx-auto text-blue-400 mb-3" />
+                  <h3 className="font-semibold text-white mb-2">Network Analytics</h3>
+                  <p className="text-gray-400 text-sm">Track your professional connections</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6 text-center">
+                  <Mic className="w-8 h-8 mx-auto text-green-400 mb-3" />
+                  <h3 className="font-semibold text-white mb-2">Session History</h3>
+                  <p className="text-gray-400 text-sm">Review your coaching conversations</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6 text-center">
+                  <BarChart3 className="w-8 h-8 mx-auto text-purple-400 mb-3" />
+                  <h3 className="font-semibold text-white mb-2">Progress Tracking</h3>
+                  <p className="text-gray-400 text-sm">Monitor your career growth</p>
+                </CardContent>
+              </Card>
             </div>
-          ) : workspaces.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {workspaces.map((workspace) => (
-                <CompanyCard
-                  key={workspace.id}
-                  workspace={workspace}
-                  onEdit={() => {
-                    // TODO: Implement edit functionality
-                    console.log('Edit workspace:', workspace.id)
-                  }}
-                />
-              ))}
-            </div>
-          ) : (
-            <Card className="border-2 border-dashed border-gray-300">
-              <CardContent className="text-center py-12">
-                <Building2 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No company workspaces yet</h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  Create your first company workspace to start managing documents, collaborating with your team, and leveraging AI-powered insights.
-                </p>
-                <Button
-                  onClick={() => setShowCreateModal(true)}
-                  className="bg-orange-600 hover:bg-orange-700"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Your First Workspace
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Recent Repo Sessions */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Recent Repo Sessions</span>
-                  <Badge variant="secondary" className="flex items-center">
-                    <Shield className="mr-1 h-3 w-3" />
-                    Private
-                  </Badge>
-                </CardTitle>
-                <CardDescription>
-                  Your latest career conversations and insights
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="text-center py-8 text-gray-500">
-                    <Mic className="mx-auto h-12 w-12 text-gray-300" />
-                    <p className="mt-2">No repo sessions yet</p>
-                    <p className="text-sm">Start your first career conversation to build your repository</p>
-                    <Link href="/repo">
-                      <Button className="mt-4" size="sm">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create First Session
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Career Insights */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <TrendingUp className="mr-2 h-4 w-4" />
-                  Career Insights
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="text-center py-4 text-gray-500">
-                  <p className="text-sm">Build your repo to unlock AI-powered career insights</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Network Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="mr-2 h-4 w-4" />
-                  Your Network
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Connections</span>
-                    <span className="font-medium">0</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Shared Repos</span>
-                    <span className="font-medium">0</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Coaching Sessions</span>
-                    <span className="font-medium">0</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Tips */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Getting Started</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-start space-x-2">
-                    <div className="rounded-full bg-blue-100 p-1 mt-0.5">
-                      <div className="h-2 w-2 rounded-full bg-blue-600"></div>
-                    </div>
-                    <p>Start your first Repo session to build your career story</p>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <div className="rounded-full bg-gray-100 p-1 mt-0.5">
-                      <div className="h-2 w-2 rounded-full bg-gray-400"></div>
-                    </div>
-                    <p>Connect with colleagues and professionals in your field</p>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <div className="rounded-full bg-gray-100 p-1 mt-0.5">
-                      <div className="h-2 w-2 rounded-full bg-gray-400"></div>
-                    </div>
-                    <p>Use voice search to find jobs tailored to your experience</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
-      </main>
+      </div>
+    )
+  }
 
-      {/* Create Company Modal */}
-      <CreateCompanyModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onCompanyCreated={loadWorkspaces}
-      />
+  // Main conversation view
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+      {/* Header */}
+      <div className="flex justify-between items-center p-6">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+            <MessageCircle className="w-4 h-4 text-white" />
+          </div>
+          <span className="text-xl font-bold">Quest</span>
+        </div>
+        <Button
+          onClick={() => setViewMode('dashboard')}
+          variant="outline"
+          className="border-gray-600 text-gray-300 hover:bg-gray-800"
+        >
+          <BarChart3 className="w-4 h-4 mr-2" />
+          Dashboard
+        </Button>
+      </div>
+
+      {/* Main conversation interface */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
+        <VoiceCircle
+          isListening={isListening}
+          isSpeaking={isSpeaking}
+          isConnected={isConnected}
+          onClick={isConnected ? stopConversation : startConversation}
+          userName={user?.firstName || 'there'}
+        />
+      </div>
+
+      {/* Colleague Suggestions */}
+      <div className="px-6 pb-8">
+        <div className="max-w-4xl mx-auto">
+          <ColleagueSuggestions userName={user?.firstName || 'there'} />
+        </div>
+      </div>
     </div>
   )
 }
