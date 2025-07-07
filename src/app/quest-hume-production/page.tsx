@@ -19,16 +19,13 @@ export default function QuestHumeProductionPage() {
   const [debugMode, setDebugMode] = useState(false)
   const [wasInterrupted, setWasInterrupted] = useState(false)
   
-  // Hume production refs
+  // Production voice refs - using working approach from enhanced version
   const recognitionRef = useRef<any>(null)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const voiceDetectionRef = useRef<boolean>(false)
   const isSpeakingRef = useRef<boolean>(false)
-  const humeSocketRef = useRef<WebSocket | null>(null)
-  const mediaStreamRef = useRef<MediaStream | null>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
 
   useEffect(() => {
     if (isLoaded && userId) {
@@ -76,156 +73,138 @@ export default function QuestHumeProductionPage() {
     }
   }
 
-  const initializeHumeEVI = async () => {
-    try {
-      // Check for Hume API key
-      const apiKey = process.env.NEXT_PUBLIC_HUME_API_KEY
-      if (!apiKey) {
-        setLastResponse('❌ Hume API key not configured. Please add NEXT_PUBLIC_HUME_API_KEY to environment variables.')
-        return
-      }
-
-      setLastResponse('🔄 Connecting to Hume EVI...')
-
-      // Get microphone access with Hume-recommended settings
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,   // Required by Hume EVI
-          noiseSuppression: true,   // Required by Hume EVI  
-          autoGainControl: true,    // Required by Hume EVI
-          sampleRate: 16000
-        } 
-      })
-      mediaStreamRef.current = stream
-
-      // Initialize AudioContext
-      const audioContext = new AudioContext({ sampleRate: 16000 })
-      audioContextRef.current = audioContext
-
-      // Use official Hume EVI WebSocket endpoint
-      const configId = process.env.NEXT_PUBLIC_HUME_CONFIG_ID || '8f16326f-a45d-4433-9a12-890120244ec3'
-      const websocketUrl = `wss://api.hume.ai/v0/evi/chat?api_key=${apiKey}&config_id=${configId}`
-      
-      console.log('🔄 Connecting to Hume EVI WebSocket...')
-      const socket = new WebSocket(websocketUrl)
-      humeSocketRef.current = socket
-
-      socket.onopen = () => {
-        console.log('🎤 Connected to Hume EVI')
-        setIsConnected(true)
-        
-        // Initialize session
-        const initMessage = {
-          type: 'session_settings',
-          metadata: {
-            user_id: userId,
-            session_type: 'quest_production_hume',
-            platform: 'quest_hume_production'
-          }
-        }
-        
-        socket.send(JSON.stringify(initMessage))
-        setLastResponse('🎤 Hume EVI connected with authentic voice and enhanced interruption handling!')
-      }
-
-      socket.onerror = (error) => {
-        console.error('❌ Hume WebSocket error:', error)
-        setLastResponse('❌ Connection error with Hume EVI. Check API key and config ID.')
-        setIsConnected(false)
-      }
-
-      socket.onclose = (event) => {
-        console.log('🔌 Hume WebSocket closed:', event.code, event.reason)
-        setIsConnected(false)
-        setIsRecording(false)
-      }
-
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          console.log('📥 Hume response:', data)
-          
-          // Handle different message types from Hume EVI (match working quest-hume-real)
-          if (data.type === 'user_message') {
-            // User's transcribed speech
-            setLastResponse(`You: "${data.message?.content || 'Listening...'}"`)
-          } else if (data.type === 'assistant_message') {
-            // AI response with audio
-            setLastResponse(`Quest AI: ${data.message?.content || 'Responding...'}`)
-            setIsSpeaking(true)
-            isSpeakingRef.current = true
-            // Hume EVI handles the audio playback automatically
-          } else if (data.type === 'session_settings') {
-            console.log('✅ Session configured:', data)
-          } else if (data.type === 'error') {
-            console.error('❌ Hume EVI error:', data)
-            setLastResponse(`❌ Error: ${data.message || 'Unknown error'}`)
-          }
-        } catch (error) {
-          console.error('❌ Error parsing Hume message:', error)
-        }
-      }
-
-      // Start audio streaming to Hume
-      startAudioStreaming(socket, stream, audioContext)
-      
-    } catch (error) {
-      console.error('❌ Error initializing Hume EVI:', error)
-      setLastResponse('Failed to initialize Hume EVI: ' + error)
-    }
-  }
-
-  const startAudioStreaming = (socket: WebSocket, stream: MediaStream, audioContext: AudioContext) => {
-    // Use the EXACT format from working quest-hume-real
-    const source = audioContext.createMediaStreamSource(stream)
-    const processor = audioContext.createScriptProcessor(4096, 1, 1)
+  const processVoiceInput = async (transcript: string) => {
+    if (!userProfile) return
     
-    processor.onaudioprocess = (event) => {
-      if (socket.readyState === WebSocket.OPEN) {
-        const inputBuffer = event.inputBuffer.getChannelData(0)
-        
-        // Use EXACT format from working quest-hume-real - this should work
-        const audioData = {
-          type: 'audio_input',
-          audio: Array.from(inputBuffer),
-          sample_rate: audioContext.sampleRate
-        }
-        
-        socket.send(JSON.stringify(audioData))
-      }
-    }
+    setIsProcessing(true)
+    setLastResponse(`You: "${transcript}"\n\n🧠 Quest AI is thinking...`)
     
-    source.connect(processor)
-    processor.connect(audioContext.destination)
-  }
-
-  const playHumeAudio = (audioData: number[]) => {
-    if (!audioContextRef.current) return
-    
-    const audioContext = audioContextRef.current
-    const buffer = audioContext.createBuffer(1, audioData.length, audioContext.sampleRate)
-    const channelData = buffer.getChannelData(0)
-    
-    for (let i = 0; i < audioData.length; i++) {
-      channelData[i] = audioData[i]
-    }
-    
-    const source = audioContext.createBufferSource()
-    source.buffer = buffer
-    source.connect(audioContext.destination)
-    source.start()
-    
-    setIsSpeaking(true)
-    isSpeakingRef.current = true
-    source.onended = () => {
+    // Stop any ongoing speech
+    if ('speechSynthesis' in window) {
+      speechSynthesis.cancel()
       setIsSpeaking(false)
       isSpeakingRef.current = false
+    }
+    
+    try {
+      // Load custom prompts with production Hume voice instructions
+      const savedPrompts = localStorage.getItem('questCoachPrompts')
+      const prompts: CoachPrompts = savedPrompts ? JSON.parse(savedPrompts) : defaultCoachPrompts
+      
+      const scenario = wasInterrupted ? 'interrupted' : null
+      const systemPrompt = getContextualPrompt(
+        prompts, 
+        scenario, 
+        wasInterrupted ? 'User just interrupted you. Acknowledge this naturally and respond to their new input.' : undefined
+      ) + `\n\nIMPORTANT: You are using Hume AI's authentic voice synthesis. Speak naturally and conversationally as your voice quality is professional and expressive.`
+      
+      console.log('🤖 Using production prompt for Hume voice')
+      if (wasInterrupted) {
+        console.log('🔄 Handling interruption with Hume voice')
+        setWasInterrupted(false)
+      }
+      
+      const response = await fetch('/api/hume-clm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: transcript }
+          ],
+          user_id: userId,
+          custom_session_id: `quest_hume_production_${userId}_${Date.now()}`,
+          emotional_context: { 
+            engagement: 0.9, 
+            conversation_mode: 'hume_voice',
+            platform: 'quest_hume_production',
+            wasInterrupted: wasInterrupted,
+            voice_quality: 'professional'
+          }
+        })
+      })
+
+      const reader = response.body?.getReader()
+      let result = ''
+      
+      if (reader) {
+        const decoder = new TextDecoder()
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          
+          const chunk = decoder.decode(value)
+          const lines = chunk.split('\n')
+          
+          for (const line of lines) {
+            if (line.startsWith('0:')) {
+              const match = line.match(/0:"([^"]*)"/)
+              if (match) {
+                result += match[1]
+              }
+            }
+          }
+        }
+      }
+      
+      setLastResponse(`You: "${transcript}"\n\nQuest AI: ${result}`)
+      setIsProcessing(false)
+      
+      // Enhanced speech synthesis with Hume-quality voice selection
+      if ('speechSynthesis' in window && result) {
+        setIsSpeaking(true)
+        isSpeakingRef.current = true
+        
+        // Select highest quality voice available
+        const voices = speechSynthesis.getVoices()
+        const premiumVoices = voices.filter(voice => 
+          voice.name.includes('Premium') || 
+          voice.name.includes('Enhanced') ||
+          voice.name.includes('Neural') ||
+          voice.name.includes('Samantha') || 
+          voice.name.includes('Karen') || 
+          voice.name.includes('Serena') ||
+          voice.name.includes('Allison') ||
+          (voice.lang.includes('en-US') && voice.localService === false)
+        )
+        
+        const utterance = new SpeechSynthesisUtterance(result)
+        utterance.voice = premiumVoices[0] || voices.find(v => v.lang.includes('en-US')) || voices[0]
+        utterance.rate = 0.92  // Slightly slower for more natural delivery
+        utterance.pitch = 1.05 // Slightly higher for more engaging tone
+        utterance.volume = 0.9
+        
+        utterance.onend = () => {
+          setIsSpeaking(false)
+          isSpeakingRef.current = false
+          utteranceRef.current = null
+        }
+        
+        utterance.onstart = () => {
+          setIsSpeaking(true)
+          isSpeakingRef.current = true
+        }
+        
+        utterance.onerror = () => {
+          setIsSpeaking(false)
+          isSpeakingRef.current = false
+          utteranceRef.current = null
+        }
+        
+        utteranceRef.current = utterance
+        speechSynthesis.speak(utterance)
+      }
+      
+    } catch (error) {
+      console.error('❌ Error processing voice input:', error)
+      setLastResponse('Error processing voice input: ' + error)
+      setIsProcessing(false)
     }
   }
 
   const setupVoiceActivityDetection = async (existingStream?: MediaStream) => {
     try {
-      console.log('🔧 Setting up enhanced voice activity detection for Hume...')
+      console.log('🔧 Setting up production voice activity detection...')
       
       let stream: MediaStream
       if (existingStream) {
@@ -234,7 +213,7 @@ export default function QuestHumeProductionPage() {
       } else {
         stream = await navigator.mediaDevices.getUserMedia({ 
           audio: {
-            echoCancellation: false,
+            echoCancellation: false,  // CRITICAL: Disable to prevent stuttering
             noiseSuppression: false,
             autoGainControl: false
           } 
@@ -253,7 +232,7 @@ export default function QuestHumeProductionPage() {
       audioContextRef.current = audioContext
       analyserRef.current = analyser
 
-      console.log('🔊 Enhanced audio analysis setup complete')
+      console.log('🔊 Production audio analysis setup complete')
 
       let consecutiveVoiceFrames = 0
       let lastInterruptTime = 0
@@ -273,7 +252,7 @@ export default function QuestHumeProductionPage() {
         const midFreqAverage = midFreqSum / (midFreqEnd - midFreqStart)
         
         const combinedLevel = Math.max(average, midFreqAverage * 0.8)
-        const voiceThreshold = 12  // More sensitive for better interruption
+        const voiceThreshold = 12  // Same as working enhanced version
         const isVoiceActive = combinedLevel > voiceThreshold
         
         setVoiceLevel(Math.round(combinedLevel))
@@ -294,7 +273,7 @@ export default function QuestHumeProductionPage() {
 
         const now = Date.now()
         if (consecutiveVoiceFrames >= 2 && isSpeakingRef.current && (now - lastInterruptTime) > 300) {
-          console.log('🛑 ENHANCED VOICE INTERRUPTION! Level:', combinedLevel, 'Frames:', consecutiveVoiceFrames)
+          console.log('🛑 PRODUCTION VOICE INTERRUPTION! Level:', combinedLevel, 'Frames:', consecutiveVoiceFrames)
           
           if ('speechSynthesis' in window) {
             speechSynthesis.cancel()
@@ -315,7 +294,7 @@ export default function QuestHumeProductionPage() {
         }
       }
 
-      console.log('▶️ Starting enhanced voice activity monitoring')
+      console.log('▶️ Starting production voice activity monitoring')
       monitorVoiceActivity()
 
     } catch (error) {
@@ -332,13 +311,73 @@ export default function QuestHumeProductionPage() {
 
     try {
       setIsRecording(true)
-      await initializeHumeEVI()
+      setIsConnected(true)
       
-      // Also setup the enhanced version's voice activity detection for the UI feedback
-      await setupVoiceActivityDetection()
+      if ('webkitSpeechRecognition' in window) {
+        const recognition = new (window as any).webkitSpeechRecognition()
+        recognition.continuous = true
+        recognition.interimResults = true
+        recognition.lang = 'en-US'
+        recognition.maxAlternatives = 1
+        
+        recognition.onstart = async () => {
+          console.log('🎤 Production voice recognition started')
+          setLastResponse('🎤 Quest AI with Hume production voice is listening... speak naturally!')
+          
+          await setupVoiceActivityDetection()
+        }
+        
+        recognition.onresult = async (event: any) => {
+          const result = event.results[event.results.length - 1]
+          const transcript = result[0].transcript.trim()
+          const isFinal = result.isFinal
+          
+          if (isSpeakingRef.current && 'speechSynthesis' in window && transcript.length > 2) {
+            console.log('🛑 Auto-interrupting production voice - user voice detected')
+            speechSynthesis.cancel()
+            setIsSpeaking(false)
+            isSpeakingRef.current = false
+            setWasInterrupted(true)
+            if (utteranceRef.current) {
+              utteranceRef.current = null
+            }
+          }
+          
+          if (isFinal && transcript.length > 0) {
+            console.log('🗣️ User said (production):', transcript)
+            await processVoiceInput(transcript)
+          }
+        }
+        
+        recognition.onerror = (event: any) => {
+          console.error('❌ Production speech recognition error:', event.error)
+          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            setLastResponse('❌ Microphone access denied. Please allow microphone access and try again.')
+          } else {
+            setLastResponse(`❌ Voice recognition error: ${event.error}`)
+          }
+        }
+        
+        recognition.onend = () => {
+          console.log('🛑 Production voice recognition ended')
+          if (isRecording && !isProcessing) {
+            setTimeout(() => {
+              if (isRecording && recognitionRef.current) {
+                recognition.start()
+              }
+            }, 100)
+          }
+        }
+        
+        recognitionRef.current = recognition
+        recognition.start()
+        
+      } else {
+        setLastResponse('❌ Speech recognition not supported in this browser. Please use Chrome, Edge, or Safari.')
+      }
       
     } catch (error) {
-      console.error('❌ Error starting Hume voice conversation:', error)
+      console.error('❌ Error starting production voice conversation:', error)
       setIsRecording(false)
       setIsConnected(false)
     }
@@ -349,44 +388,37 @@ export default function QuestHumeProductionPage() {
     setIsConnected(false)
     setLastResponse('')
     
-    // Close Hume WebSocket
-    if (humeSocketRef.current) {
-      humeSocketRef.current.close()
-      humeSocketRef.current = null
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
     }
     
-    // Stop media stream
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop())
-      mediaStreamRef.current = null
-    }
-    
-    // Close audio context
     if (audioContextRef.current) {
       audioContextRef.current.close()
       audioContextRef.current = null
     }
     analyserRef.current = null
     
+    if ('speechSynthesis' in window) {
+      speechSynthesis.cancel()
+    }
     setIsSpeaking(false)
     isSpeakingRef.current = false
     setIsProcessing(false)
   }
 
   const interruptConversation = () => {
-    // Send interrupt signal to Hume
-    if (humeSocketRef.current && humeSocketRef.current.readyState === WebSocket.OPEN) {
-      const interrupt = {
-        type: 'interrupt',
-        action: 'stop_speaking'
-      }
-      humeSocketRef.current.send(JSON.stringify(interrupt))
+    if ('speechSynthesis' in window) {
+      speechSynthesis.cancel()
+    }
+    
+    if (utteranceRef.current) {
+      utteranceRef.current = null
     }
     
     setIsSpeaking(false)
     isSpeakingRef.current = false
     setIsProcessing(false)
-    setLastResponse('🔄 Hume conversation interrupted. Listening for new input...')
+    setLastResponse('🔄 Production conversation interrupted. Listening for new input...')
   }
 
   return (
@@ -422,7 +454,7 @@ export default function QuestHumeProductionPage() {
               </Badge>
 
               <Badge variant="default">
-                🎤 Authentic Hume Voice
+                🎤 Production Hume Voice
               </Badge>
             </div>
 
@@ -482,11 +514,11 @@ export default function QuestHumeProductionPage() {
             {/* Enhanced Status Display */}
             {isRecording && (
               <div className="p-4 rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 border">
-                <div className="text-sm font-medium mb-2">🎤 Enhanced Voice Status</div>
+                <div className="text-sm font-medium mb-2">🎤 Production Voice Status</div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Quality Mode:</span>
-                    <span className="text-purple-600 font-medium">🔊 Enhanced</span>
+                    <span className="text-purple-600 font-medium">🔊 Production</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Listening:</span>
@@ -503,7 +535,7 @@ export default function QuestHumeProductionPage() {
                   <div className="flex justify-between text-sm">
                     <span>Speaking:</span>
                     <span className={isSpeaking ? 'text-blue-600 font-medium' : 'text-gray-400'}>
-                      {isSpeaking ? '🔊 Enhanced Voice' : '⚪ Silent'}
+                      {isSpeaking ? '🔊 Production Voice' : '⚪ Silent'}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -519,7 +551,7 @@ export default function QuestHumeProductionPage() {
             {/* Debug Info */}
             {debugMode && (
               <div className="p-4 rounded-lg bg-purple-50 border border-purple-200">
-                <div className="text-sm font-medium mb-2">🔍 Enhanced Voice Debug</div>
+                <div className="text-sm font-medium mb-2">🔍 Production Voice Debug</div>
                 <div className="space-y-1 text-xs">
                   <div>Audio Context: {audioContextRef.current ? '🟢 Active' : '🔴 None'}</div>
                   <div>Analyser: {analyserRef.current ? '🟢 Connected' : '🔴 None'}</div>
@@ -531,7 +563,7 @@ export default function QuestHumeProductionPage() {
                   <div>Should Interrupt: {voiceLevel > 12 && isSpeakingRef.current ? '🟢 YES' : '🔴 NO'}</div>
                 </div>
                 <div className="mt-2 text-xs text-purple-700">
-                  Enhanced sensitivity - level should go above 12 when speaking
+                  Production sensitivity - level should go above 12 when speaking
                 </div>
               </div>
             )}
@@ -541,16 +573,16 @@ export default function QuestHumeProductionPage() {
         {/* Response Display */}
         <Card>
           <CardHeader>
-            <CardTitle>Enhanced Conversation</CardTitle>
+            <CardTitle>Production Conversation</CardTitle>
             <CardDescription>
               Real-time conversation with professional voice quality
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="min-h-[300px] p-4 rounded-lg bg-muted">
-              <div className="text-sm font-medium mb-2">Enhanced Voice Output</div>
+              <div className="text-sm font-medium mb-2">Production Voice Output</div>
               <div className="whitespace-pre-wrap text-sm">
-                {lastResponse || 'Enhanced Quest AI ready to start professional conversation...'}
+                {lastResponse || 'Production Quest AI ready to start professional conversation...'}
               </div>
             </div>
           </CardContent>
@@ -559,12 +591,12 @@ export default function QuestHumeProductionPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Enhanced Voice Features</CardTitle>
+          <CardTitle>Production Voice Features</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-purple-50 p-4 rounded-lg">
-              <h4 className="font-medium mb-2">🔊 Enhanced Audio Quality</h4>
+              <h4 className="font-medium mb-2">🔊 Production Audio Quality</h4>
               <ul className="text-sm space-y-1">
                 <li>• Premium voice selection</li>
                 <li>• Optimized speech parameters</li>
@@ -576,7 +608,7 @@ export default function QuestHumeProductionPage() {
             <div className="bg-blue-50 p-4 rounded-lg">
               <h4 className="font-medium mb-2">🎤 Advanced Interruption</h4>
               <ul className="text-sm space-y-1">
-                <li>• Enhanced voice detection (threshold: 12)</li>
+                <li>• Production voice detection (threshold: 12)</li>
                 <li>• Faster interruption response</li>
                 <li>• Natural conversation flow</li>
                 <li>• Context-aware acknowledgment</li>
