@@ -257,7 +257,7 @@ export default function ProfilePage() {
                           {section.required && (
                             <span className="ml-2 text-xs text-red-500">*</span>
                           )}
-                          {section.count > 0 && (
+                          {(section.count ?? 0) > 0 && (
                             <Badge variant="secondary" className="ml-2 text-xs">
                               {section.count}
                             </Badge>
