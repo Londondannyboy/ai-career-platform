@@ -13,7 +13,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useUser, SignInButton } from '@clerk/nextjs'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { 
   MessageCircle, 
   BarChart3, 
@@ -21,7 +21,8 @@ import {
   Plus,
   Building2,
   Mic,
-  User
+  User,
+  Briefcase
 } from 'lucide-react'
 
 // Voice circle component
@@ -233,6 +234,9 @@ export default function HomePage() {
       socket.onopen = () => {
         console.log('🎤 Connected to Hume EVI')
         setLastResponse('🎤 Connected! Start speaking...')
+        
+        // Start audio streaming to Hume
+        startAudioStreaming(socket, stream)
       }
 
       socket.onerror = (error) => {
@@ -300,6 +304,40 @@ export default function HomePage() {
     setLastResponse('')
   }
 
+  const startAudioStreaming = (socket: WebSocket, stream: MediaStream) => {
+    try {
+      const audioContext = new AudioContext({ sampleRate: 16000 })
+      const source = audioContext.createMediaStreamSource(stream)
+      const processor = audioContext.createScriptProcessor(4096, 1, 1)
+      
+      processor.onaudioprocess = (event) => {
+        if (socket.readyState === WebSocket.OPEN) {
+          const inputBuffer = event.inputBuffer.getChannelData(0)
+          
+          // Convert Float32Array to base64 for Hume
+          const audioArray = new Float32Array(inputBuffer)
+          const audioBytes = new Uint8Array(audioArray.buffer)
+          const base64Audio = btoa(String.fromCharCode.apply(null, Array.from(audioBytes)))
+          
+          // Send audio in Hume's expected format
+          const audioData = {
+            type: 'audio_input',
+            data: base64Audio
+          }
+          
+          socket.send(JSON.stringify(audioData))
+        }
+      }
+      
+      source.connect(processor)
+      processor.connect(audioContext.destination)
+      
+      console.log('🎤 Audio streaming started')
+    } catch (error) {
+      console.error('❌ Audio streaming error:', error)
+    }
+  }
+
   if (!isLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
@@ -337,54 +375,199 @@ export default function HomePage() {
     )
   }
 
-  // Dashboard view
+  // Dashboard view  
   if (viewMode === 'dashboard') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-8">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full"></div>
-              <span className="text-xl font-bold">Quest Dashboard</span>
-            </div>
-            <Button
-              onClick={() => setViewMode('conversation')}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <MessageCircle className="w-4 h-4 mr-2" />
-              Voice Chat
-            </Button>
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex justify-between items-center p-6 bg-white shadow-sm">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full"></div>
+            <span className="text-xl font-bold text-gray-900">Quest Dashboard</span>
           </div>
-          
-          <div className="text-center py-20">
-            <BarChart3 className="w-24 h-24 mx-auto text-gray-400 mb-6" />
-            <h2 className="text-2xl font-bold text-gray-300 mb-4">Dashboard Coming Soon</h2>
-            <p className="text-gray-400 mb-8">Advanced analytics and insights for your career journey</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
-              <Card className="bg-gray-800 border-gray-700">
-                <CardContent className="p-6 text-center">
-                  <Users className="w-8 h-8 mx-auto text-blue-400 mb-3" />
-                  <h3 className="font-semibold text-white mb-2">Network Analytics</h3>
-                  <p className="text-gray-400 text-sm">Track your professional connections</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-gray-800 border-gray-700">
-                <CardContent className="p-6 text-center">
-                  <Mic className="w-8 h-8 mx-auto text-green-400 mb-3" />
-                  <h3 className="font-semibold text-white mb-2">Session History</h3>
-                  <p className="text-gray-400 text-sm">Review your coaching conversations</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-gray-800 border-gray-700">
-                <CardContent className="p-6 text-center">
-                  <BarChart3 className="w-8 h-8 mx-auto text-purple-400 mb-3" />
-                  <h3 className="font-semibold text-white mb-2">Progress Tracking</h3>
-                  <p className="text-gray-400 text-sm">Monitor your career growth</p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          <Button
+            onClick={() => setViewMode('conversation')}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          >
+            <MessageCircle className="w-4 h-4 mr-2" />
+            Voice Chat
+          </Button>
         </div>
+        
+        <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          {/* Welcome Section */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">
+              Welcome back, {user?.firstName || 'there'}!
+            </h1>
+            <p className="mt-2 text-gray-600">
+              Build your career story, connect with professionals, and discover opportunities.
+            </p>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="cursor-pointer transition-shadow hover:shadow-md" onClick={() => setViewMode('conversation')}>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center text-sm font-medium">
+                  <div className="rounded-lg bg-blue-100 p-2 mr-3">
+                    <MessageCircle className="h-4 w-4 text-blue-600" />
+                  </div>
+                  Voice Coaching
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-gray-600 mb-3">
+                  AI-powered career coaching with voice
+                </p>
+                <Button size="sm" className="w-full bg-gradient-to-r from-blue-600 to-purple-600">
+                  Start Session
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="cursor-pointer transition-shadow hover:shadow-md">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center text-sm font-medium">
+                  <div className="rounded-lg bg-green-100 p-2 mr-3">
+                    <Users className="h-4 w-4 text-green-600" />
+                  </div>
+                  Find Connections
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-gray-600 mb-3">
+                  Discover and connect with professionals
+                </p>
+                <Button size="sm" variant="outline" className="w-full">
+                  Browse Network
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="cursor-pointer transition-shadow hover:shadow-md">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center text-sm font-medium">
+                  <div className="rounded-lg bg-purple-100 p-2 mr-3">
+                    <Briefcase className="h-4 w-4 text-purple-600" />
+                  </div>
+                  Search Jobs
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-gray-600 mb-3">
+                  Use AI to find your perfect role
+                </p>
+                <Button size="sm" variant="outline" className="w-full">
+                  Voice Search
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="cursor-pointer transition-shadow hover:shadow-md">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center text-sm font-medium">
+                  <div className="rounded-lg bg-orange-100 p-2 mr-3">
+                    <Building2 className="h-4 w-4 text-orange-600" />
+                  </div>
+                  Companies
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-gray-600 mb-3">
+                  AI-powered company intelligence
+                </p>
+                <Link href="/admin/companies">
+                  <Button size="sm" className="w-full bg-orange-600 hover:bg-orange-700">
+                    Browse
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {/* Recent Sessions */}
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Voice Sessions</CardTitle>
+                  <CardDescription>
+                    Your latest career conversations and insights
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8 text-gray-500">
+                    <MessageCircle className="mx-auto h-12 w-12 text-gray-300" />
+                    <p className="mt-2">No voice sessions yet</p>
+                    <p className="text-sm">Start your first conversation to build your career profile</p>
+                    <Button 
+                      className="mt-4" 
+                      size="sm"
+                      onClick={() => setViewMode('conversation')}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Start Voice Session
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Network Stats */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Users className="mr-2 h-4 w-4" />
+                    Your Network
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Connections</span>
+                      <span className="font-medium">0</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Companies</span>
+                      <span className="font-medium">1</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Voice Sessions</span>
+                      <span className="font-medium">0</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Debug Tools */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Debug Tools</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Link href="/quest-hume-debug">
+                    <Button variant="outline" size="sm" className="w-full">
+                      Voice Debug Interface
+                    </Button>
+                  </Link>
+                  <Link href="/test-hume-integration">
+                    <Button variant="outline" size="sm" className="w-full">
+                      Test CLM Integration
+                    </Button>
+                  </Link>
+                  <Link href="/admin/companies">
+                    <Button variant="outline" size="sm" className="w-full">
+                      Company Admin
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }
