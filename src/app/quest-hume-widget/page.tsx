@@ -130,16 +130,3 @@ export default function QuestHumeWidgetPage() {
     </div>
   )
 }
-
-// Add custom element type declaration
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'hume-ai-voice': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
-        'auth-type'?: string
-        'api-key'?: string
-        'config-id'?: string
-      }, HTMLElement>
-    }
-  }
-}
