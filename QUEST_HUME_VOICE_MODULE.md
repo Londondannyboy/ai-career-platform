@@ -1,4 +1,4 @@
-# Hume Voice AI Module - Reusable Package
+# Quest Hume Voice AI Module - Reusable Package
 
 ## 📦 **Module Overview**
 
