@@ -95,98 +95,66 @@ export default function QuestHumeRealPage() {
       const audioContext = new AudioContext({ sampleRate: 16000 })
       audioContextRef.current = audioContext
 
-      // Try different Hume WebSocket URL formats
-      const possibleUrls = [
-        `wss://api.hume.ai/v0/evi/socket?api_key=${apiKey}`,
-        `wss://api.hume.ai/v0/evi/chat?api_key=${apiKey}`,
-        `wss://ws.hume.ai/v0/evi/socket?api_key=${apiKey}`
-      ]
-
-      let socket: WebSocket | null = null
+      // Use official Hume EVI WebSocket endpoint with config ID
+      const configId = process.env.NEXT_PUBLIC_HUME_CONFIG_ID || '8f16326f-a45d-4433-9a12-890120244ec3'
+      const websocketUrl = `wss://api.hume.ai/v0/evi/chat?api_key=${apiKey}&config_id=${configId}`
       
-      for (const url of possibleUrls) {
-        try {
-          console.log('🔄 Trying WebSocket URL:', url.replace(apiKey, 'API_KEY'))
-          socket = new WebSocket(url)
-          humeSocketRef.current = socket
-          
-          // Wait for connection or error
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              reject(new Error('Connection timeout'))
-            }, 5000)
-            
-            socket!.onopen = () => {
-              clearTimeout(timeout)
-              resolve(true)
-            }
-            
-            socket!.onerror = (error) => {
-              clearTimeout(timeout)
-              reject(error)
-            }
-          })
-          
-          // If we get here, connection succeeded
-          break
-          
-        } catch (error) {
-          console.log('❌ Failed with URL:', url.replace(apiKey, 'API_KEY'))
-          if (socket) {
-            socket.close()
-            socket = null
-          }
-        }
-      }
-      
-      if (!socket) {
-        throw new Error('Failed to connect to any Hume WebSocket endpoint')
-      }
+      console.log('🔄 Connecting to Hume EVI WebSocket...')
+      const socket = new WebSocket(websocketUrl)
+      humeSocketRef.current = socket
 
       socket.onopen = () => {
         console.log('🎤 Connected to Hume EVI')
         setIsConnected(true)
         
-        // Send configuration with CLM endpoint
-        const config = {
+        // Initialize session - Hume EVI should already be configured with CLM via config_id
+        const initMessage = {
           type: 'session_settings',
-          custom_language_model: {
-            url: 'https://ai-career-platform.vercel.app/api/hume-clm',
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          },
-          user_context: {
+          metadata: {
             user_id: userId,
-            session_type: 'quest_conversation'
+            session_type: 'quest_real_hume',
+            platform: 'quest_hume_real'
           }
         }
         
-        socket.send(JSON.stringify(config))
-        setLastResponse('🎤 Hume EVI connected with your personalized context!')
-      }
-
-      socket.onmessage = (event) => {
-        const data = JSON.parse(event.data)
-        console.log('📥 Hume response:', data)
-        
-        if (data.type === 'audio_output') {
-          // Play Hume's audio response
-          playHumeAudio(data.audio)
-        } else if (data.type === 'text_output') {
-          setLastResponse(`Hume AI: ${data.text}`)
-        }
+        socket.send(JSON.stringify(initMessage))
+        setLastResponse('🎤 Hume EVI connected with authentic voice and your personalized context!')
       }
 
       socket.onerror = (error) => {
         console.error('❌ Hume WebSocket error:', error)
-        setLastResponse('Connection error with Hume EVI')
-      }
-
-      socket.onclose = () => {
-        console.log('🛑 Hume EVI disconnected')
+        setLastResponse('❌ Connection error with Hume EVI. Check API key and config ID.')
         setIsConnected(false)
       }
+
+      socket.onclose = (event) => {
+        console.log('🔌 Hume WebSocket closed:', event.code, event.reason)
+        setIsConnected(false)
+        setIsRecording(false)
+      }
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          console.log('📥 Hume response:', data)
+          
+          // Handle different message types from Hume EVI
+          if (data.type === 'user_message') {
+            // User's transcribed speech
+            setLastResponse(`You: "${data.message?.content || 'Listening...'}"`)
+          } else if (data.type === 'assistant_message') {
+            // AI response with audio
+            setLastResponse(`Quest AI: ${data.message?.content || 'Responding...'}`)
+            // Hume EVI handles the audio playback automatically
+          } else if (data.type === 'session_settings') {
+            console.log('✅ Session configured:', data)
+          } else if (data.type === 'error') {
+            console.error('❌ Hume EVI error:', data)
+            setLastResponse(`❌ Error: ${data.message || 'Unknown error'}`)
+          }
+        } catch (error) {
+          console.error('❌ Error parsing Hume message:', error)
+        }
 
       // Start audio streaming to Hume
       startAudioStreaming(socket, stream, audioContext)
