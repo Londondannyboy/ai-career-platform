@@ -276,7 +276,7 @@ export default function HomePage() {
       
     } catch (error) {
       console.error('Failed to start conversation:', error)
-      setLastResponse('❌ Failed to start: ' + error.message)
+      setLastResponse('❌ Failed to start: ' + (error instanceof Error ? error.message : String(error)))
       setIsConnected(false)
     }
   }
