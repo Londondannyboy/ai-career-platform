@@ -144,24 +144,16 @@ export default function QuestHumeProductionPage() {
           const data = JSON.parse(event.data)
           console.log('📥 Hume response:', data)
           
-          // Handle different message types from Hume EVI
+          // Handle different message types from Hume EVI (match working quest-hume-real)
           if (data.type === 'user_message') {
             // User's transcribed speech
-            const userText = data.message?.content || 'Listening...'
-            setLastResponse(`You: \"${userText}\"`)
+            setLastResponse(`You: "${data.message?.content || 'Listening...'}"`)
           } else if (data.type === 'assistant_message') {
-            // AI response text
-            const aiText = data.message?.content || 'Responding...'
-            setLastResponse(`Quest AI: ${aiText}`)
-          } else if (data.type === 'audio_output') {
-            // AI is speaking - handle audio playback
+            // AI response with audio
+            setLastResponse(`Quest AI: ${data.message?.content || 'Responding...'}`)
             setIsSpeaking(true)
             isSpeakingRef.current = true
-            
-            // Play the audio data if provided
-            if (data.data) {
-              playHumeAudio(data.data)
-            }
+            // Hume EVI handles the audio playback automatically
           } else if (data.type === 'session_settings') {
             console.log('✅ Session configured:', data)
           } else if (data.type === 'error') {
@@ -190,21 +182,11 @@ export default function QuestHumeProductionPage() {
       if (socket.readyState === WebSocket.OPEN) {
         const inputBuffer = event.inputBuffer.getChannelData(0)
         
-        // Convert to Base64 format that Hume EVI expects
-        const float32Array = new Float32Array(inputBuffer)
-        const buffer = new ArrayBuffer(float32Array.length * 4)
-        const view = new DataView(buffer)
-        
-        for (let i = 0; i < float32Array.length; i++) {
-          view.setFloat32(i * 4, float32Array[i], true) // little endian
-        }
-        
-        const base64Audio = btoa(String.fromCharCode(...new Uint8Array(buffer)))
-        
-        // Format according to Hume EVI documentation
+        // Use the working format from quest-hume-real
         const audioData = {
           type: 'audio_input',
-          data: base64Audio
+          audio: Array.from(inputBuffer),
+          sample_rate: audioContext.sampleRate
         }
         
         socket.send(JSON.stringify(audioData))
@@ -215,39 +197,25 @@ export default function QuestHumeProductionPage() {
     processor.connect(audioContext.destination)
   }
 
-  const playHumeAudio = (base64AudioData: string) => {
+  const playHumeAudio = (audioData: number[]) => {
     if (!audioContextRef.current) return
     
-    try {
-      // Decode base64 audio data
-      const binaryString = atob(base64AudioData)
-      const bytes = new Uint8Array(binaryString.length)
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i)
-      }
-      
-      // Convert to Float32Array for Web Audio API
-      const floatArray = new Float32Array(bytes.buffer)
-      
-      const audioContext = audioContextRef.current
-      const buffer = audioContext.createBuffer(1, floatArray.length, audioContext.sampleRate)
-      const channelData = buffer.getChannelData(0)
-      
-      for (let i = 0; i < floatArray.length; i++) {
-        channelData[i] = floatArray[i]
-      }
-      
-      const source = audioContext.createBufferSource()
-      source.buffer = buffer
-      source.connect(audioContext.destination)
-      source.start()
-      
-      source.onended = () => {
-        setIsSpeaking(false)
-        isSpeakingRef.current = false
-      }
-    } catch (error) {
-      console.error('❌ Error playing Hume audio:', error)
+    const audioContext = audioContextRef.current
+    const buffer = audioContext.createBuffer(1, audioData.length, audioContext.sampleRate)
+    const channelData = buffer.getChannelData(0)
+    
+    for (let i = 0; i < audioData.length; i++) {
+      channelData[i] = audioData[i]
+    }
+    
+    const source = audioContext.createBufferSource()
+    source.buffer = buffer
+    source.connect(audioContext.destination)
+    source.start()
+    
+    setIsSpeaking(true)
+    isSpeakingRef.current = true
+    source.onended = () => {
       setIsSpeaking(false)
       isSpeakingRef.current = false
     }
