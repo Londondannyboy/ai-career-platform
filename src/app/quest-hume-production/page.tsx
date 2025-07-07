@@ -176,11 +176,29 @@ export default function QuestHumeProductionPage() {
           setIsSpeaking(false)
           isSpeakingRef.current = false
           utteranceRef.current = null
+          
+          // CRITICAL: Restart speech recognition after AI finishes speaking
+          // This allows user to speak again without the AI hearing itself
+          if (isRecording && recognitionRef.current) {
+            console.log('🎤 Restarting speech recognition after AI finished speaking')
+            setTimeout(() => {
+              if (isRecording && recognitionRef.current) {
+                recognitionRef.current.start()
+              }
+            }, 500) // 500ms delay to ensure clean restart
+          }
         }
         
         utterance.onstart = () => {
           setIsSpeaking(true)
           isSpeakingRef.current = true
+          
+          // CRITICAL: Pause speech recognition when AI starts speaking
+          // This prevents the AI from hearing itself and interrupting
+          if (recognitionRef.current) {
+            console.log('🔇 Pausing speech recognition while AI speaks to prevent self-interruption')
+            recognitionRef.current.stop()
+          }
         }
         
         utterance.onerror = () => {
@@ -317,17 +335,8 @@ export default function QuestHumeProductionPage() {
           const transcript = result[0].transcript.trim()
           const isFinal = result.isFinal
           
-          // More conservative interruption - only on longer utterances to avoid false triggers
-          if (isSpeakingRef.current && 'speechSynthesis' in window && transcript.length > 5) {
-            console.log('🛑 Web Speech interruption - user spoke:', transcript.substring(0, 20))
-            speechSynthesis.cancel()
-            setIsSpeaking(false)
-            isSpeakingRef.current = false
-            setWasInterrupted(true)
-            if (utteranceRef.current) {
-              utteranceRef.current = null
-            }
-          }
+          // Speech recognition is paused when AI speaks, so this should not trigger false interruptions
+          console.log('📝 Interim transcript:', transcript, 'Final:', isFinal)
           
           if (isFinal && transcript.length > 0) {
             console.log('🗣️ User said (production):', transcript)
