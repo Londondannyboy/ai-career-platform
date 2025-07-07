@@ -192,35 +192,112 @@ export default function HomePage() {
   const [isConnected, setIsConnected] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const [lastResponse, setLastResponse] = useState('')
+  
+  // WebSocket refs for Hume connection
+  const humeSocketRef = useRef<WebSocket | null>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
 
   const startConversation = async () => {
     try {
       setIsConnected(true)
       setIsListening(true)
       
-      // TODO: Initialize Hume connection here
-      console.log('Starting voice conversation...')
+      const HUME_API_KEY = process.env.NEXT_PUBLIC_HUME_API_KEY
+      const HUME_CONFIG_ID = process.env.NEXT_PUBLIC_HUME_CONFIG_ID
+
+      if (!HUME_API_KEY || !HUME_CONFIG_ID) {
+        setLastResponse('❌ Missing Hume configuration')
+        setIsConnected(false)
+        return
+      }
+
+      // Get microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 16000
+        } 
+      })
+      mediaStreamRef.current = stream
+
+      // Connect to Hume WebSocket
+      const websocketUrl = `wss://api.hume.ai/v0/evi/chat?api_key=${HUME_API_KEY}&config_id=${HUME_CONFIG_ID}`
       
-      // Simulate conversation states for now
-      setTimeout(() => {
+      console.log('🔄 Connecting to Hume WebSocket')
+      const socket = new WebSocket(websocketUrl)
+      humeSocketRef.current = socket
+
+      socket.onopen = () => {
+        console.log('🎤 Connected to Hume EVI')
+        setLastResponse('🎤 Connected! Start speaking...')
+      }
+
+      socket.onerror = (error) => {
+        console.error('❌ Hume WebSocket error:', error)
+        setLastResponse('❌ Connection error')
+        setIsConnected(false)
+      }
+
+      socket.onclose = () => {
+        console.log('🔌 Hume WebSocket closed')
+        setIsConnected(false)
         setIsListening(false)
-        setIsSpeaking(true)
-      }, 2000)
-      
-      setTimeout(() => {
         setIsSpeaking(false)
-        setIsListening(true)
-      }, 4000)
+      }
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          console.log('📥 Hume message:', data)
+          
+          if (data.type === 'user_message') {
+            const userText = data.message?.content || ''
+            setLastResponse(`You: "${userText}"`)
+            setIsListening(false)
+            
+          } else if (data.type === 'assistant_message') {
+            const aiText = data.message?.content || ''
+            setLastResponse(`Quest: ${aiText}`)
+            setIsSpeaking(true)
+            
+            // Stop speaking indicator after a delay
+            setTimeout(() => {
+              setIsSpeaking(false)
+              setIsListening(true)
+            }, 2000)
+          }
+        } catch (error) {
+          console.error('Error parsing Hume message:', error)
+        }
+      }
+      
     } catch (error) {
       console.error('Failed to start conversation:', error)
+      setLastResponse('❌ Failed to start: ' + error.message)
       setIsConnected(false)
     }
   }
 
   const stopConversation = () => {
+    // Close WebSocket connection
+    if (humeSocketRef.current) {
+      humeSocketRef.current.close()
+      humeSocketRef.current = null
+    }
+
+    // Stop media stream
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop())
+      mediaStreamRef.current = null
+    }
+
     setIsConnected(false)
     setIsListening(false)
     setIsSpeaking(false)
+    setLastResponse('')
   }
 
   if (!isLoaded) {
@@ -379,6 +456,17 @@ export default function HomePage() {
             )}
           </div>
           
+          {/* Conversation display */}
+          {lastResponse && (
+            <Card className="bg-gray-800/50 border-gray-700 backdrop-blur-sm max-w-md">
+              <CardContent className="p-4">
+                <p className="text-gray-300 text-sm text-center">
+                  {lastResponse}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Quick access to debug interface for testing */}
           {isConnected && (
             <div className="text-center">
