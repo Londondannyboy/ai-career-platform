@@ -262,24 +262,8 @@ export default function QuestHybridPage() {
           consecutiveVoiceFrames = 0
         }
 
-        // Only interrupt when AI is actually speaking (like enhanced version)
-        const now = Date.now()
-        if (consecutiveVoiceFrames >= 2 && isSpeakingRef.current && (now - lastInterruptTime) > 300) {
-          console.log('🛑 VOICE INTERRUPTION! Level:', combinedLevel, 'Frames:', consecutiveVoiceFrames)
-          
-          if ('speechSynthesis' in window) {
-            speechSynthesis.cancel()
-          }
-          setIsSpeaking(false)
-          isSpeakingRef.current = false
-          setWasInterrupted(true)
-          if (utteranceRef.current) {
-            utteranceRef.current = null
-          }
-          
-          consecutiveVoiceFrames = 0
-          lastInterruptTime = now
-        }
+        // Voice activity detection for UI feedback only - NO INTERRUPTION
+        // Let speech recognition handle all interruptions to avoid conflicts
 
         if (isRecording) {
           requestAnimationFrame(monitorVoiceActivity)
@@ -559,7 +543,7 @@ export default function QuestHybridPage() {
                   <div>Processing: {isProcessing ? '🟡 YES' : '🔴 NO'}</div>
                 </div>
                 <div className="mt-2 text-xs text-yellow-700">
-                  Clean speech recognition approach - no conflicting voice detection.
+                  Voice detection for UI feedback only. Speech recognition handles all interruptions.
                 </div>
               </div>
             )}
