@@ -192,7 +192,8 @@ export default function QuestCLMDirectPage() {
                 <div>✅ Endpoint: /api/hume-clm/chat/completions</div>
                 <div>✅ Database: Connected to Neon.tech</div>
                 <div>✅ User Context: {userProfile ? 'Available' : 'Pending'}</div>
-                <div>✅ Hume Config: {process.env.NEXT_PUBLIC_HUME_CONFIG_ID}</div>
+                <div>✅ Hume Config: {process.env.NEXT_PUBLIC_HUME_CONFIG_ID || '❌ Missing NEXT_PUBLIC_HUME_CONFIG_ID'}</div>
+                <div>✅ Hume API Key: {process.env.NEXT_PUBLIC_HUME_API_KEY ? '✅ Set' : '❌ Missing NEXT_PUBLIC_HUME_API_KEY'}</div>
               </div>
             </div>
           </CardContent>
