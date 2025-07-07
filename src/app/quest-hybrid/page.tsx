@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@clerk/nextjs'
+import { getContextualPrompt, defaultCoachPrompts, CoachPrompts } from '@/lib/prompts/quest-coach-prompts'
 
 export default function QuestHybridPage() {
   const { userId, isLoaded } = useAuth()
@@ -17,6 +18,7 @@ export default function QuestHybridPage() {
   const [voiceMode, setVoiceMode] = useState<'web_speech' | 'hume_ready'>('web_speech')
   const [voiceLevel, setVoiceLevel] = useState(0)
   const [debugMode, setDebugMode] = useState(false)
+  const [wasInterrupted, setWasInterrupted] = useState(false)
   
   // Voice recognition refs
   const recognitionRef = useRef<any>(null)
@@ -84,12 +86,30 @@ export default function QuestHybridPage() {
         setIsSpeaking(false)
       }
       
+      // Load custom prompts from localStorage or use defaults
+      const savedPrompts = localStorage.getItem('questCoachPrompts')
+      const prompts: CoachPrompts = savedPrompts ? JSON.parse(savedPrompts) : defaultCoachPrompts
+      
+      // Determine if this is an interruption scenario
+      const scenario = wasInterrupted ? 'interrupted' : null
+      const systemPrompt = getContextualPrompt(
+        prompts, 
+        scenario, 
+        wasInterrupted ? 'User just interrupted you. Acknowledge this naturally and respond to their new input.' : undefined
+      )
+      
+      console.log('🤖 Using prompt scenario:', scenario || 'normal')
+      if (wasInterrupted) {
+        console.log('🔄 Handling interruption - not resuming previous response')
+        setWasInterrupted(false) // Reset interruption flag
+      }
+      
       const response = await fetch('/api/hume-clm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [
-            { role: 'system', content: 'You are Quest, an empathetic AI career coach. Respond warmly and conversationally. Keep responses concise for voice conversation.' },
+            { role: 'system', content: systemPrompt },
             { role: 'user', content: transcript }
           ],
           user_id: userId,
@@ -97,7 +117,8 @@ export default function QuestHybridPage() {
           emotional_context: { 
             engagement: 0.8, 
             conversation_mode: 'voice',
-            platform: 'quest_hybrid'
+            platform: 'quest_hybrid',
+            wasInterrupted: wasInterrupted
           }
         })
       })
@@ -269,6 +290,7 @@ export default function QuestHybridPage() {
           }
           setIsSpeaking(false)
           isSpeakingRef.current = false
+          setWasInterrupted(true) // Mark that an interruption occurred
           if (utteranceRef.current) {
             utteranceRef.current = null
           }
@@ -331,6 +353,7 @@ export default function QuestHybridPage() {
             speechSynthesis.cancel()
             setIsSpeaking(false)
             isSpeakingRef.current = false
+            setWasInterrupted(true) // Mark that an interruption occurred
             if (utteranceRef.current) {
               utteranceRef.current = null
             }
@@ -500,6 +523,15 @@ export default function QuestHybridPage() {
               >
                 🔍 {debugMode ? 'Hide' : 'Show'} Debug Info
               </Button>
+              
+              <Button 
+                onClick={() => window.open('/coach-prompts', '_blank')}
+                variant="outline"
+                className="w-full"
+                size="sm"
+              >
+                ⚙️ Edit Coach Prompts
+              </Button>
             </div>
 
             {/* Voice Status */}
@@ -546,6 +578,7 @@ export default function QuestHybridPage() {
                   <div>Detection Active: {voiceLevel > 15 ? '🟢 YES' : '🔴 NO'}</div>
                   <div>AI Speaking (state): {isSpeaking ? '🟢 YES' : '🔴 NO'}</div>
                   <div>AI Speaking (ref): {isSpeakingRef.current ? '🟢 YES' : '🔴 NO'}</div>
+                  <div>Was Interrupted: {wasInterrupted ? '🟡 YES' : '🔴 NO'}</div>
                   <div>Should Interrupt: {voiceLevel > 15 && isSpeakingRef.current ? '🟢 YES' : '🔴 NO'}</div>
                 </div>
                 <div className="mt-2 text-xs text-yellow-700">
