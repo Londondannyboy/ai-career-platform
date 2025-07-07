@@ -194,9 +194,15 @@ export default function QuestHumeDebugPage() {
       if (socket.readyState === WebSocket.OPEN) {
         const inputBuffer = event.inputBuffer.getChannelData(0)
         
-        // Convert Float32Array to base64 for Hume
-        const audioArray = new Float32Array(inputBuffer)
-        const audioBytes = new Uint8Array(audioArray.buffer)
+        // Convert Float32Array to 16-bit PCM for Hume
+        const pcmData = new Int16Array(inputBuffer.length)
+        for (let i = 0; i < inputBuffer.length; i++) {
+          // Convert from -1.0 to 1.0 range to -32768 to 32767 range
+          pcmData[i] = Math.max(-32768, Math.min(32767, inputBuffer[i] * 32767))
+        }
+        
+        // Convert to bytes and then to base64
+        const audioBytes = new Uint8Array(pcmData.buffer)
         const base64Audio = btoa(String.fromCharCode.apply(null, Array.from(audioBytes)))
         
         // Send audio in Hume's expected format
@@ -217,7 +223,7 @@ export default function QuestHumeDebugPage() {
     source.connect(processor)
     processor.connect(audioContext.destination)
     
-    console.log('🎙️ Audio streaming to Hume started with proper format')
+    console.log('🎙️ Audio streaming to Hume started with proper 16-bit PCM format')
   }
 
   const disconnect = () => {
