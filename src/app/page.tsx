@@ -279,11 +279,20 @@ export default function HomePage() {
             setLastResponse(`Quest: ${aiText}`)
             setIsSpeaking(true)
             
-            // Stop speaking indicator after a delay
+            // Auto-stop speaking after reasonable delay
             setTimeout(() => {
               setIsSpeaking(false)
               setIsListening(true)
-            }, 2000)
+            }, 3000)
+            
+          } else if (data.type === 'audio_output') {
+            console.log('🔊 Hume streaming audio chunk')
+            // Keep speaking status true while audio is being streamed
+            
+          } else if (data.type === 'user_message' || data.type === 'user_interruption') {
+            console.log('👤 User speaking - stopping AI speech')
+            setIsSpeaking(false)
+            setIsListening(true)
           }
         } catch (error) {
           console.error('Error parsing Hume message:', error)
