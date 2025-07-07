@@ -28,6 +28,7 @@ export default function QuestHumeProductionPage() {
   const isSpeakingRef = useRef<boolean>(false)
   const humeSocketRef = useRef<WebSocket | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
 
   useEffect(() => {
     if (isLoaded && userId) {
@@ -86,12 +87,12 @@ export default function QuestHumeProductionPage() {
 
       setLastResponse('🔄 Connecting to Hume EVI...')
 
-      // Get microphone access with enhanced settings (matching the working enhanced version)
+      // Get microphone access with Hume-recommended settings
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
-          echoCancellation: false,  // Match enhanced version settings
-          noiseSuppression: false,
-          autoGainControl: false,
+          echoCancellation: true,   // Required by Hume EVI
+          noiseSuppression: true,   // Required by Hume EVI  
+          autoGainControl: true,    // Required by Hume EVI
           sampleRate: 16000
         } 
       })
@@ -175,26 +176,34 @@ export default function QuestHumeProductionPage() {
   }
 
   const startAudioStreaming = (socket: WebSocket, stream: MediaStream, audioContext: AudioContext) => {
-    const source = audioContext.createMediaStreamSource(stream)
-    const processor = audioContext.createScriptProcessor(4096, 1, 1)
+    // Use MediaRecorder for proper audio encoding as recommended by Hume docs
+    const mediaRecorder = new MediaRecorder(stream, {
+      mimeType: 'audio/webm;codecs=opus'
+    })
     
-    processor.onaudioprocess = (event) => {
-      if (socket.readyState === WebSocket.OPEN) {
-        const inputBuffer = event.inputBuffer.getChannelData(0)
-        
-        // Use the working format from quest-hume-real
-        const audioData = {
-          type: 'audio_input',
-          audio: Array.from(inputBuffer),
-          sample_rate: audioContext.sampleRate
+    // Store the MediaRecorder instance for cleanup
+    mediaRecorderRef.current = mediaRecorder
+    
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
+        // Convert Blob to base64 as required by Hume EVI
+        const reader = new FileReader()
+        reader.onload = () => {
+          const base64Audio = (reader.result as string).split(',')[1] // Remove data:audio/webm;base64, prefix
+          
+          const audioData = {
+            type: 'audio_input',
+            data: base64Audio
+          }
+          
+          socket.send(JSON.stringify(audioData))
         }
-        
-        socket.send(JSON.stringify(audioData))
+        reader.readAsDataURL(event.data)
       }
     }
     
-    source.connect(processor)
-    processor.connect(audioContext.destination)
+    // Start recording with small time slices for real-time streaming
+    mediaRecorder.start(100) // 100ms chunks
   }
 
   const playHumeAudio = (audioData: number[]) => {
@@ -346,6 +355,12 @@ export default function QuestHumeProductionPage() {
     setIsRecording(false)
     setIsConnected(false)
     setLastResponse('')
+    
+    // Stop MediaRecorder
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+      mediaRecorderRef.current = null
+    }
     
     // Close Hume WebSocket
     if (humeSocketRef.current) {
