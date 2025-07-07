@@ -272,7 +272,7 @@ export default function HomePage() {
         setIsSpeaking(false)
       }
 
-      socket.onmessage = (event) => {
+      socket.onmessage = async (event) => {
         try {
           const data = JSON.parse(event.data)
           console.log('📥 Hume message:', data)
