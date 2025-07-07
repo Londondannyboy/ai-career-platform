@@ -191,7 +191,7 @@ export default function QuestHumeProductionPage() {
                   recognition.lang = 'en-US'
                   recognition.maxAlternatives = 1
                   
-                  recognition.onresult = async (event: any) => {
+                  recognition.onresult = (event: any) => {
                     const result = event.results[event.results.length - 1]
                     const transcript = result[0].transcript.trim()
                     const isFinal = result.isFinal
@@ -212,7 +212,10 @@ export default function QuestHumeProductionPage() {
                     
                     if (isFinal && transcript.length > 0) {
                       console.log('🗣️ User said (after restart):', transcript)
-                      await processVoiceInput(transcript)
+                      // Use setTimeout to ensure async call works properly
+                      setTimeout(() => {
+                        processVoiceInput(transcript)
+                      }, 0)
                     }
                   }
                   
