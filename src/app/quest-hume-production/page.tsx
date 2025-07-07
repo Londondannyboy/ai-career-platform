@@ -184,11 +184,10 @@ export default function QuestHumeProductionPage() {
       if (socket.readyState === WebSocket.OPEN) {
         const inputBuffer = event.inputBuffer.getChannelData(0)
         
-        // Convert to the format Hume expects (EXACT match from quest-hume-real)
+        // Convert to the format Hume expects - use 'data' field as required by API
         const audioData = {
           type: 'audio_input',
-          audio: Array.from(inputBuffer),
-          sample_rate: audioContext.sampleRate
+          data: Array.from(inputBuffer)
         }
         
         socket.send(JSON.stringify(audioData))
