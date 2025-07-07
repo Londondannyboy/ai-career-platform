@@ -461,7 +461,10 @@ export default function QuestFreshIntegrationPage() {
 
   return (
     <VoiceProvider
-      apiKey={HUME_API_KEY}
+      auth={{
+        type: "apiKey",
+        value: HUME_API_KEY
+      }}
       configId={HUME_CONFIG_ID}
       onMessage={(message) => {
         console.log('🎤 Hume Voice Message:', message)
