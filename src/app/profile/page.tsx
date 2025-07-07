@@ -126,34 +126,31 @@ export default function ProfilePage() {
   const loadProfileData = async () => {
     try {
       setLoading(true)
-      // TODO: Load from our Quest database
       console.log('Loading profile data for user:', user?.id)
       
-      // Mock data for now - will be replaced with real API calls
-      setProfileData({
-        workExperience: [
-          {
-            id: '1',
-            company_name: 'CKDelta',
-            role_title: 'Founder/CEO',
-            period_description: 'Q1 2023 - Present',
-            is_current: true,
-            description: 'Building Quest AI platform'
-          }
-        ],
-        education: [],
-        certificates: [],
-        coreSkills: ['Leadership', 'AI/ML', 'Strategy']
-      })
+      const response = await fetch('/api/profile')
+      if (!response.ok) {
+        throw new Error('Failed to load profile data')
+      }
       
-      setCompletionData({
-        current_work_completed: true,
-        work_history_completed: false,
-        education_completed: false,
-        certificates_completed: false,
-        core_skills_completed: true,
-        completion_percentage: 40
-      })
+      const result = await response.json()
+      if (result.success) {
+        setProfileData({
+          workExperience: result.data.workExperience || [],
+          education: result.data.education || [],
+          certificates: result.data.certificates || [],
+          coreSkills: result.data.coreSkills || []
+        })
+        
+        setCompletionData(result.data.completion || {
+          current_work_completed: false,
+          work_history_completed: false,
+          education_completed: false,
+          certificates_completed: false,
+          core_skills_completed: false,
+          completion_percentage: 0
+        })
+      }
     } catch (error) {
       console.error('Error loading profile:', error)
     } finally {
