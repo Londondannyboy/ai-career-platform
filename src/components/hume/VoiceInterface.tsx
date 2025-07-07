@@ -325,9 +325,15 @@ export default function VoiceInterface({
           <button 
             onClick={connect}
             className={styles.connectButton}
-            disabled={status === 'connecting'}
           >
-            {status === 'connecting' ? 'Connecting...' : 'Start Voice Chat'}
+            Start Voice Chat
+          </button>
+        ) : status === 'connecting' ? (
+          <button 
+            disabled
+            className={styles.connectButton}
+          >
+            Connecting...
           </button>
         ) : (
           <button 
