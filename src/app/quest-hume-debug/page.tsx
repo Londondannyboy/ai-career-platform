@@ -180,8 +180,17 @@ export default function QuestHumeDebugPage() {
               message: `CLM returned: "${aiText.substring(0, 50)}..."`
             }])
             
+            // Auto-stop speaking after reasonable delay
+            setTimeout(() => {
+              setIsSpeaking(false)
+            }, 4000)
+            
           } else if (data.type === 'audio_output') {
-            console.log('🔊 Hume voice synthesis finished')
+            console.log('🔊 Hume streaming audio chunk:', data.index)
+            // Keep speaking status true while audio chunks are streaming
+            
+          } else if (data.type === 'user_message' || data.type === 'user_interruption') {
+            console.log('👤 User speaking - stopping AI speech')
             setIsSpeaking(false)
           }
           
