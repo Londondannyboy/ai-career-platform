@@ -110,12 +110,15 @@ export async function POST(req: NextRequest) {
       presencePenalty: 0.2,
     })
 
-    // Return streaming response in OpenAI format
+    // Return streaming response in OpenAI format for Hume
     return result.toDataStreamResponse({
       headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
+        'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       }
     })
 
@@ -504,4 +507,16 @@ async function createFallbackResponse(messages: any[], reason: string) {
   })
 
   return result.toDataStreamResponse()
+}
+
+// Handle preflight requests for CORS
+export async function OPTIONS(req: NextRequest) {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  })
 }
