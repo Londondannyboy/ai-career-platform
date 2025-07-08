@@ -31,14 +31,37 @@ export async function POST(req: NextRequest) {
     // Extract user ID (default to Dan's ID for now)
     const userId = body.user_id || 'user_2z5UB58sfZFnapkymfEkFzGIlzK'
     
-    // Get Dan's profile from database
+    // Get user's profile and Trinity from database
     let userContext = null
+    let trinityContext = null
     try {
       const userQuery = await sql`
         SELECT * FROM users WHERE id = ${userId} LIMIT 1
       `
       if (userQuery.rows.length > 0) {
         userContext = userQuery.rows[0]
+      }
+
+      // Get user's Trinity statement and coaching preferences
+      const trinityQuery = await sql`
+        SELECT 
+          ts.quest,
+          ts.service,
+          ts.pledge,
+          ts.trinity_type,
+          ts.trinity_type_description,
+          tcp.quest_focus,
+          tcp.service_focus,
+          tcp.pledge_focus,
+          tcp.coaching_methodology,
+          tcp.coaching_tone
+        FROM trinity_statements ts
+        LEFT JOIN trinity_coaching_preferences tcp ON ts.id = tcp.trinity_statement_id
+        WHERE ts.user_id = ${userId} AND ts.is_active = TRUE
+        LIMIT 1
+      `
+      if (trinityQuery.rows.length > 0) {
+        trinityContext = trinityQuery.rows[0]
       }
     } catch (error) {
       console.error('Database error:', error)
@@ -47,7 +70,7 @@ export async function POST(req: NextRequest) {
     // Extract user message
     const userMessage = body.messages[body.messages.length - 1]?.content || ''
     
-    // Build enhanced system prompt with user context
+    // Build enhanced system prompt with user and Trinity context
     let systemPrompt = 'You are Quest AI, an empathetic career coach. Keep responses under 150 words for voice synthesis. Be warm and conversational.'
     
     if (userContext) {
@@ -58,6 +81,27 @@ export async function POST(req: NextRequest) {
 - Experience: ${userContext.years_experience || 15} years
 
 Address them by name and reference their background when relevant.`
+    }
+
+    if (trinityContext) {
+      const trinityType = trinityContext.trinity_type === 'F' ? 'Foundation' : 
+                        trinityContext.trinity_type === 'L' ? 'Living' : 'Mixed';
+      
+      systemPrompt += `\n\nUser's Trinity (${trinityType} approach):
+- Quest: "${trinityContext.quest}"
+- Service: "${trinityContext.service}"
+- Pledge: "${trinityContext.pledge}"
+
+Coaching Focus:
+- Quest emphasis: ${trinityContext.quest_focus}%
+- Service emphasis: ${trinityContext.service_focus}%
+- Pledge emphasis: ${trinityContext.pledge_focus}%
+- Methodology: ${trinityContext.coaching_methodology}
+- Tone: ${trinityContext.coaching_tone}
+
+Adapt your coaching to align with their Trinity. If Quest focus is high, emphasize their mission and purpose. 
+If Service focus is high, discuss how they can help others. If Pledge focus is high, reinforce their commitments.
+Use a ${trinityContext.coaching_tone} tone and ${trinityContext.coaching_methodology} methodology when appropriate.`
     }
     
     const response = await generateText({

@@ -26,6 +26,18 @@ interface Message {
   coachName?: string
 }
 
+interface TrinityData {
+  quest: string
+  service: string
+  pledge: string
+  trinity_type: 'F' | 'L' | 'M'
+  quest_focus: number
+  service_focus: number
+  pledge_focus: number
+  coaching_methodology: string
+  coaching_tone: string
+}
+
 export default function EnhancedQuestPage() {
   const { user, isLoaded } = useUser()
   const [conversationState, setConversationState] = useState<ConversationState>('idle')
@@ -40,6 +52,7 @@ export default function EnhancedQuestPage() {
     leadership: 10
   })
   const [speechIntensity, setSpeechIntensity] = useState(0)
+  const [trinityData, setTrinityData] = useState<TrinityData | null>(null)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [conversationHistory, setConversationHistory] = useState<any[]>([])
@@ -187,12 +200,43 @@ export default function EnhancedQuestPage() {
       if (user?.id) {
         ensureUserExists().then(() => {
           loadPreviousConversation(user.id)
+          fetchTrinityData()
         })
       } else {
         console.log('ℹ️ Running Quest in debug mode without authentication')
       }
     }
   }, [isLoaded, user])
+
+  // Fetch Trinity data
+  const fetchTrinityData = async () => {
+    try {
+      const response = await fetch('/api/trinity')
+      const data = await response.json()
+      
+      if (data.has_trinity) {
+        const trinity = {
+          quest: data.trinity_statement.quest,
+          service: data.trinity_statement.service,
+          pledge: data.trinity_statement.pledge,
+          trinity_type: data.trinity_statement.trinity_type,
+          quest_focus: data.coaching_preferences.quest_focus,
+          service_focus: data.coaching_preferences.service_focus,
+          pledge_focus: data.coaching_preferences.pledge_focus,
+          coaching_methodology: data.coaching_preferences.coaching_methodology,
+          coaching_tone: data.coaching_preferences.coaching_tone
+        }
+        setTrinityData(trinity)
+        
+        // Update coaching methodology from Trinity preferences
+        if (trinity.coaching_methodology && trinity.coaching_methodology !== 'balanced') {
+          setCoachingMethodology(trinity.coaching_methodology.toUpperCase())
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching Trinity data:', error)
+    }
+  }
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -249,14 +293,25 @@ export default function EnhancedQuestPage() {
     try {
       console.log('🔗 Starting Enhanced Quest with Multi-Agent Coaching...')
       
-      // Start coaching session
+      // Start coaching session with Trinity context
       const context = {
         userId: user?.id || 'anonymous',
         userProfile: user,
         conversationHistory: [],
         currentGoals: ['career_development'],
         relationshipType: 'self_coaching' as const,
-        urgencyLevel: 'medium' as const
+        urgencyLevel: 'medium' as const,
+        trinityContext: trinityData ? {
+          quest: trinityData.quest,
+          service: trinityData.service,
+          pledge: trinityData.pledge,
+          trinityType: trinityData.trinity_type,
+          questFocus: trinityData.quest_focus,
+          serviceFocus: trinityData.service_focus,
+          pledgeFocus: trinityData.pledge_focus,
+          coachingMethodology: trinityData.coaching_methodology,
+          coachingTone: trinityData.coaching_tone
+        } : undefined
       }
       
       await coaching.startSession(context, weights)
@@ -527,6 +582,42 @@ export default function EnhancedQuestPage() {
             </div>
           </div>
         </div>
+
+        {/* Trinity Display */}
+        {trinityData && (
+          <div className="mb-8 bg-gradient-to-br from-blue-50 via-purple-50 to-green-50 rounded-xl p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Your Trinity</h3>
+              <span className="text-sm text-gray-600">
+                {trinityData.trinity_type === 'F' ? '🗿 Foundation' : 
+                 trinityData.trinity_type === 'L' ? '🌱 Living' : '⚖️ Mixed'}
+              </span>
+            </div>
+            <div className="space-y-4">
+              <div className="bg-white/60 rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <span className="text-sm font-medium text-gray-700">Quest ({trinityData.quest_focus}%)</span>
+                </div>
+                <p className="text-sm text-gray-600 italic">{trinityData.quest}</p>
+              </div>
+              <div className="bg-white/60 rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span className="text-sm font-medium text-gray-700">Service ({trinityData.service_focus}%)</span>
+                </div>
+                <p className="text-sm text-gray-600 italic">{trinityData.service}</p>
+              </div>
+              <div className="bg-white/60 rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                  <span className="text-sm font-medium text-gray-700">Pledge ({trinityData.pledge_focus}%)</span>
+                </div>
+                <p className="text-sm text-gray-600 italic">{trinityData.pledge}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Optional transcript view */}
         {showTranscript && (
