@@ -15,6 +15,7 @@ const isPublicRoute = createRouteMatcher([
   '/company-insights',
   '/graph-insights',
   '/api/debug/(.*)',
+  '/api/debug/trinity-status',
   '/api/trinity/debug',
   '/api/trinity/debug-simple',
   '/api/admin/init-trinity',

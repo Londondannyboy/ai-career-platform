@@ -62,9 +62,12 @@ export default function TrinityCreatePage() {
 
       const result = await response.json();
 
-      if (response.ok) {
-        // Success! Redirect to Trinity dashboard or profile
-        router.push('/trinity/dashboard');
+      console.log('Trinity creation response:', { ok: response.ok, status: response.status, result });
+      
+      if (response.ok && result.success) {
+        console.log('✅ Trinity created successfully!', result);
+        alert('Trinity created successfully! Redirecting to success page...');
+        router.push('/trinity/success');
       } else {
         console.error('Trinity creation failed:', result);
         // Show detailed debug information
@@ -83,7 +86,7 @@ export default function TrinityCreatePage() {
       }
     } catch (error) {
       console.error('Trinity creation error:', error);
-      alert('Network error creating Trinity. Please check your connection and try again.');
+      alert('Network error creating Trinity: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsCreating(false);
     }
