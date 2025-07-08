@@ -49,7 +49,7 @@ export default function TrinityCreatePage() {
     setIsCreating(true);
     
     try {
-      const response = await fetch('/api/trinity', {
+      const response = await fetch('/api/trinity/debug', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,6 +67,9 @@ export default function TrinityCreatePage() {
         router.push('/trinity/dashboard');
       } else {
         console.error('Trinity creation failed:', result);
+        // Show detailed debug information
+        const errorMsg = `Failed to create Trinity at step: ${result.step || 'unknown'}\n\nError: ${result.error || 'Unknown error'}\n\nDetails: ${result.details || 'No details'}\n\nAction: ${result.action || 'Try again'}`;
+        
         // Check if it's a database table issue
         if (result.action && result.action.includes('/trinity/init')) {
           const shouldInit = confirm('Trinity database not initialized. Would you like to go to the initialization page now?');
@@ -75,7 +78,7 @@ export default function TrinityCreatePage() {
             return;
           }
         } else {
-          alert('Failed to create Trinity: ' + (result.error || 'Unknown error'));
+          alert(errorMsg);
         }
       }
     } catch (error) {
