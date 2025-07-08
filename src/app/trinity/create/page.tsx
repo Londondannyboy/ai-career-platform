@@ -49,7 +49,7 @@ export default function TrinityCreatePage() {
     setIsCreating(true);
     
     try {
-      const response = await fetch('/api/trinity/debug', {
+      const response = await fetch('/api/trinity/debug-simple', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
