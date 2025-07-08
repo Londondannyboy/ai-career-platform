@@ -93,8 +93,25 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error('Trinity creation error:', error);
+    
+    // Check if it's a database table issue
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
+      return NextResponse.json(
+        { 
+          error: 'Trinity database tables not found', 
+          details: errorMessage,
+          action: 'Please visit /trinity/init to initialize the Trinity database first'
+        },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to create Trinity statement' },
+      { 
+        error: 'Failed to create Trinity statement',
+        details: errorMessage
+      },
       { status: 500 }
     );
   }
@@ -160,8 +177,24 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     console.error('Trinity fetch error:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
+      return NextResponse.json(
+        { 
+          error: 'Trinity database tables not found', 
+          details: errorMessage,
+          action: 'Please visit /trinity/init to initialize the Trinity database first'
+        },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to fetch Trinity statement' },
+      { 
+        error: 'Failed to fetch Trinity statement',
+        details: errorMessage
+      },
       { status: 500 }
     );
   }
@@ -223,8 +256,24 @@ export async function PATCH(req: NextRequest) {
 
   } catch (error) {
     console.error('Trinity preferences update error:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
+      return NextResponse.json(
+        { 
+          error: 'Trinity database tables not found', 
+          details: errorMessage,
+          action: 'Please visit /trinity/init to initialize the Trinity database first'
+        },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to update Trinity preferences' },
+      { 
+        error: 'Failed to update Trinity preferences',
+        details: errorMessage
+      },
       { status: 500 }
     );
   }

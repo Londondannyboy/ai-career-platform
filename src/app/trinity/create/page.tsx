@@ -67,11 +67,20 @@ export default function TrinityCreatePage() {
         router.push('/trinity/dashboard');
       } else {
         console.error('Trinity creation failed:', result);
-        alert('Failed to create Trinity: ' + (result.error || 'Unknown error'));
+        // Check if it's a database table issue
+        if (result.action && result.action.includes('/trinity/init')) {
+          const shouldInit = confirm('Trinity database not initialized. Would you like to go to the initialization page now?');
+          if (shouldInit) {
+            router.push('/trinity/init');
+            return;
+          }
+        } else {
+          alert('Failed to create Trinity: ' + (result.error || 'Unknown error'));
+        }
       }
     } catch (error) {
       console.error('Trinity creation error:', error);
-      alert('Network error creating Trinity');
+      alert('Network error creating Trinity. Please check your connection and try again.');
     } finally {
       setIsCreating(false);
     }
