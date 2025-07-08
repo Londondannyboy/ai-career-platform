@@ -14,6 +14,47 @@ export async function GET(request: NextRequest) {
     await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
     console.log('✅ UUID extension enabled');
 
+    // Create users table first (required for Trinity foreign keys)
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,  -- Clerk user ID
+        email TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        full_name TEXT,
+        first_name TEXT,
+        last_name TEXT,
+        profile_image_url TEXT,
+        
+        -- Professional context
+        current_role TEXT,
+        company TEXT,
+        department TEXT,
+        seniority_level TEXT DEFAULT 'mid',
+        years_experience INTEGER DEFAULT 0,
+        
+        -- Skills and goals
+        skills TEXT[] DEFAULT '{}',
+        professional_goals TEXT,
+        career_interests TEXT[],
+        industry TEXT,
+        
+        -- LinkedIn integration
+        linkedin_url TEXT,
+        linkedin_data JSONB DEFAULT '{}',
+        
+        -- Preferences
+        coaching_preferences JSONB DEFAULT '{}',
+        privacy_settings JSONB DEFAULT '{"profile_visible": true, "share_insights": true}',
+        
+        -- System fields
+        is_active BOOLEAN DEFAULT true,
+        last_active_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+    console.log('✅ Users table created');
+
     // Create Trinity Statements Core Table
     await sql`
       CREATE TABLE IF NOT EXISTS trinity_statements (
@@ -275,17 +316,26 @@ export async function GET(request: NextRequest) {
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public' 
-      AND table_name LIKE 'trinity_%'
+      AND (table_name LIKE 'trinity_%' OR table_name = 'users')
       ORDER BY table_name
     `;
 
     const tables = tableCheck.rows.map(row => row.table_name);
-    console.log('✅ Trinity tables verified:', tables);
+    console.log('✅ All tables verified:', tables);
+
+    // Check if users table exists specifically
+    const usersExists = tables.includes('users');
+    const trinityTables = tables.filter(name => name.startsWith('trinity_'));
+    
+    console.log('✅ Users table exists:', usersExists);
+    console.log('✅ Trinity tables count:', trinityTables.length);
 
     return NextResponse.json({
       success: true,
       message: 'Trinity database schema initialized successfully',
       tables: tables,
+      usersTableExists: usersExists,
+      trinityTablesCount: trinityTables.length,
       databaseUrl: process.env.DATABASE_URL ? 'Set' : 'Not set',
       postgresUrl: process.env.POSTGRES_URL ? 'Set' : 'Not set'
     });
