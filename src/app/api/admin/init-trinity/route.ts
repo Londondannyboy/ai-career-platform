@@ -264,29 +264,37 @@ export async function GET(request: NextRequest) {
     console.log('✅ Trinity validation function created');
 
     // Create Quest Seal Generation Function
-    await sql`
-      CREATE OR REPLACE FUNCTION generate_quest_seal(
-        p_quest TEXT,
-        p_service TEXT,
-        p_pledge TEXT,
-        p_trinity_type CHAR(1),
-        p_user_id TEXT
-      ) RETURNS TEXT AS $$
-      DECLARE
-        seal_input TEXT;
-        quest_seal TEXT;
-      BEGIN
-        -- Create input string for hashing
-        seal_input := p_quest || '|' || p_service || '|' || p_pledge || '|' || p_trinity_type || '|' || p_user_id || '|' || NOW()::TEXT;
-        
-        -- Generate SHA-256 hash
-        quest_seal := encode(digest(seal_input, 'sha256'), 'hex');
-        
-        RETURN quest_seal;
-      END;
-      $$ LANGUAGE plpgsql;
-    `;
-    console.log('✅ Quest seal generation function created');
+    try {
+      // First enable pgcrypto extension for digest function
+      await sql`CREATE EXTENSION IF NOT EXISTS pgcrypto`;
+      console.log('✅ pgcrypto extension enabled');
+      
+      await sql`
+        CREATE OR REPLACE FUNCTION generate_quest_seal(
+          p_quest TEXT,
+          p_service TEXT,
+          p_pledge TEXT,
+          p_trinity_type CHAR(1),
+          p_user_id TEXT
+        ) RETURNS TEXT AS $$
+        DECLARE
+          seal_input TEXT;
+          quest_seal TEXT;
+        BEGIN
+          -- Create input string for hashing
+          seal_input := p_quest || '|' || p_service || '|' || p_pledge || '|' || p_trinity_type || '|' || p_user_id || '|' || NOW()::TEXT;
+          
+          -- Generate SHA-256 hash
+          quest_seal := encode(digest(seal_input, 'sha256'), 'hex');
+          
+          RETURN quest_seal;
+        END;
+        $$ LANGUAGE plpgsql;
+      `;
+      console.log('✅ Quest seal generation function created');
+    } catch (error) {
+      console.log('⚠️ Quest seal function creation failed, will use fallback:', error);
+    }
 
     // Create indexes for performance
     await sql`CREATE INDEX IF NOT EXISTS idx_trinity_statements_user_id ON trinity_statements(user_id)`;

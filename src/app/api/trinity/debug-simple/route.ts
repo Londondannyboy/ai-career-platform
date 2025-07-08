@@ -101,8 +101,19 @@ export async function POST(req: NextRequest) {
 
     // Step 4: Test Trinity creation
     try {
-      // Generate a simple seal
-      const questSeal = `${testUserId}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      // Try to generate Quest Seal with function first, fallback to simple generation
+      let questSeal;
+      try {
+        const questSealResult = await sql`
+          SELECT generate_quest_seal(${quest}, ${service}, ${pledge}, ${trinity_type}, ${testUserId}) as quest_seal
+        `;
+        questSeal = questSealResult.rows[0]?.quest_seal;
+        console.log('✅ Generated Quest Seal with function:', questSeal?.substring(0, 16) + '...');
+      } catch (sealError) {
+        // Fallback to simple seal generation
+        questSeal = `${testUserId}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        console.log('⚠️ Using fallback Quest Seal:', questSeal);
+      }
 
       const trinityResult = await sql`
         INSERT INTO trinity_statements (
