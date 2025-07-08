@@ -1,6 +1,25 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
 export default function TrinitySuccessPage() {
+  const router = useRouter();
+
+  // Sync user on mount
+  useEffect(() => {
+    const syncUser = async () => {
+      try {
+        await fetch('/api/user/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        console.error('Failed to sync user:', error);
+      }
+    };
+    syncUser();
+  }, []);
   return (
     <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-8">
       <div className="max-w-2xl mx-auto text-center">
@@ -40,19 +59,19 @@ export default function TrinitySuccessPage() {
           </div>
           
           <div className="space-y-4">
-            <a 
-              href="/trinity/dashboard" 
-              className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors mr-4"
+            <button 
+              onClick={() => router.push('/trinity/dashboard')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors mr-4"
             >
               View Trinity Dashboard
-            </a>
+            </button>
             
-            <a 
-              href="/quest/enhanced" 
-              className="inline-block bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors"
+            <button 
+              onClick={() => router.push('/quest/enhanced')}
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors"
             >
               Start Trinity-Focused Coaching
-            </a>
+            </button>
           </div>
           
           <div className="mt-8 text-sm text-gray-500">

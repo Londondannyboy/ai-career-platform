@@ -41,9 +41,33 @@ export default function TrinityDashboard() {
     }
 
     if (isSignedIn) {
-      fetchTrinityData();
+      syncAndFetchData();
     }
   }, [isLoaded, isSignedIn, router]);
+
+  const syncAndFetchData = async () => {
+    try {
+      // First sync the user with the database
+      const syncResponse = await fetch('/api/user/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!syncResponse.ok) {
+        console.error('Failed to sync user:', await syncResponse.text());
+        // Continue anyway - the error might be handled elsewhere
+      }
+
+      // Then fetch Trinity data
+      await fetchTrinityData();
+    } catch (error) {
+      console.error('Error syncing user:', error);
+      // Continue to fetch Trinity data anyway
+      await fetchTrinityData();
+    }
+  };
 
   const fetchTrinityData = async () => {
     try {
