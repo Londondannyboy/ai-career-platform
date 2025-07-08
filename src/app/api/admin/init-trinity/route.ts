@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
         profile_image_url TEXT,
         
         -- Professional context
-        current_role TEXT,
+        "current_role" TEXT,
         company TEXT,
         department TEXT,
         seniority_level TEXT DEFAULT 'mid',
