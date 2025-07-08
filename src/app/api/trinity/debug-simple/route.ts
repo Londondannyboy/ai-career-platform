@@ -8,8 +8,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { quest, service, pledge, trinity_type, trinity_type_description } = body;
 
-    // Mock user ID for testing
-    const testUserId = 'test-user-123';
+    // Mock user ID for testing - use unique ID each time
+    const testUserId = `test-user-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
     console.log('🔍 Debug Trinity Creation:', {
       userId: testUserId,
