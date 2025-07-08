@@ -33,7 +33,7 @@ const TrinityRitual: React.FC<TrinityRitualProps> = ({ onComplete, onClose }) =>
     visible: { 
       opacity: 1, 
       scale: 1,
-      transition: { duration: 0.8, ease: "easeOut" }
+      transition: { duration: 0.8, ease: [0.04, 0.62, 0.23, 0.98] }
     },
     exit: { 
       opacity: 0, 
@@ -47,7 +47,7 @@ const TrinityRitual: React.FC<TrinityRitualProps> = ({ onComplete, onClose }) =>
     visible: { 
       opacity: 1, 
       y: 0,
-      transition: { duration: 0.6, ease: "easeOut" }
+      transition: { duration: 0.6, ease: [0.04, 0.62, 0.23, 0.98] }
     },
     exit: { 
       opacity: 0, 
