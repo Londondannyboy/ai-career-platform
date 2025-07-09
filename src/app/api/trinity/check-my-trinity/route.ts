@@ -13,10 +13,12 @@ export async function GET(request: NextRequest) {
 
     
     // Direct SQL query
-    const trinityResult = await sql`
+    const result = await sql`
       SELECT * FROM trinity_statements
       WHERE user_id = ${user.id}
     `;
+
+    const trinityRows = result.rows;
 
     return NextResponse.json({
       success: true,
@@ -25,9 +27,9 @@ export async function GET(request: NextRequest) {
         email: user.emailAddresses?.[0]?.emailAddress,
         name: `${user.firstName} ${user.lastName}`
       },
-      trinityCount: trinityResult.length,
-      trinities: trinityResult,
-      hasActiveTrinity: trinityResult.some(t => t.is_active),
+      trinityCount: trinityRows.length,
+      trinities: trinityRows,
+      hasActiveTrinity: trinityRows.some((t: any) => t.is_active),
       debug: {
         clerkUserId: user.id,
         timestamp: new Date().toISOString()

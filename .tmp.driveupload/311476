@@ -66,8 +66,8 @@ export class TrinityGraphService {
         LIMIT 1
       `;
       
-      console.log('[TrinityGraphService] Trinity query result:', result.length, 'records found');
-      return result[0] || null;
+      console.log('[TrinityGraphService] Trinity query result:', result.rows.length, 'records found');
+      return result.rows[0] || null;
     } catch (error) {
       console.error('[TrinityGraphService] Error fetching Trinity data:', error);
       
@@ -91,7 +91,7 @@ export class TrinityGraphService {
         )
       `;
       
-      if (!tableCheck[0]?.exists) {
+      if (!tableCheck.rows[0]?.exists) {
         // Return sample goals if table doesn't exist
         return [
           {
@@ -135,7 +135,7 @@ export class TrinityGraphService {
         AND is_active = true
       `;
       
-      return result;
+      return result.rows;
     } catch (error) {
       console.error('Error fetching goals:', error);
       return [];
@@ -153,7 +153,7 @@ export class TrinityGraphService {
         )
       `;
       
-      if (!tableCheck[0]?.exists) {
+      if (!tableCheck.rows[0]?.exists) {
         // Return sample tasks if table doesn't exist
         return [
           {
@@ -193,7 +193,7 @@ export class TrinityGraphService {
         AND t.is_active = true
       `;
       
-      return result;
+      return result.rows;
     } catch (error) {
       console.error('Error fetching tasks:', error);
       return [];

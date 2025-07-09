@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     
     // Check all trinity statements for this user
-    const trinityStatements = await sql`
+    const result = await sql`
       SELECT 
         id, 
         user_id, 
@@ -29,8 +29,10 @@ export async function GET(request: NextRequest) {
       ORDER BY created_at DESC
     `;
 
+    const trinityStatements = result.rows;
+
     // Check if there are any trinity statements
-    const activeTrinity = trinityStatements.find(t => t.is_active);
+    const activeTrinity = trinityStatements.find((t: any) => t.is_active);
     
     // Get user details
     const userDetails = {
