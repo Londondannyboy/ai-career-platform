@@ -18,7 +18,7 @@ const getNeo4jSession = () => {
 export interface TrinityGraphNode {
   id: string;
   label: string;
-  type: 'trinity-core' | 'trinity-aspect' | 'goal' | 'task' | 'user' | 'connection';
+  type: 'trinity-core' | 'trinity-aspect' | 'user' | 'connection';
   val?: number;
   color?: string;
   x?: number;
@@ -263,15 +263,11 @@ export class TrinityGraphService {
 
   // Build the complete graph data structure
   static async buildTrinityGraph(userId: string): Promise<TrinityGraphData> {
-    const [trinityData, goals, tasks, connections] = await Promise.all([
+    const [trinityData, connections] = await Promise.all([
       this.fetchUserTrinityData(userId),
-      this.fetchUserGoals(userId),
-      this.fetchUserTasks(userId),
       this.fetchTrinityConnections(userId)
     ]) as [
       any | null,
-      Array<{ id: string; title: string; description: string; progress: number; trinity_aspect: string; user_id: string }>,
-      Array<{ id: string; title: string; goal_id: string; completed: boolean; priority: string }>,
       Array<{ otherId: string; otherName: string; compatibilityScore: number; sharedAspects: string[]; connectionType: string }>
     ];
 
@@ -287,13 +283,7 @@ export class TrinityGraphService {
       quest: '#FFD700', // Gold
       service: '#00CED1', // Dark Turquoise
       pledge: '#9370DB', // Medium Purple
-      core: '#FFFFFF', // White
-      goal: '#4169E1', // Royal Blue
-      task: {
-        low: '#90EE90',
-        medium: '#FFA500',
-        high: '#FF6347'
-      }
+      core: '#FFFFFF' // White
     };
 
     // Central Trinity node
@@ -339,71 +329,11 @@ export class TrinityGraphService {
       });
     });
 
-    // Add goals
-    const goalRadius = 200;
-    goals.forEach((goal, index) => {
-      const angle = (index * 360) / goals.length;
-      const angleRad = (angle * Math.PI) / 180;
-      const zOffset = (index % 2) * 50 - 25;
-
-      nodes.push({
-        id: `goal-${goal.id}`,
-        label: goal.title,
-        type: 'goal',
-        val: 15,
-        color: TRINITY_COLORS.goal,
-        x: goalRadius * Math.cos(angleRad),
-        y: goalRadius * Math.sin(angleRad),
-        z: zOffset,
-        progress: goal.progress,
-        trinityAspect: goal.trinity_aspect
-      });
-
-      const targetAspect = `trinity-${goal.trinity_aspect}-${userId}`;
-      links.push({
-        source: targetAspect,
-        target: `goal-${goal.id}`,
-        color: TRINITY_COLORS[goal.trinity_aspect as 'quest' | 'service' | 'pledge'],
-        particles: Math.floor((goal.progress || 0) / 20)
-      });
-    });
-
-    // Add tasks
-    tasks.forEach((task) => {
-      const goalNode = nodes.find(n => n.id === `goal-${task.goal_id}`);
-      if (!goalNode) return;
-
-      const taskAngle = Math.random() * 360;
-      const taskAngleRad = (taskAngle * Math.PI) / 180;
-      const taskRadius = 50;
-
-      nodes.push({
-        id: `task-${task.id}`,
-        label: task.title,
-        type: 'task',
-        val: 5,
-        color: task.completed 
-          ? '#00FF00'
-          : TRINITY_COLORS.task[task.priority as 'low' | 'medium' | 'high'],
-        x: (goalNode.x || 0) + taskRadius * Math.cos(taskAngleRad),
-        y: (goalNode.y || 0) + taskRadius * Math.sin(taskAngleRad),
-        z: (goalNode.z || 0) + (Math.random() * 40 - 20),
-        completed: task.completed,
-        priority: task.priority
-      });
-
-      links.push({
-        source: `goal-${task.goal_id}`,
-        target: `task-${task.id}`,
-        color: task.completed ? '#00FF00' : '#CCCCCC',
-        particles: task.completed ? 3 : 0
-      });
-    });
 
     // Add connections to other Trinity users
     const connectionRadius = 300;
     connections.forEach((connection, index) => {
-      const angle = (index * 360) / connections.length + 45; // Offset from goals
+      const angle = (index * 360) / connections.length + 45;
       const angleRad = (angle * Math.PI) / 180;
 
       nodes.push({
