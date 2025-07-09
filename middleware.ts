@@ -35,7 +35,12 @@ const isPublicRoute = createRouteMatcher([
   '/api/intelligence/search-suggestions',
   '/api/demo/(.*)',
   // Note: /api/trinity/graph/me is NOT public - requires authentication
-  '/api/trinity/graph' // Only the base graph endpoint is public for test users
+  '/api/trinity/graph', // Only the base graph endpoint is public for test users
+  
+  // Sentry test pages
+  '/sentry-example-page',
+  '/api/test-sentry',
+  '/api/debug/test-error'
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

@@ -45,11 +45,47 @@ export interface TrinityGraphData {
 }
 
 export class TrinityGraphService {
-  // Fetch Trinity data from original trinity_statements table
+  // Fetch Trinity data from Deep Repo
+  static async fetchUserTrinityData(userId: string) {
+    try {
+      console.log('[TrinityGraphService] Fetching Trinity from Deep Repo for user:', userId);
+      
+      // First try Deep Repo
+      const deepRepoResult = await sql`
+        SELECT deep_repo->>'trinity' as trinity
+        FROM user_profiles
+        WHERE user_id = ${userId}
+        LIMIT 1
+      `;
+      
+      if (deepRepoResult.rows.length > 0 && deepRepoResult.rows[0].trinity) {
+        const trinity = JSON.parse(deepRepoResult.rows[0].trinity);
+        console.log('[TrinityGraphService] Found Trinity in Deep Repo');
+        return {
+          user_id: userId,
+          quest: trinity.quest,
+          service: trinity.service,
+          pledge: trinity.pledge,
+          type: trinity.type,
+          quest_seal: trinity.questSeal,
+          created_at: trinity.createdAt,
+          updated_at: trinity.updatedAt
+        };
+      }
+      
+      // Fallback to original trinity_statements table
+      console.log('[TrinityGraphService] No Deep Repo Trinity, checking trinity_statements');
+      return await this.fetchUserTrinityDataOriginal(userId);
+    } catch (error) {
+      console.error('[TrinityGraphService] Error fetching Trinity data:', error);
+      // Fallback to original method
+      return await this.fetchUserTrinityDataOriginal(userId);
+    }
+  }
+  
+  // Keep original method for fallback
   static async fetchUserTrinityDataOriginal(userId: string) {
     try {
-      console.log('[TrinityGraphService] Fetching Trinity for user:', userId);
-      
       const result = await sql`
         SELECT 
           id,
@@ -129,7 +165,7 @@ export class TrinityGraphService {
   // Build the complete graph data structure
   static async buildTrinityGraph(userId: string): Promise<TrinityGraphData> {
     // For now, just fetch Trinity data - no connections or other features
-    const trinityData = await this.fetchUserTrinityDataOriginal(userId);
+    const trinityData = await this.fetchUserTrinityData(userId);
 
     if (!trinityData) {
       return { nodes: [], links: [] };

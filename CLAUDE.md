@@ -139,6 +139,48 @@ This choice becomes part of their **Quest Seal** - a cryptographic commitment th
 - Pre-ritual preparation addressing "unusual" nature
 - Sacred geometry introduction ceremony
 
+## 🚨 Common Pitfalls & Solutions (MUST READ)
+
+### 1. **PostgreSQL is Primary** (Not Supabase)
+- **Issue**: Keep thinking Supabase patterns
+- **Reality**: We use Neon PostgreSQL
+- **Solution**: Always use `@vercel/postgres` and `sql` template literals
+
+### 2. **Clerk Middleware Blocks Everything**
+- **Issue**: Test routes return 404/redirect to sign-in
+- **Pattern**: Add to `middleware.ts` public routes
+- **Quick Fix**: Use `/api/debug/*` prefix (already public)
+
+### 3. **Next.js 15 Dynamic Route Params**
+```typescript
+// WRONG - Works in Next.js 14
+export async function GET(req, { params }) {
+  const { id } = params; // ERROR!
+}
+
+// CORRECT - Next.js 15
+export async function GET(req, { params }) {
+  const { id } = await params; // Must await!
+}
+```
+
+### 4. **Vercel SQL No Dynamic Columns**
+```typescript
+// WRONG
+sql`SELECT ${columnName} FROM users`
+
+// CORRECT - Use switch statement
+switch(layer) {
+  case 'surface':
+    sql`SELECT surface_repo FROM users`
+}
+```
+
+### 5. **Environment Variable Names**
+- `DATABASE_URL` = Neon PostgreSQL (not Supabase)
+- `POSTGRES_URL` = Same as above (Vercel expects this)
+- Always check which service expects which name
+
 ## Technical Implementation Stack
 
 ### AI Integration (Production Ready)
@@ -349,22 +391,34 @@ SERPER_API_KEY=283930ae73689a0190bec03233e3178be7ce3c82
 - ✅ Basic success flow and confirmation
 - 🔄 **Next**: Voice Integration with Hume AI coaching
 
-### ✅ 3D Graph Visualization Module - COMPLETED (December 8, 2025)
+### ✅ 3D Graph Visualization Module - COMPLETED (December 8-9, 2025)
 - **Status**: Successfully implemented and deployed to production
 - **Technology**: react-force-graph-3d with TypeScript wrapper
-- **Live URL**: `/visualization/3d` - Interactive 3D Trinity Universe
+- **Live URLs**: 
+  - `/visualization/3d` - Interactive 3D Trinity Universe
+  - `/visualization` - Dashboard with mode selection
 - **Features Implemented**:
-  - Trinity Universe with golden core and orbiting aspects
-  - Goals as planets orbiting Trinity aspects
-  - Tasks as moons with completion status
-  - Particle flows showing progress (task → goal → Trinity)
-  - Three visualization modes: Trinity only, Goals, Full Universe
-  - Click-to-focus navigation with smooth camera transitions
-  - ✅ **Neo4j Integration**: Live data from PostgreSQL + Neo4j
-  - ✅ **Real-time Data Toggle**: Switch between live database and sample data
-  - ✅ **Trinity Connections**: Shows relationships with other Trinity users
-  - ✅ **API Endpoint**: `/api/trinity/graph` for real-time graph data
-- **Next Steps**: OKR and Career Path 3D visualizations
+  - ✅ **Trinity-Only Visualization**: Clean identity visualization (per user feedback)
+  - ✅ **My Trinity Mode**: Shows logged-in user's actual Trinity data
+  - ✅ **3D Navigation**: Smooth rotation, zoom, and interaction
+  - ✅ **Real-time Data**: Live from PostgreSQL (trinity_statements table)
+  - ✅ **Simplified Architecture**: Removed goals/tasks - pure Trinity focus
+- **Key Decision**: Simplified to Trinity-only after user feedback that Quest is about identity, not task management
+- **Next Steps**: Deploy Deep Repo, then build OKR and Career Path as separate visualizations
+
+### 🏗️ Deep Repo Architecture - BUILT (December 9, 2025)
+- **Status**: Complete implementation ready for deployment
+- **Architecture**: Four-layer privacy system in PostgreSQL
+  - **Surface**: Public profile data
+  - **Working**: Professional/curated achievements
+  - **Personal**: Private workspace (OKRs, goals, tasks)
+  - **Deep**: Core identity (Trinity)
+- **Implementation**:
+  - ✅ **DeepRepoService**: Complete service layer
+  - ✅ **Database Schema**: user_profiles table with JSONB layers
+  - ✅ **API Endpoints**: Full CRUD for all layers
+  - ✅ **Trinity Integration**: Service checks Deep Repo first
+- **Deployment Decision Pending**: Fresh start vs. migration approach
 
 ### Phase 2: Sacred Geometry Engine with 3D Visualization (Months 4-6)
 - Develop full 3D Trinity visualization with WebGL and react-force-graph-3d
@@ -569,9 +623,13 @@ Before considering any Quest feature complete:
 
 *This document provides complete context for the revolutionary Quest Trinity System - the world's first platform to ask "How do you want to be coached?" with production-ready voice AI, cutting-edge agentic RAG architecture, and sacred geometry visualization of professional identity. The system combines ancient wisdom (Trinity philosophy) with state-of-the-art AI technology to create an unprecedented professional transformation platform.*
 
-**Last Updated**: December 8, 2025  
+**Last Updated**: December 9, 2025  
 **Status**: Production Ready - Voice AI + Trinity System + 3D Visualization Complete  
-**Current Phase**: 3D Graph Visualization Module ✅ DEPLOYED - Live at `/visualization/3d`  
-**Next Phase**: Neo4j integration for real-time Trinity data, then OKR and Career Path 3D visualizations  
+**Current Phase**: Deep Repo Architecture Built - Awaiting deployment decision  
+**Today's Achievements**: 
+- ✅ 3D Trinity Visualization working perfectly (simplified to identity-only)
+- ✅ Visualization Dashboard with mode selection
+- ✅ Complete Deep Repo architecture implementation
+**Next Phase**: Deploy Deep Repo, then build OKR and Career Path as separate 3D visualizations  
 **Documentation**: All files organized with QUEST_ prefix (except CLAUDE.md for Claude integration)  
 **Code Quality**: Development principles and implementation checklist established

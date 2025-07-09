@@ -1,346 +1,330 @@
-'use client'
+'use client';
 
-// Force this page to be dynamically rendered
-export const dynamic = 'force-dynamic'
+import { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
-import { useState, useRef, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { Mic, Square, Upload, Loader2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
-import { User } from '@supabase/supabase-js'
-import Link from 'next/link'
-
-type RecordingState = 'idle' | 'recording' | 'paused' | 'processing'
-
-interface RepoSession {
-  id: string
-  title: string
-  transcript: string
-  ai_analysis: string
-  created_at: string
-  session_type: string
-  privacy_level: string
+interface UserProfile {
+  id: string;
+  userId: string;
+  surfaceRepo: any;
+  workingRepo: any;
+  personalRepo: any;
+  deepRepo: any;
+  profileCompleteness: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export default function RepoPage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [recordingState, setRecordingState] = useState<RecordingState>('idle')
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
-  const [transcript, setTranscript] = useState('')
-  const [aiAnalysis, setAiAnalysis] = useState('')
-  const [repoSessions, setRepoSessions] = useState<RepoSession[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
-  const streamRef = useRef<MediaStream | null>(null)
-  
-  const supabase = createClient()
-  const router = useRouter()
+export default function DeepRepoPage() {
+  const { userId } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('surface');
+  const [editMode, setEditMode] = useState(false);
+  const [editData, setEditData] = useState<any>({});
 
   useEffect(() => {
-    const initializePage = async () => {
-      await checkUser()
-      await loadRepoSessions()
+    if (userId) {
+      fetchProfile();
     }
-    initializePage()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [userId]);
 
-  const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/login')
-      return
-    }
-    setUser(user)
-  }
-
-  const loadRepoSessions = async () => {
-    const { data: sessions } = await supabase
-      .from('repo_sessions')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(10)
-    
-    if (sessions) setRepoSessions(sessions)
-  }
-
-  const startRecording = async () => {
+  const fetchProfile = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 44100
-        }
-      })
+      setLoading(true);
+      const response = await fetch('/api/deep-repo');
+      const data = await response.json();
       
-      streamRef.current = stream
-      audioChunksRef.current = []
-      
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      })
-      
-      mediaRecorderRef.current = mediaRecorder
-      
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data)
-        }
+      if (data.success) {
+        setProfile(data.profile);
+      } else {
+        setError(data.error || 'Failed to fetch profile');
       }
-      
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm;codecs=opus' })
-        setAudioBlob(audioBlob)
-        
-        // Stop all tracks
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => track.stop())
-        }
-      }
-      
-      mediaRecorder.start(1000) // Collect data every second
-      setRecordingState('recording')
-      
-    } catch (error) {
-      console.error('Error starting recording:', error)
-      alert('Could not access microphone. Please check permissions.')
+    } catch (err) {
+      setError('Error loading profile');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && recordingState === 'recording') {
-      mediaRecorderRef.current.stop()
-      setRecordingState('idle')
-    }
-  }
-
-  const processRecording = async () => {
-    if (!audioBlob || !user) return
-    
-    setIsLoading(true)
-    setRecordingState('processing')
-    
+  const handleMigrateTrinity = async () => {
     try {
-      // Convert audio blob to base64 for API
-      const arrayBuffer = await audioBlob.arrayBuffer()
-      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
-      
-      // Call your API route to process with Whisper
-      const response = await fetch('/api/process-audio', {
+      const response = await fetch('/api/deep-repo/migrate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          audio: base64Audio,
-          mimeType: audioBlob.type
-        })
-      })
+        body: JSON.stringify({ migrateAll: false })
+      });
       
-      if (!response.ok) {
-        throw new Error('Failed to process audio')
+      const data = await response.json();
+      if (data.success) {
+        alert('Trinity data migrated successfully!');
+        fetchProfile();
+      } else {
+        alert(data.message || 'Migration failed');
       }
-      
-      const result = await response.json()
-      setTranscript(result.transcript)
-      setAiAnalysis(result.analysis)
-      
-      // Save to database
-      const { error } = await supabase
-        .from('repo_sessions')
-        .insert({
-          user_id: user.id,
-          title: `Career Session ${new Date().toLocaleDateString()}`,
-          transcript: result.transcript,
-          ai_analysis: result.analysis,
-          audio_url: null, // We'll implement audio storage later
-          session_type: 'voice_recording',
-          privacy_level: 'private'
+    } catch (err) {
+      alert('Error migrating Trinity data');
+      console.error(err);
+    }
+  };
+
+  const handleSaveLayer = async (layer: string) => {
+    try {
+      const response = await fetch('/api/deep-repo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          layer,
+          data: editData[layer] || {},
+          merge: true
         })
+      });
       
-      if (error) throw error
-      
-      // Reload sessions
-      await loadRepoSessions()
-      
-    } catch (error) {
-      console.error('Error processing recording:', error)
-      alert('Failed to process recording. Please try again.')
-    } finally {
-      setIsLoading(false)
-      setRecordingState('idle')
-      setAudioBlob(null)
+      const data = await response.json();
+      if (data.success) {
+        setProfile(data.profile);
+        setEditMode(false);
+        setEditData({});
+      } else {
+        alert(data.error || 'Failed to save');
+      }
+    } catch (err) {
+      alert('Error saving data');
+      console.error(err);
     }
+  };
+
+  const renderLayerContent = (layer: string, data: any) => {
+    const isEditing = editMode && activeTab === layer;
+    
+    if (!data || Object.keys(data).length === 0) {
+      return (
+        <div className="text-gray-500 text-center py-8">
+          No data in this layer yet
+        </div>
+      );
+    }
+
+    if (isEditing) {
+      return (
+        <div className="space-y-4">
+          {layer === 'surface' && (
+            <>
+              <div>
+                <Label>Professional Headline</Label>
+                <Input
+                  value={editData[layer]?.professional_headline || data.professional_headline || ''}
+                  onChange={(e) => setEditData({
+                    ...editData,
+                    [layer]: { ...editData[layer], professional_headline: e.target.value }
+                  })}
+                />
+              </div>
+              <div>
+                <Label>Summary</Label>
+                <Textarea
+                  value={editData[layer]?.summary || data.summary || ''}
+                  onChange={(e) => setEditData({
+                    ...editData,
+                    [layer]: { ...editData[layer], summary: e.target.value }
+                  })}
+                  rows={4}
+                />
+              </div>
+            </>
+          )}
+          
+          <div className="flex gap-2">
+            <Button onClick={() => handleSaveLayer(layer)}>Save</Button>
+            <Button variant="outline" onClick={() => setEditMode(false)}>Cancel</Button>
+          </div>
+        </div>
+      );
+    }
+
+    // Display mode
+    if (layer === 'deep' && data.trinity) {
+      return (
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-semibold mb-2">Trinity</h4>
+            <div className="space-y-2">
+              <div>
+                <Badge variant="outline" className="mb-1">Quest ({data.trinity.type})</Badge>
+                <p className="text-sm">{data.trinity.quest}</p>
+              </div>
+              <div>
+                <Badge variant="outline" className="mb-1">Service</Badge>
+                <p className="text-sm">{data.trinity.service}</p>
+              </div>
+              <div>
+                <Badge variant="outline" className="mb-1">Pledge</Badge>
+                <p className="text-sm">{data.trinity.pledge}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <pre className="text-sm bg-gray-50 p-4 rounded overflow-auto max-h-96">
+        {JSON.stringify(data, null, 2)}
+      </pre>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="text-center">Loading Deep Repo...</div>
+      </div>
+    );
   }
 
-  const getRecordingButtonContent = () => {
-    switch (recordingState) {
-      case 'recording':
-        return (
-          <>
-            <Square className="h-4 w-4 mr-2" />
-            Stop Recording
-          </>
-        )
-      case 'processing':
-        return (
-          <>
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Processing...
-          </>
-        )
-      default:
-        return (
-          <>
-            <Mic className="h-4 w-4 mr-2" />
-            Start Recording
-          </>
-        )
-    }
-  }
-
-  if (!user) {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>
+  if (error) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card className="border-red-200">
+          <CardContent className="pt-6">
+            <div className="text-red-600">Error: {error}</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Career Repository</h1>
-        <p className="text-muted-foreground">
-          Record your career thoughts, experiences, and goals. Our AI will analyze and help you build insights.
-        </p>
-        {user && (
-          <div className="mt-4 flex items-center space-x-4">
-            <span className="text-sm text-gray-600">
-              Logged in as: <strong>{user.user_metadata?.full_name || user.email}</strong>
-            </span>
-            <Link href="/profile" className="text-blue-600 hover:underline text-sm">
-              View Profile & LinkedIn Data
-            </Link>
-          </div>
-        )}
-      </div>
-
-      {/* Recording Interface */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Record a Career Session</CardTitle>
-          <CardDescription>
-            Share your thoughts about your career journey, challenges, goals, or experiences
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-4">
-            <Button
-              onClick={recordingState === 'recording' ? stopRecording : startRecording}
-              disabled={recordingState === 'processing' || isLoading}
-              variant={recordingState === 'recording' ? 'destructive' : 'default'}
-              size="lg"
-            >
-              {getRecordingButtonContent()}
-            </Button>
-            
-            {audioBlob && recordingState === 'idle' && (
-              <Button 
-                onClick={processRecording}
-                disabled={isLoading}
-                variant="secondary"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Process Recording
-              </Button>
-            )}
-          </div>
-          
-          {recordingState === 'recording' && (
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-              <span className="text-sm text-muted-foreground">Recording in progress...</span>
-            </div>
-          )}
-          
-          {audioBlob && recordingState === 'idle' && (
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm font-medium mb-2">Recording completed</p>
-              <p className="text-sm text-muted-foreground">
-                Click &ldquo;Process Recording&rdquo; to transcribe and analyze with AI
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Results */}
-      {transcript && (
-        <div className="grid gap-6 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Transcript</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea 
-                value={transcript}
-                readOnly
-                className="min-h-[120px]"
-              />
-            </CardContent>
-          </Card>
-          
-          {aiAnalysis && (
-            <Card>
-              <CardHeader>
-                <CardTitle>AI Analysis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose max-w-none">
-                  <p className="whitespace-pre-wrap">{aiAnalysis}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* Recent Sessions */}
+    <div className="container mx-auto py-8">
       <Card>
         <CardHeader>
-          <CardTitle>Recent Career Sessions</CardTitle>
-          <CardDescription>Your private career conversations and insights</CardDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle>Deep Repository</CardTitle>
+              <CardDescription>
+                Manage your tiered profile data across four privacy layers
+              </CardDescription>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-500 mb-2">Profile Completeness</div>
+              <Progress value={profile?.profileCompleteness || 0} className="w-32" />
+              <div className="text-sm font-semibold mt-1">{profile?.profileCompleteness || 0}%</div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {repoSessions.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No sessions yet. Record your first career conversation above!
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {repoSessions.map((session) => (
-                <div key={session.id} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-medium">{session.title}</h3>
-                    <div className="flex gap-2">
-                      <Badge variant="secondary">{session.session_type}</Badge>
-                      <Badge variant="outline">{session.privacy_level}</Badge>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {new Date(session.created_at).toLocaleDateString()} at{' '}
-                    {new Date(session.created_at).toLocaleTimeString()}
-                  </p>
-                  {session.transcript && (
-                    <p className="text-sm line-clamp-2">{session.transcript.substring(0, 150)}...</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="mb-4 flex justify-between">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleMigrateTrinity}
+            >
+              Migrate Trinity Data
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setEditMode(!editMode);
+                setEditData({});
+              }}
+            >
+              {editMode ? 'Cancel Edit' : 'Edit Mode'}
+            </Button>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="surface">
+                Surface
+                <Badge variant="outline" className="ml-2 text-xs">Public</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="working">
+                Working
+                <Badge variant="outline" className="ml-2 text-xs">Professional</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="personal">
+                Personal
+                <Badge variant="outline" className="ml-2 text-xs">Peers</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="deep">
+                Deep
+                <Badge variant="outline" className="ml-2 text-xs">Private</Badge>
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="surface" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Surface Repository</CardTitle>
+                  <CardDescription>
+                    Public profile information visible to everyone
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {renderLayerContent('surface', profile?.surfaceRepo)}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="working" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Working Repository</CardTitle>
+                  <CardDescription>
+                    Professional depth shared with recruiters and hiring managers
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {renderLayerContent('working', profile?.workingRepo)}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="personal" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Personal Repository</CardTitle>
+                  <CardDescription>
+                    Authentic sharing with peers and coaches
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {renderLayerContent('personal', profile?.personalRepo)}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="deep" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Deep Repository</CardTitle>
+                  <CardDescription>
+                    Your Trinity, life goals, and deeply personal mission
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {renderLayerContent('deep', profile?.deepRepo)}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+
+          <div className="mt-6 text-xs text-gray-500">
+            Last updated: {profile?.updatedAt ? new Date(profile.updatedAt).toLocaleString() : 'Never'}
+          </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
