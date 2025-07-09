@@ -248,6 +248,14 @@ const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
       {/* Legend */}
       <div className="absolute bottom-4 right-4 bg-black/70 text-white p-4 rounded-lg text-sm">
         <h3 className="font-bold mb-2">Trinity Universe</h3>
+        
+        {/* Profile Details */}
+        <div className="mb-3 pb-3 border-b border-gray-600 text-xs">
+          <p><span className="text-gray-400">User:</span> {entityName || 'Unknown'}</p>
+          <p><span className="text-gray-400">ID:</span> {testUserId || user?.id || 'No ID'}</p>
+          <p><span className="text-gray-400">Source:</span> {testUserId === 'current-user' ? 'Deep Repo' : 'Trinity Table'}</p>
+        </div>
+        
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-white"></div>
@@ -290,6 +298,14 @@ const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
           <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
             <p>Total nodes: {stats.nodeCount}</p>
             <p>Total links: {stats.linkCount}</p>
+            {graphData.nodes.length > 0 && (
+              <div className="mt-1">
+                <p className="text-yellow-400">Trinity Data:</p>
+                <p className="text-[10px] break-all">
+                  Q: {graphData.nodes.find(n => n.type === 'trinity-aspect' && n.label === 'Quest')?.fullText?.substring(0, 30)}...
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
