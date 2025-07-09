@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import TrinityGraph3D from '@/components/visualization/3d/TrinityGraph3D';
-import { ArrowLeft, Maximize2, Minimize2 } from 'lucide-react';
+import TrinityGraph3DLive from '@/components/visualization/3d/TrinityGraph3DLive';
+import { ArrowLeft, Maximize2, Minimize2, Database, FlaskConical } from 'lucide-react';
 import Link from 'next/link';
 
 // Sample data for demonstration
@@ -61,6 +62,7 @@ const sampleTasks = [
 export default function Visualization3DPage() {
   const [viewMode, setViewMode] = useState<'trinity' | 'goals' | 'full'>('full');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [dataSource, setDataSource] = useState<'sample' | 'live'>('live');
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -86,6 +88,32 @@ export default function Visualization3DPage() {
           </div>
           
           <div className="flex items-center gap-4">
+            {/* Data source toggle */}
+            <div className="flex gap-2 bg-gray-700 rounded-lg p-1">
+              <button
+                onClick={() => setDataSource('live')}
+                className={`px-3 py-1 rounded flex items-center gap-2 ${
+                  dataSource === 'live' 
+                    ? 'bg-green-600 text-white' 
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                <Database className="w-4 h-4" />
+                Live Data
+              </button>
+              <button
+                onClick={() => setDataSource('sample')}
+                className={`px-3 py-1 rounded flex items-center gap-2 ${
+                  dataSource === 'sample' 
+                    ? 'bg-purple-600 text-white' 
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                <FlaskConical className="w-4 h-4" />
+                Sample Data
+              </button>
+            </div>
+
             {/* View mode selector */}
             <div className="flex gap-2 bg-gray-700 rounded-lg p-1">
               <button
@@ -138,16 +166,28 @@ export default function Visualization3DPage() {
 
       {/* 3D Visualization */}
       <div className="h-[calc(100vh-80px)]">
-        <TrinityGraph3D
-          trinityData={sampleTrinityData}
-          goals={sampleGoals}
-          tasks={sampleTasks}
-          mode={viewMode}
-          onNodeClick={(node) => {
-            console.log('Node clicked:', node);
-            // Could open a modal or sidebar with node details
-          }}
-        />
+        {dataSource === 'sample' ? (
+          <TrinityGraph3D
+            trinityData={sampleTrinityData}
+            goals={sampleGoals}
+            tasks={sampleTasks}
+            mode={viewMode}
+            onNodeClick={(node) => {
+              console.log('Node clicked:', node);
+              // Could open a modal or sidebar with node details
+            }}
+          />
+        ) : (
+          <TrinityGraph3DLive
+            mode={viewMode}
+            onNodeClick={(node) => {
+              console.log('Node clicked:', node);
+              // Could open a modal or sidebar with node details
+            }}
+            // For testing without auth, you can pass a test user ID:
+            // testUserId="test-user-123"
+          />
+        )}
       </div>
 
       {/* Info Panel */}
@@ -157,6 +197,12 @@ export default function Visualization3DPage() {
           Your professional identity visualized as a living, breathing universe.
         </p>
         <div className="space-y-2 text-sm">
+          <p>
+            <span className="font-semibold">Data Source:</span>{' '}
+            <span className={dataSource === 'live' ? 'text-green-400' : 'text-purple-400'}>
+              {dataSource === 'live' ? 'Live Database' : 'Sample Data'}
+            </span>
+          </p>
           <p>
             <span className="font-semibold">Current View:</span>{' '}
             {viewMode === 'trinity' && 'Trinity core with three aspects'}
