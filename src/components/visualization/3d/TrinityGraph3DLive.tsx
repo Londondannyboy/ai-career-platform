@@ -46,7 +46,11 @@ const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
         // Handle special "current-user" case
         let url: string;
         if (testUserId === 'current-user') {
-          url = '/api/trinity/graph/me';
+          // Try the my-data endpoint which bypasses Clerk auth issues
+          const userEmail = user?.emailAddresses?.[0]?.emailAddress;
+          url = userEmail 
+            ? `/api/trinity/my-data?email=${encodeURIComponent(userEmail)}`
+            : '/api/trinity/my-data';
         } else if (testUserId) {
           url = `/api/trinity/graph?userId=${testUserId}`;
         } else {
