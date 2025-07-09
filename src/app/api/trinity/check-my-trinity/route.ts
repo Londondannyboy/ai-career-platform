@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import { getSql } from '@/lib/db';
+import { sql } from '@/lib/db';
 
 // Simple endpoint to check current user's Trinity
 export async function GET(request: NextRequest) {
@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const sql = await getSql();
     
     // Direct SQL query
     const trinityResult = await sql`
