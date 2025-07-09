@@ -63,6 +63,9 @@ export default function Visualization3DPage() {
   const [viewMode, setViewMode] = useState<'trinity' | 'goals' | 'full'>('full');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [dataSource, setDataSource] = useState<'sample' | 'live'>('live');
+  const [entityType, setEntityType] = useState<'person' | 'company' | 'industry'>('person');
+  const [entityId, setEntityId] = useState('test-user-123');
+  const [entityName, setEntityName] = useState('Test User');
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -185,7 +188,9 @@ export default function Visualization3DPage() {
               // Could open a modal or sidebar with node details
             }}
             // For testing without auth, you can pass a test user ID:
-            testUserId="test-user-123"
+            testUserId={entityId}
+            entityType={entityType}
+            entityName={entityName}
           />
         )}
       </div>
@@ -193,9 +198,69 @@ export default function Visualization3DPage() {
       {/* Info Panel */}
       <div className="absolute top-24 left-4 bg-black/70 text-white p-4 rounded-lg max-w-sm">
         <h2 className="font-bold mb-2">Trinity Universe Explorer</h2>
+        
+        {/* Entity Information */}
+        <div className="mb-3 p-2 bg-white/10 rounded">
+          <p className="text-xs text-gray-400 mb-1">Currently Viewing:</p>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">
+              {entityType === 'person' && '👤'}
+              {entityType === 'company' && '🏢'}
+              {entityType === 'industry' && '🏭'}
+            </span>
+            <div>
+              <p className="font-semibold">{entityName}</p>
+              <p className="text-xs text-gray-400 capitalize">{entityType}</p>
+            </div>
+          </div>
+          {dataSource === 'live' && (
+            <p className="text-xs text-green-400 mt-1">Live Data • ID: {entityId}</p>
+          )}
+          
+          {/* Quick entity switcher for demo */}
+          {dataSource === 'live' && (
+            <div className="mt-2 pt-2 border-t border-white/20">
+              <p className="text-xs text-gray-400 mb-1">Quick Switch:</p>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => {
+                    setEntityType('person');
+                    setEntityId('test-user-123');
+                    setEntityName('Test User');
+                  }}
+                  className="text-xs px-2 py-1 bg-white/10 hover:bg-white/20 rounded"
+                >
+                  Test User
+                </button>
+                <button
+                  onClick={() => {
+                    setEntityType('company');
+                    setEntityId('company-ckdelta');
+                    setEntityName('CK Delta');
+                  }}
+                  className="text-xs px-2 py-1 bg-white/10 hover:bg-white/20 rounded"
+                >
+                  CK Delta
+                </button>
+                <button
+                  onClick={() => {
+                    setEntityType('industry');
+                    setEntityId('industry-tech');
+                    setEntityName('Technology');
+                  }}
+                  className="text-xs px-2 py-1 bg-white/10 hover:bg-white/20 rounded"
+                >
+                  Tech Industry
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         <p className="text-sm text-gray-300 mb-3">
-          Your professional identity visualized as a living, breathing universe.
+          Professional identity visualized as a living, breathing universe.
         </p>
+        
         <div className="space-y-2 text-sm">
           <p>
             <span className="font-semibold">Data Source:</span>{' '}
@@ -206,11 +271,11 @@ export default function Visualization3DPage() {
           <p>
             <span className="font-semibold">Current View:</span>{' '}
             {viewMode === 'trinity' && 'Trinity core with three aspects'}
-            {viewMode === 'goals' && 'Goals orbiting your Trinity'}
+            {viewMode === 'goals' && 'Goals orbiting Trinity'}
             {viewMode === 'full' && 'Complete universe with tasks'}
           </p>
           <p>
-            <span className="font-semibold">Particles:</span> Show progress flow from tasks → goals → Trinity
+            <span className="font-semibold">Particles:</span> Show progress flow
           </p>
           <p className="text-xs text-gray-400 mt-2">
             💡 Click nodes to explore • Drag to reposition • Scroll to zoom

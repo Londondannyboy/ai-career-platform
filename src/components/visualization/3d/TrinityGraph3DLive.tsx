@@ -9,12 +9,16 @@ interface TrinityGraph3DLiveProps {
   onNodeClick?: (node: any) => void;
   mode?: 'trinity' | 'goals' | 'full';
   testUserId?: string; // For testing without auth
+  entityType?: 'person' | 'company' | 'industry';
+  entityName?: string;
 }
 
 const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
   onNodeClick,
   mode = 'full',
-  testUserId
+  testUserId,
+  entityType = 'person',
+  entityName = 'User'
 }) => {
   const { user, isLoaded } = useUser();
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
