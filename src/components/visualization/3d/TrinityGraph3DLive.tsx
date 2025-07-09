@@ -98,6 +98,12 @@ const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
           // Update entity name if we got user data from /me endpoint
           if (testUserId === 'current-user' && result.userName && onEntityNameUpdate) {
             onEntityNameUpdate(result.userName);
+          } else if (testUserId === 'current-user' && user && onEntityNameUpdate) {
+            // If we don't get a userName from the API, use the Clerk user data
+            const displayName = user.firstName && user.lastName 
+              ? `${user.firstName} ${user.lastName}`
+              : user.firstName || user.emailAddresses?.[0]?.emailAddress || 'My Trinity';
+            onEntityNameUpdate(displayName);
           }
         } else {
           throw new Error('Invalid data format received');

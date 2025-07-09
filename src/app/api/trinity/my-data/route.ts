@@ -65,9 +65,26 @@ export async function GET(request: NextRequest) {
     `;
 
     if (trinityResult.rows.length === 0) {
+      // Check if there are test Trinities available
+      const testTrinities = await sql`
+        SELECT user_id, quest, created_at
+        FROM trinity_statements
+        WHERE user_id LIKE 'test-%'
+        AND is_active = true
+        ORDER BY created_at DESC
+        LIMIT 3
+      `;
+      
       return NextResponse.json({
-        error: 'No active Trinity found',
-        userId: user.id
+        error: 'No active Trinity found for your account',
+        userId: user.id,
+        userName: user.name || user.email,
+        hint: 'You can claim a test Trinity using /api/trinity/claim-test',
+        availableTestTrinities: testTrinities.rows.map(t => ({
+          testUserId: t.user_id,
+          preview: t.quest.substring(0, 50) + '...',
+          created: t.created_at
+        }))
       }, { status: 404 });
     }
 
