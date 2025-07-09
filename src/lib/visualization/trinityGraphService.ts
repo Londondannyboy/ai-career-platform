@@ -45,170 +45,38 @@ export interface TrinityGraphData {
 }
 
 export class TrinityGraphService {
-  // Fetch Trinity data from PostgreSQL
+  // Fetch Trinity data from Deep Repo
   static async fetchUserTrinityData(userId: string) {
     try {
-      console.log('[TrinityGraphService] Fetching Trinity for user:', userId);
+      console.log('[TrinityGraphService] Fetching Trinity from Deep Repo for user:', userId);
       
-      const result = await sql`
-        SELECT 
-          id,
-          user_id,
-          quest,
-          service,
-          pledge,
-          quest_seal,
-          created_at,
-          updated_at
-        FROM trinity_statements
-        WHERE user_id = ${userId} 
-        AND is_active = true
-        LIMIT 1
-      `;
+      // Import DeepRepoService
+      const { DeepRepoService } = await import('@/lib/profile/deepRepoService');
       
-      console.log('[TrinityGraphService] Trinity query result:', result.rows.length, 'records found');
-      return result.rows[0] || null;
+      // Get Trinity from Deep Repo
+      const trinity = await DeepRepoService.getTrinity(userId);
+      
+      console.log('[TrinityGraphService] Trinity found:', trinity ? 'Yes' : 'No');
+      
+      if (!trinity) return null;
+      
+      // Convert to expected format
+      return {
+        id: `trinity-${userId}`,
+        user_id: userId,
+        quest: trinity.quest,
+        service: trinity.service,
+        pledge: trinity.pledge,
+        type: trinity.type || 'F',
+        created_at: trinity.createdAt,
+        updated_at: trinity.updatedAt
+      };
     } catch (error) {
       console.error('[TrinityGraphService] Error fetching Trinity data:', error);
-      
-      // If table doesn't exist, return null instead of throwing
-      if ((error as any)?.code === '42P01') {
-        return null;
-      }
-      
-      throw error;
+      return null;
     }
   }
 
-  // Fetch goals from PostgreSQL (assuming a goals table exists)
-  static async fetchUserGoals(userId: string) {
-    try {
-      // Check if goals table exists first
-      const tableCheck = await sql`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_name = 'goals'
-        )
-      `;
-      
-      if (!tableCheck.rows[0]?.exists) {
-        // No goals table exists - return empty array for real experience
-        return [];
-        
-        // Uncomment below to show sample goals for demo purposes
-        /*
-        return [
-          {
-            id: 'goal-1',
-            title: 'Complete Trinity System',
-            description: 'Finalize Trinity implementation',
-            progress: 85,
-            trinity_aspect: 'quest',
-            user_id: userId
-          },
-          {
-            id: 'goal-2',
-            title: 'Launch Voice AI',
-            description: 'Deploy Hume EVI integration',
-            progress: 90,
-            trinity_aspect: 'service',
-            user_id: userId
-          },
-          {
-            id: 'goal-3',
-            title: 'Ensure Privacy',
-            description: 'Implement data protection',
-            progress: 70,
-            trinity_aspect: 'pledge',
-            user_id: userId
-          }
-        ];
-        */
-      }
-
-      const result = await sql`
-        SELECT 
-          id,
-          title,
-          description,
-          progress,
-          trinity_aspect,
-          user_id,
-          created_at
-        FROM goals
-        WHERE user_id = ${userId}
-        AND is_active = true
-      `;
-      
-      return result.rows;
-    } catch (error) {
-      console.error('Error fetching goals:', error);
-      return [];
-    }
-  }
-
-  // Fetch tasks (assuming a tasks table exists)
-  static async fetchUserTasks(userId: string) {
-    try {
-      // Check if tasks table exists
-      const tableCheck = await sql`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_name = 'tasks'
-        )
-      `;
-      
-      if (!tableCheck.rows[0]?.exists) {
-        // No tasks table exists - return empty array for real experience
-        return [];
-        
-        // Uncomment below to show sample tasks for demo purposes
-        /*
-        return [
-          {
-            id: 'task-1',
-            title: 'Design Trinity UI',
-            goal_id: 'goal-1',
-            completed: true,
-            priority: 'high'
-          },
-          {
-            id: 'task-2',
-            title: 'Implement ritual flow',
-            goal_id: 'goal-1',
-            completed: false,
-            priority: 'medium'
-          },
-          {
-            id: 'task-3',
-            title: 'Test voice integration',
-            goal_id: 'goal-2',
-            completed: true,
-            priority: 'high'
-          }
-        ];
-        */
-      }
-
-      const result = await sql`
-        SELECT 
-          t.id,
-          t.title,
-          t.goal_id,
-          t.completed,
-          t.priority
-        FROM tasks t
-        JOIN goals g ON t.goal_id = g.id
-        WHERE g.user_id = ${userId}
-        AND t.is_active = true
-      `;
-      
-      return result.rows;
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
-      return [];
-    }
-  }
 
   // Fetch Trinity connections from Neo4j
   static async fetchTrinityConnections(userId: string) {
