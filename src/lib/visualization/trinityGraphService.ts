@@ -296,7 +296,7 @@ export class TrinityGraphService {
         label: aspect.label,
         type: 'trinity-aspect',
         val: 20,
-        color: TRINITY_COLORS[aspect.id as keyof typeof TRINITY_COLORS],
+        color: TRINITY_COLORS[aspect.id as 'quest' | 'service' | 'pledge'],
         x: aspectRadius * Math.cos(angleRad),
         y: aspectRadius * Math.sin(angleRad),
         z: 0,
@@ -306,7 +306,7 @@ export class TrinityGraphService {
       links.push({
         source: `trinity-core-${userId}`,
         target: `trinity-${aspect.id}-${userId}`,
-        color: TRINITY_COLORS[aspect.id as keyof typeof TRINITY_COLORS],
+        color: TRINITY_COLORS[aspect.id as 'quest' | 'service' | 'pledge'],
         particles: 2
       });
     });
@@ -335,7 +335,7 @@ export class TrinityGraphService {
       links.push({
         source: targetAspect,
         target: `goal-${goal.id}`,
-        color: TRINITY_COLORS[goal.trinity_aspect as keyof typeof TRINITY_COLORS],
+        color: TRINITY_COLORS[goal.trinity_aspect as 'quest' | 'service' | 'pledge'],
         particles: Math.floor((goal.progress || 0) / 20)
       });
     });
@@ -356,7 +356,7 @@ export class TrinityGraphService {
         val: 5,
         color: task.completed 
           ? '#00FF00'
-          : TRINITY_COLORS.task[task.priority as keyof typeof TRINITY_COLORS.task],
+          : TRINITY_COLORS.task[task.priority as 'low' | 'medium' | 'high'],
         x: (goalNode.x || 0) + taskRadius * Math.cos(taskAngleRad),
         y: (goalNode.y || 0) + taskRadius * Math.sin(taskAngleRad),
         z: (goalNode.z || 0) + (Math.random() * 40 - 20),
