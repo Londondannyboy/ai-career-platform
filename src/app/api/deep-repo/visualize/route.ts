@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
 import { DeepRepoService } from '@/lib/profile/deepRepoService';
-import { auth } from '@clerk/nextjs/server';
 
 export async function GET() {
   try {
-    // Get authenticated user or use test user
-    const { userId } = await auth();
-    const testUserId = userId || 'test-user-123';
+    // Use test user for now since this is a public endpoint
+    const testUserId = 'test-user-123';
 
     // Get or create user profile
     const profile = await DeepRepoService.getUserProfile(testUserId);
