@@ -16,7 +16,7 @@ export async function GET() {
     
     return Response.json({ 
       error: 'Error captured and sent to Sentry',
-      sentryEnabled: !!Sentry.getCurrentHub().getClient()
+      message: 'Check Sentry dashboard for errors'
     });
   }
 }
