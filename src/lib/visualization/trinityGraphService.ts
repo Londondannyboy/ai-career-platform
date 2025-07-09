@@ -1,5 +1,14 @@
-import { sql } from '@/lib/db';
 import neo4j from 'neo4j-driver';
+
+// Lazy load SQL to avoid edge runtime issues
+let sql: any;
+const getSql = async () => {
+  if (!sql) {
+    const db = await import('@/lib/db');
+    sql = db.sql;
+  }
+  return sql;
+};
 
 // Neo4j connection
 const getNeo4jSession = () => {
@@ -48,6 +57,7 @@ export class TrinityGraphService {
     try {
       console.log('Fetching Trinity data for user:', userId);
       
+      const sql = await getSql();
       const result = await sql`
         SELECT 
           id,
@@ -88,6 +98,7 @@ export class TrinityGraphService {
   // Fetch goals from PostgreSQL (assuming a goals table exists)
   static async fetchUserGoals(userId: string) {
     try {
+      const sql = await getSql();
       // Check if goals table exists first
       const tableCheck = await sql`
         SELECT EXISTS (
@@ -150,6 +161,7 @@ export class TrinityGraphService {
   // Fetch tasks (assuming a tasks table exists)
   static async fetchUserTasks(userId: string) {
     try {
+      const sql = await getSql();
       // Check if tasks table exists
       const tableCheck = await sql`
         SELECT EXISTS (
