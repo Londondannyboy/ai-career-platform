@@ -62,7 +62,7 @@ export async function GET() {
 
     // Experience nodes
     if (surfaceData?.experience) {
-      surfaceData.experience.forEach((exp, index) => {
+      surfaceData.experience.forEach((exp: any, index: number) => {
         const expId = `exp-${index}`;
         nodes.push({
           id: expId,
@@ -81,7 +81,7 @@ export async function GET() {
 
     // Skills nodes
     if (surfaceData?.skills) {
-      surfaceData.skills.forEach((skill, index) => {
+      surfaceData.skills.forEach((skill: string, index: number) => {
         const skillId = `skill-${index}`;
         const endorsements = surfaceData.endorsements?.[skill] || 0;
         nodes.push({
