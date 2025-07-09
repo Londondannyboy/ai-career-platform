@@ -45,8 +45,8 @@ export async function GET() {
     const surfaceData = await DeepRepoService.getRepoLayer(testUserId, 'surface');
 
     // Create visualization nodes from Surface Repo data
-    const nodes = [];
-    const links = [];
+    const nodes: any[] = [];
+    const links: any[] = [];
 
     // Central profile node
     nodes.push({
