@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import ForceGraph3DWrapper from './ForceGraph3DWrapper';
 import { useUser } from '@clerk/nextjs';
 import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 interface TrinityGraph3DLiveProps {
   onNodeClick?: (node: any) => void;
@@ -38,6 +39,14 @@ const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
         setLoading(false);
         return;
       }
+      
+      console.log('[TrinityGraph3DLive] Fetching data for:', {
+        testUserId,
+        clerkUserId: user?.id,
+        userEmail: user?.emailAddresses?.[0]?.emailAddress,
+        entityType,
+        entityName
+      });
 
       try {
         setLoading(true);
@@ -62,6 +71,13 @@ const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
 
         if (!response.ok) {
           console.error('API Error Response:', result);
+          // Check if it's a "no Trinity found" error vs actual error
+          if (response.status === 404 && result.error?.includes('No active Trinity found')) {
+            // This is expected for new users - show empty state
+            setGraphData({ nodes: [], links: [] });
+            setLoading(false);
+            return;
+          }
           throw new Error(result.error || 'Failed to fetch graph data');
         }
 
@@ -183,9 +199,28 @@ const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
   if (graphData.nodes.length === 0) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-900">
-        <div className="text-center text-white">
-          <p className="mb-2">No Trinity data found</p>
-          <p className="text-sm text-gray-400">Create your Trinity to see it visualized here</p>
+        <div className="text-center text-white max-w-md">
+          <h2 className="text-2xl font-bold mb-4">Your Trinity Universe Awaits</h2>
+          <p className="mb-6 text-gray-300">
+            Create your Trinity to see your professional identity visualized in 3D space.
+          </p>
+          <div className="space-y-4">
+            <div className="p-4 bg-gray-800 rounded-lg text-left">
+              <h3 className="font-semibold text-yellow-400 mb-2">🎯 Quest</h3>
+              <p className="text-sm text-gray-400">What drives you? Your mission and purpose.</p>
+            </div>
+            <div className="p-4 bg-gray-800 rounded-lg text-left">
+              <h3 className="font-semibold text-cyan-400 mb-2">🤝 Service</h3>
+              <p className="text-sm text-gray-400">How do you serve? Your unique value and contribution.</p>
+            </div>
+            <div className="p-4 bg-gray-800 rounded-lg text-left">
+              <h3 className="font-semibold text-purple-400 mb-2">🛡️ Pledge</h3>
+              <p className="text-sm text-gray-400">What do you commit to? Your values and accountability.</p>
+            </div>
+          </div>
+          <Link href="/trinity/create" className="inline-block mt-8 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-colors">
+            Create Your Trinity
+          </Link>
         </div>
       </div>
     );
