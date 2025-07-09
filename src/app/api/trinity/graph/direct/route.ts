@@ -15,8 +15,7 @@ export async function GET(request: NextRequest) {
           user_id,
           quest,
           service,
-          pledge,
-          type
+          pledge
         FROM trinity_statements
         WHERE user_id = ${testUserId} 
         AND is_active = true

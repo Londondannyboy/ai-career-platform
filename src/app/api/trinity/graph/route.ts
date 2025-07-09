@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
 import { TrinityGraphService } from '@/lib/visualization/trinityGraphService';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the current user
-    const user = await currentUser();
-    
-    // For testing, allow a test user ID to be passed as a query parameter
+    // For now, just use the query parameter to avoid Clerk auth issues
     const searchParams = request.nextUrl.searchParams;
-    const testUserId = searchParams.get('userId');
-    
-    const userId = testUserId || user?.id;
+    const userId = searchParams.get('userId');
     
     if (!userId) {
       return NextResponse.json(
-        { error: 'User not authenticated', requiresAuth: true },
+        { error: 'User ID required. Please pass userId as query parameter.', requiresAuth: true },
         { status: 401 }
       );
     }
@@ -64,16 +58,15 @@ export async function GET(request: NextRequest) {
 // Create or update Trinity connections in Neo4j
 export async function POST(request: NextRequest) {
   try {
-    const user = await currentUser();
-    if (!user) {
+    const body = await request.json();
+    const { sourceUserId, targetUserId, connectionType = 'viewed', compatibilityScore } = body;
+
+    if (!sourceUserId) {
       return NextResponse.json(
-        { error: 'User not authenticated' },
-        { status: 401 }
+        { error: 'Source user ID is required' },
+        { status: 400 }
       );
     }
-
-    const body = await request.json();
-    const { targetUserId, connectionType = 'viewed', compatibilityScore } = body;
 
     if (!targetUserId) {
       return NextResponse.json(
@@ -87,7 +80,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       connection: {
-        sourceUserId: user.id,
+        sourceUserId,
         targetUserId,
         connectionType,
         compatibilityScore,

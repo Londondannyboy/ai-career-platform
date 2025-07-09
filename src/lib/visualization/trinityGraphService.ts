@@ -63,7 +63,6 @@ export class TrinityGraphService {
           quest,
           service,
           pledge,
-          type,
           quest_seal,
           created_at,
           updated_at
@@ -304,7 +303,7 @@ export class TrinityGraphService {
       fx: 0,
       fy: 0,
       fz: 0,
-      trinityData
+      trinityData: {...trinityData, type: trinityData?.type || 'F'}
     });
 
     // Trinity aspect nodes
