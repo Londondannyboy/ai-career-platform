@@ -302,7 +302,7 @@ const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
               <div className="mt-1">
                 <p className="text-yellow-400">Trinity Data:</p>
                 <p className="text-[10px] break-all">
-                  Q: {graphData.nodes.find(n => n.type === 'trinity-aspect' && n.label === 'Quest')?.fullText?.substring(0, 30)}...
+                  Q: {graphData.nodes.find((n: any) => n.type === 'trinity-aspect' && n.label === 'Quest')?.fullText?.substring(0, 30)}...
                 </p>
               </div>
             )}
