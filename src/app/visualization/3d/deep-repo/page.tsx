@@ -141,17 +141,6 @@ export default function DeepRepoVisualization3DPage() {
             enableNodeDrag={false}
             enableNavigationControls={true}
             controlType="orbit"
-            cameraPosition={{ x: 0, y: 0, z: 400 }}
-            onEngineStop={() => {
-              // Center camera on Trinity after initial render
-              const cameraDistance = 350;
-              const angle = Math.PI / 4;
-              return {
-                x: cameraDistance * Math.sin(angle),
-                y: cameraDistance * 0.3,
-                z: cameraDistance * Math.cos(angle)
-              };
-            }}
             onNodeClick={(node: any) => {
               if (node.value) {
                 alert(`${node.name}: ${node.value}`);
