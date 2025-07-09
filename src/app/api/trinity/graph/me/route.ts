@@ -15,6 +15,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log('[Trinity Graph Me] Authenticated user:', {
+      id: user.id,
+      email: user.emailAddresses?.[0]?.emailAddress,
+      name: `${user.firstName} ${user.lastName}`
+    });
+
     // Build the Trinity graph data for the authenticated user
     const graphData = await TrinityGraphService.buildTrinityGraph(user.id);
 

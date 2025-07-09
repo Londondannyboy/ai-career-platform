@@ -23,6 +23,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/test-db',
   '/api/test-workspaces',
   '/api/debug-user',
+  '/api/trinity/debug-user',
   '/api/test/apollo',
   '/api/test/apollo-debug',
   '/api/test/apollo-simple',
