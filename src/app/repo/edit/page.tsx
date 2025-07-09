@@ -42,7 +42,7 @@ export default function RepoEditorPage() {
     });
   }, [isLoaded, userId]);
 
-  const saveLayer = async (layer: string) => {
+  const saveLayer = async (layer: keyof typeof repoData) => {
     setSaving(true);
     try {
       const response = await fetch(`/api/deep-repo/${layer}`, {
