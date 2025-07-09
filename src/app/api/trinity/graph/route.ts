@@ -44,14 +44,20 @@ export async function GET(request: NextRequest) {
     console.error('Error in Trinity graph API:', error);
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     
-    return NextResponse.json(
-      { 
-        error: 'Failed to fetch Trinity graph data',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
-      },
-      { status: 500 }
-    );
+    // Add more detailed error info
+    const errorDetails: any = {
+      error: 'Failed to fetch Trinity graph data',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      type: error?.constructor?.name,
+      code: (error as any)?.code
+    };
+    
+    // In production, include stack trace for debugging
+    if (error instanceof Error) {
+      errorDetails.stack = error.stack;
+    }
+    
+    return NextResponse.json(errorDetails, { status: 500 });
   }
 }
 
