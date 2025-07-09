@@ -36,7 +36,8 @@ const isPublicRoute = createRouteMatcher([
   '/api/demo/(.*)',
   // Note: /api/trinity/graph/me is NOT public - requires authentication
   '/api/trinity/graph', // Only the base graph endpoint is public for test users
-  '/api/deep-repo/(.*)' // Deep Repo endpoints for testing
+  '/api/deep-repo/(.*)', // Deep Repo endpoints for testing
+  '/api/surface-repo/(.*)' // Surface Repo endpoints for testing
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
