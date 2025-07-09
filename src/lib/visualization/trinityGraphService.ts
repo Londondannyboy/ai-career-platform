@@ -92,7 +92,11 @@ export class TrinityGraphService {
       `;
       
       if (!tableCheck.rows[0]?.exists) {
-        // Return sample goals if table doesn't exist
+        // No goals table exists - return empty array for real experience
+        return [];
+        
+        // Uncomment below to show sample goals for demo purposes
+        /*
         return [
           {
             id: 'goal-1',
@@ -119,6 +123,7 @@ export class TrinityGraphService {
             user_id: userId
           }
         ];
+        */
       }
 
       const result = await sql`
@@ -154,7 +159,11 @@ export class TrinityGraphService {
       `;
       
       if (!tableCheck.rows[0]?.exists) {
-        // Return sample tasks if table doesn't exist
+        // No tasks table exists - return empty array for real experience
+        return [];
+        
+        // Uncomment below to show sample tasks for demo purposes
+        /*
         return [
           {
             id: 'task-1',
@@ -178,6 +187,7 @@ export class TrinityGraphService {
             priority: 'high'
           }
         ];
+        */
       }
 
       const result = await sql`
