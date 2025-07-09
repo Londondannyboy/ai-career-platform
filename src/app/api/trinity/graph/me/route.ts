@@ -38,8 +38,6 @@ export async function GET(request: NextRequest) {
         nodeCount: graphData.nodes.length,
         linkCount: graphData.links.length,
         hasTrinity: graphData.nodes.some(n => n.type === 'trinity-core'),
-        goalCount: graphData.nodes.filter(n => n.type === 'goal').length,
-        taskCount: graphData.nodes.filter(n => n.type === 'task').length,
         connectionCount: graphData.nodes.filter(n => n.type === 'connection').length
       }
     };
