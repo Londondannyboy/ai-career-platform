@@ -40,7 +40,8 @@ const isPublicRoute = createRouteMatcher([
   // Sentry test pages
   '/sentry-example-page',
   '/api/test-sentry',
-  '/api/debug/test-error'
+  '/api/debug/test-error',
+  '/api/sentry-force-error'
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
