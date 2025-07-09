@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const email = searchParams.get("email");
     
-    if (\!email) {
+    if (!email) {
       return NextResponse.json({ 
         error: "Email required", 
         usage: "Add ?email=your-email to the URL" 
