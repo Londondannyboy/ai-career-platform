@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
         oldTrinityCount: currentCount,
         hadDansTrinity: hasDansTrinity,
         deactivatedAll: true,
-        deletedDansTrinity: deleteResult?.rows.length > 0
+        deletedDansTrinity: deleteResult?.rows?.length > 0 || false
       },
       migration: migrationResult,
       deepRepoVerification: {
