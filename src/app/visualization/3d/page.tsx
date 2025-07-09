@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TrinityGraph3D from '@/components/visualization/3d/TrinityGraph3D';
 import TrinityGraph3DLive from '@/components/visualization/3d/TrinityGraph3DLive';
 import { ArrowLeft, Maximize2, Minimize2, Database, FlaskConical, User } from 'lucide-react';
 import Link from 'next/link';
+import { useUser } from '@clerk/nextjs';
 
 // Sample data for demonstration
 const sampleTrinityData = {
@@ -60,12 +61,23 @@ const sampleTasks = [
 ];
 
 export default function Visualization3DPage() {
+  const { user, isLoaded } = useUser();
   const [viewMode, setViewMode] = useState<'trinity' | 'goals' | 'full'>('full');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [dataSource, setDataSource] = useState<'sample' | 'live'>('live');
   const [entityType, setEntityType] = useState<'person' | 'company' | 'industry'>('person');
-  const [entityId, setEntityId] = useState('test-user-123');
-  const [entityName, setEntityName] = useState('Test User');
+  const [entityId, setEntityId] = useState('current-user'); // Default to current user
+  const [entityName, setEntityName] = useState('Loading...'); // Will be updated dynamically
+
+  // Set user name when Clerk loads
+  useEffect(() => {
+    if (isLoaded && user && entityId === 'current-user') {
+      const displayName = user.firstName && user.lastName 
+        ? `${user.firstName} ${user.lastName}`
+        : user.firstName || user.emailAddresses?.[0]?.emailAddress || 'My Trinity';
+      setEntityName(displayName);
+    }
+  }, [isLoaded, user, entityId]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
