@@ -88,7 +88,7 @@ export default function SurfaceRepoVisualization3DPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <h3 className="text-lg font-medium mb-2 text-red-400">Experience</h3>
-              {surfaceData.experience?.map((exp, idx) => (
+              {surfaceData.experience?.map((exp: any, idx: number) => (
                 <div key={idx} className="mb-2 text-sm">
                   <div className="font-medium">{exp.title}</div>
                   <div className="text-gray-400">{exp.company}</div>
@@ -99,7 +99,7 @@ export default function SurfaceRepoVisualization3DPage() {
             <div>
               <h3 className="text-lg font-medium mb-2 text-cyan-400">Top Skills</h3>
               <div className="flex flex-wrap gap-2">
-                {surfaceData.skills?.slice(0, 5).map((skill, idx) => (
+                {surfaceData.skills?.slice(0, 5).map((skill: string, idx: number) => (
                   <span key={idx} className="bg-gray-700 px-3 py-1 rounded-full text-sm">
                     {skill} ({surfaceData.endorsements?.[skill] || 0})
                   </span>
