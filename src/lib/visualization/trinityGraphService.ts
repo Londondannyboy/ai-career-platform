@@ -272,7 +272,12 @@ export class TrinityGraphService {
       this.fetchUserGoals(userId),
       this.fetchUserTasks(userId),
       this.fetchTrinityConnections(userId)
-    ]);
+    ]) as [
+      any | null,
+      Array<{ id: string; title: string; description: string; progress: number; trinity_aspect: string; user_id: string }>,
+      Array<{ id: string; title: string; goal_id: string; completed: boolean; priority: string }>,
+      Array<{ otherId: string; otherName: string; compatibilityScore: number; sharedAspects: string[]; connectionType: string }>
+    ];
 
     if (!trinityData) {
       return { nodes: [], links: [] };
