@@ -32,7 +32,9 @@ const isPublicRoute = createRouteMatcher([
   '/api/enrich/cleanup-duplicates',
   '/api/intelligence/company',
   '/api/intelligence/search-suggestions',
-  '/api/demo/(.*)'
+  '/api/demo/(.*)',
+  // Note: /api/trinity/graph/me is NOT public - requires authentication
+  '/api/trinity/graph' // Only the base graph endpoint is public for test users
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

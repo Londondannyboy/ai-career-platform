@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import TrinityGraph3D from '@/components/visualization/3d/TrinityGraph3D';
 import TrinityGraph3DLive from '@/components/visualization/3d/TrinityGraph3DLive';
-import { ArrowLeft, Maximize2, Minimize2, Database, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Maximize2, Minimize2, Database, FlaskConical, User } from 'lucide-react';
 import Link from 'next/link';
 
 // Sample data for demonstration
@@ -191,6 +191,7 @@ export default function Visualization3DPage() {
             testUserId={entityId}
             entityType={entityType}
             entityName={entityName}
+            onEntityNameUpdate={(name) => setEntityName(name)}
           />
         )}
       </div>
@@ -221,7 +222,18 @@ export default function Visualization3DPage() {
           {dataSource === 'live' && (
             <div className="mt-2 pt-2 border-t border-white/20">
               <p className="text-xs text-gray-400 mb-1">Quick Switch:</p>
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1">
+                <button
+                  onClick={() => {
+                    setEntityType('person');
+                    setEntityId('current-user');
+                    setEntityName('My Trinity');
+                  }}
+                  className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded flex items-center gap-1"
+                >
+                  <User className="w-3 h-3" />
+                  My Trinity
+                </button>
                 <button
                   onClick={() => {
                     setEntityType('person');

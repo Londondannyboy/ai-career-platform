@@ -11,6 +11,7 @@ interface TrinityGraph3DLiveProps {
   testUserId?: string; // For testing without auth
   entityType?: 'person' | 'company' | 'industry';
   entityName?: string;
+  onEntityNameUpdate?: (name: string) => void; // Callback to update parent's entity name
 }
 
 const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
@@ -18,7 +19,8 @@ const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
   mode = 'full',
   testUserId,
   entityType = 'person',
-  entityName = 'User'
+  entityName = 'User',
+  onEntityNameUpdate
 }) => {
   const { user, isLoaded } = useUser();
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
@@ -41,9 +43,15 @@ const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
         setLoading(true);
         setError(null);
         
-        const url = testUserId 
-          ? `/api/trinity/graph?userId=${testUserId}`
-          : '/api/trinity/graph';
+        // Handle special "current-user" case
+        let url: string;
+        if (testUserId === 'current-user') {
+          url = '/api/trinity/graph/me';
+        } else if (testUserId) {
+          url = `/api/trinity/graph?userId=${testUserId}`;
+        } else {
+          url = '/api/trinity/graph';
+        }
           
         const response = await fetch(url);
         const result = await response.json();
@@ -82,6 +90,11 @@ const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
 
           setGraphData(filteredData);
           setStats(result.stats);
+          
+          // Update entity name if we got user data from /me endpoint
+          if (testUserId === 'current-user' && result.userName && onEntityNameUpdate) {
+            onEntityNameUpdate(result.userName);
+          }
         } else {
           throw new Error('Invalid data format received');
         }
