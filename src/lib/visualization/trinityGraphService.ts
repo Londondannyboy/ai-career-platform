@@ -55,8 +55,6 @@ export class TrinityGraphService {
   // Fetch Trinity data from PostgreSQL
   static async fetchUserTrinityData(userId: string) {
     try {
-      console.log('Fetching Trinity data for user:', userId);
-      
       const sql = await getSql();
       const result = await sql`
         SELECT 
@@ -75,19 +73,12 @@ export class TrinityGraphService {
         LIMIT 1
       `;
       
-      console.log('Trinity query result:', result.rows.length, 'rows');
       return result.rows[0] || null;
     } catch (error) {
       console.error('Error fetching Trinity data:', error);
-      console.error('Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        code: (error as any)?.code,
-        detail: (error as any)?.detail
-      });
       
       // If table doesn't exist, return null instead of throwing
       if ((error as any)?.code === '42P01') {
-        console.log('Trinity statements table does not exist');
         return null;
       }
       
@@ -219,9 +210,9 @@ export class TrinityGraphService {
 
   // Fetch Trinity connections from Neo4j
   static async fetchTrinityConnections(userId: string) {
-    const session = getNeo4jSession();
-    
     try {
+      const session = getNeo4jSession();
+      
       // First ensure the user exists in Neo4j
       await session.run(
         `
@@ -250,18 +241,21 @@ export class TrinityGraphService {
         { userId }
       );
 
-      return result.records.map(record => ({
+      const connections = result.records.map(record => ({
         otherId: record.get('otherId'),
         otherName: record.get('otherName') || 'Trinity User',
         compatibilityScore: record.get('compatibilityScore') || 0.5,
         sharedAspects: record.get('sharedAspects') || [],
         connectionType: record.get('connectionType') || 'potential'
       }));
+      
+      await session.close();
+      return connections;
     } catch (error) {
       console.error('Error fetching Trinity connections:', error);
+      console.log('Neo4j connection failed, returning empty connections array');
+      // Return empty array if Neo4j is not available
       return [];
-    } finally {
-      await session.close();
     }
   }
 

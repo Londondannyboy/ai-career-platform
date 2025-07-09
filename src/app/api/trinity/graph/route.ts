@@ -4,21 +4,16 @@ import { TrinityGraphService } from '@/lib/visualization/trinityGraphService';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('Trinity graph API called');
-    
     // Get the current user
     const user = await currentUser();
-    console.log('Current user:', user?.id);
     
     // For testing, allow a test user ID to be passed as a query parameter
     const searchParams = request.nextUrl.searchParams;
     const testUserId = searchParams.get('userId');
     
     const userId = testUserId || user?.id;
-    console.log('Using userId:', userId);
     
     if (!userId) {
-      console.log('No user ID available');
       return NextResponse.json(
         { error: 'User not authenticated', requiresAuth: true },
         { status: 401 }
@@ -26,12 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build the Trinity graph data
-    console.log('Building Trinity graph for user:', userId);
     const graphData = await TrinityGraphService.buildTrinityGraph(userId);
-    console.log('Graph data built:', { 
-      nodes: graphData.nodes.length, 
-      links: graphData.links.length 
-    });
 
     // Add metadata
     const response = {
