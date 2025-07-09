@@ -45,6 +45,7 @@ const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
         const result = await response.json();
 
         if (!response.ok) {
+          console.error('API Error Response:', result);
           throw new Error(result.error || 'Failed to fetch graph data');
         }
 

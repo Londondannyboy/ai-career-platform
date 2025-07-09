@@ -4,24 +4,34 @@ import { TrinityGraphService } from '@/lib/visualization/trinityGraphService';
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('Trinity graph API called');
+    
     // Get the current user
     const user = await currentUser();
+    console.log('Current user:', user?.id);
     
     // For testing, allow a test user ID to be passed as a query parameter
     const searchParams = request.nextUrl.searchParams;
     const testUserId = searchParams.get('userId');
     
     const userId = testUserId || user?.id;
+    console.log('Using userId:', userId);
     
     if (!userId) {
+      console.log('No user ID available');
       return NextResponse.json(
-        { error: 'User not authenticated' },
+        { error: 'User not authenticated', requiresAuth: true },
         { status: 401 }
       );
     }
 
     // Build the Trinity graph data
+    console.log('Building Trinity graph for user:', userId);
     const graphData = await TrinityGraphService.buildTrinityGraph(userId);
+    console.log('Graph data built:', { 
+      nodes: graphData.nodes.length, 
+      links: graphData.links.length 
+    });
 
     // Add metadata
     const response = {
@@ -32,7 +42,7 @@ export async function GET(request: NextRequest) {
       stats: {
         nodeCount: graphData.nodes.length,
         linkCount: graphData.links.length,
-        hasTriniity: graphData.nodes.some(n => n.type === 'trinity-core'),
+        hasTrinity: graphData.nodes.some(n => n.type === 'trinity-core'),
         goalCount: graphData.nodes.filter(n => n.type === 'goal').length,
         taskCount: graphData.nodes.filter(n => n.type === 'task').length,
         connectionCount: graphData.nodes.filter(n => n.type === 'connection').length
@@ -42,10 +52,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response);
   } catch (error) {
     console.error('Error in Trinity graph API:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    
     return NextResponse.json(
       { 
         error: 'Failed to fetch Trinity graph data',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
       },
       { status: 500 }
     );

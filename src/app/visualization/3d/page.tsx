@@ -185,7 +185,7 @@ export default function Visualization3DPage() {
               // Could open a modal or sidebar with node details
             }}
             // For testing without auth, you can pass a test user ID:
-            // testUserId="test-user-123"
+            testUserId="test-user-123"
           />
         )}
       </div>

@@ -46,6 +46,8 @@ export class TrinityGraphService {
   // Fetch Trinity data from PostgreSQL
   static async fetchUserTrinityData(userId: string) {
     try {
+      console.log('Fetching Trinity data for user:', userId);
+      
       const result = await sql`
         SELECT 
           id,
@@ -63,10 +65,23 @@ export class TrinityGraphService {
         LIMIT 1
       `;
       
+      console.log('Trinity query result:', result.rows.length, 'rows');
       return result.rows[0] || null;
     } catch (error) {
       console.error('Error fetching Trinity data:', error);
-      return null;
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: (error as any)?.code,
+        detail: (error as any)?.detail
+      });
+      
+      // If table doesn't exist, return null instead of throwing
+      if ((error as any)?.code === '42P01') {
+        console.log('Trinity statements table does not exist');
+        return null;
+      }
+      
+      throw error;
     }
   }
 
