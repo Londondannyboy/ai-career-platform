@@ -59,14 +59,17 @@ export class TrinityGraphService {
       `;
       
       if (deepRepoResult.rows.length > 0 && deepRepoResult.rows[0].trinity) {
-        const trinity = JSON.parse(deepRepoResult.rows[0].trinity);
+        // The trinity field is already a JSONB object, not a string
+        const trinity = typeof deepRepoResult.rows[0].trinity === 'string' 
+          ? JSON.parse(deepRepoResult.rows[0].trinity)
+          : deepRepoResult.rows[0].trinity;
         console.log('[TrinityGraphService] Found Trinity in Deep Repo');
         return {
           user_id: userId,
           quest: trinity.quest,
           service: trinity.service,
           pledge: trinity.pledge,
-          type: trinity.type,
+          trinity_type: trinity.type, // Match the original field name
           quest_seal: trinity.questSeal,
           created_at: trinity.createdAt,
           updated_at: trinity.updatedAt
