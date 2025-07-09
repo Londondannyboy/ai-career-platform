@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     `;
 
     // 5. Check user's other data (goals, etc if tables exist)
-    let goals = [];
+    let goals: any[] = [];
     try {
       const goalsResult = await sql`
         SELECT * FROM goals
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 6. Show user's profile data
-    let profile = null;
+    let profile: any = null;
     try {
       const profileResult = await sql`
         SELECT * FROM profiles
