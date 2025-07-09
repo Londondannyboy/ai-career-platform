@@ -45,32 +45,29 @@ export interface TrinityGraphData {
 }
 
 export class TrinityGraphService {
-  // Fetch Trinity data from Deep Repo
-  static async fetchUserTrinityData(userId: string) {
+  // Fetch Trinity data from original trinity_statements table
+  static async fetchUserTrinityDataOriginal(userId: string) {
     try {
-      console.log('[TrinityGraphService] Fetching Trinity from Deep Repo for user:', userId);
+      console.log('[TrinityGraphService] Fetching Trinity for user:', userId);
       
-      // Import DeepRepoService
-      const { DeepRepoService } = await import('@/lib/profile/deepRepoService');
+      const result = await sql`
+        SELECT 
+          id,
+          user_id,
+          quest,
+          service,
+          pledge,
+          quest_seal,
+          created_at,
+          updated_at
+        FROM trinity_statements
+        WHERE user_id = ${userId} 
+        AND is_active = true
+        LIMIT 1
+      `;
       
-      // Get Trinity from Deep Repo
-      const trinity = await DeepRepoService.getTrinity(userId);
-      
-      console.log('[TrinityGraphService] Trinity found:', trinity ? 'Yes' : 'No');
-      
-      if (!trinity) return null;
-      
-      // Convert to expected format
-      return {
-        id: `trinity-${userId}`,
-        user_id: userId,
-        quest: trinity.quest,
-        service: trinity.service,
-        pledge: trinity.pledge,
-        type: trinity.type || 'F',
-        created_at: trinity.createdAt,
-        updated_at: trinity.updatedAt
-      };
+      console.log('[TrinityGraphService] Trinity query result:', result.rows.length, 'records found');
+      return result.rows[0] || null;
     } catch (error) {
       console.error('[TrinityGraphService] Error fetching Trinity data:', error);
       return null;
@@ -131,13 +128,8 @@ export class TrinityGraphService {
 
   // Build the complete graph data structure
   static async buildTrinityGraph(userId: string): Promise<TrinityGraphData> {
-    const [trinityData, connections] = await Promise.all([
-      this.fetchUserTrinityData(userId),
-      this.fetchTrinityConnections(userId)
-    ]) as [
-      any | null,
-      Array<{ otherId: string; otherName: string; compatibilityScore: number; sharedAspects: string[]; connectionType: string }>
-    ];
+    // For now, just fetch Trinity data - no connections or other features
+    const trinityData = await this.fetchUserTrinityDataOriginal(userId);
 
     if (!trinityData) {
       return { nodes: [], links: [] };
@@ -198,34 +190,7 @@ export class TrinityGraphService {
     });
 
 
-    // Add connections to other Trinity users
-    const connectionRadius = 300;
-    connections.forEach((connection, index) => {
-      const angle = (index * 360) / connections.length + 45;
-      const angleRad = (angle * Math.PI) / 180;
-
-      nodes.push({
-        id: `user-${connection.otherId}`,
-        label: connection.otherName,
-        type: 'connection',
-        val: 10,
-        color: `hsl(${connection.compatibilityScore * 120}, 70%, 50%)`, // Green for high compatibility
-        x: connectionRadius * Math.cos(angleRad),
-        y: connectionRadius * Math.sin(angleRad),
-        z: Math.random() * 100 - 50,
-        compatibilityScore: connection.compatibilityScore,
-        connectionType: connection.connectionType
-      });
-
-      links.push({
-        source: `trinity-core-${userId}`,
-        target: `user-${connection.otherId}`,
-        type: 'trinity-connection',
-        color: `hsla(${connection.compatibilityScore * 120}, 70%, 50%, 0.3)`,
-        particles: connection.connectionType === 'active' ? 1 : 0,
-        value: connection.compatibilityScore
-      });
-    });
+    // Connections removed for now - pure Trinity only
 
     return { nodes, links };
   }

@@ -253,7 +253,7 @@ const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
         <div className="mb-3 pb-3 border-b border-gray-600 text-xs">
           <p><span className="text-gray-400">User:</span> {entityName || 'Unknown'}</p>
           <p><span className="text-gray-400">ID:</span> {testUserId || user?.id || 'No ID'}</p>
-          <p><span className="text-gray-400">Source:</span> {testUserId === 'current-user' ? 'Deep Repo' : 'Trinity Table'}</p>
+          <p><span className="text-gray-400">Source:</span> Trinity Table</p>
         </div>
         
         <div className="space-y-1">
