@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Build simple graph data
-    const nodes = [];
-    const links = [];
+    const nodes: any[] = [];
+    const links: any[] = [];
 
     if (trinityData) {
       // Add core
