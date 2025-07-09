@@ -4,7 +4,16 @@ import React from 'react';
 import Link from 'next/link';
 import { Database, User, Briefcase, Target, Network, TestTube } from 'lucide-react';
 
-const visualizationPages = [
+interface VisualizationItem {
+  href: string;
+  title: string;
+  description: string;
+  icon: any;
+  color: string;
+  disabled?: boolean;
+}
+
+const visualizationPages: { title: string; items: VisualizationItem[] }[] = [
   {
     title: 'Test Pages',
     items: [
