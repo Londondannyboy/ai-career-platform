@@ -24,7 +24,7 @@ const TrinityGraph3DLive: React.FC<TrinityGraph3DLiveProps> = ({
   onEntityNameUpdate
 }) => {
   const { user, isLoaded } = useUser();
-  const [graphData, setGraphData] = useState({ nodes: [], links: [] });
+  const [graphData, setGraphData] = useState<any>({ nodes: [], links: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
