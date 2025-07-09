@@ -27,10 +27,24 @@ export async function GET(request: NextRequest) {
     // Check if any tables reference trinity_statements
     const dependencies = [];
     for (const fk of foreignKeys.rows) {
-      const countResult = await sql`
-        SELECT COUNT(*) as count 
-        FROM ${sql.identifier(fk.referencing_table)}
-      `;
+      // Build query dynamically since we can't use identifiers with template literals
+      let countResult;
+      try {
+        // Use a safe table name check
+        const tableName = fk.referencing_table;
+        if (tableName === 'trinity_evolution_history') {
+          countResult = await sql`SELECT COUNT(*) as count FROM trinity_evolution_history`;
+        } else if (tableName === 'trinity_coaching_preferences') {
+          countResult = await sql`SELECT COUNT(*) as count FROM trinity_coaching_preferences`;
+        } else if (tableName === 'trinity_compatibility') {
+          countResult = await sql`SELECT COUNT(*) as count FROM trinity_compatibility`;
+        } else {
+          // For unknown tables, we'll just note them
+          countResult = { rows: [{ count: 'unknown' }] };
+        }
+      } catch (e) {
+        countResult = { rows: [{ count: 'error' }] };
+      }
       
       dependencies.push({
         table: fk.referencing_table,
