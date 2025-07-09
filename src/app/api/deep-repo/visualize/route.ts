@@ -59,7 +59,7 @@ export async function GET() {
               name: 'Trinity Core',
               group: 'trinity',
               color: '#FFD700', // Gold
-              size: 30,
+              size: 40,
               x: 0,
               y: 0,
               z: 0
@@ -69,8 +69,8 @@ export async function GET() {
               name: 'Quest',
               group: 'trinity-element',
               color: '#FF6B6B',
-              size: 20,
-              x: 50,
+              size: 30,
+              x: 100,
               y: 0,
               z: 0,
               value: sampleTrinity.quest
@@ -80,9 +80,9 @@ export async function GET() {
               name: 'Service',
               group: 'trinity-element',
               color: '#4ECDC4',
-              size: 20,
-              x: -25,
-              y: 43,
+              size: 30,
+              x: -50,
+              y: 86,
               z: 0,
               value: sampleTrinity.service
             },
@@ -91,9 +91,9 @@ export async function GET() {
               name: 'Pledge',
               group: 'trinity-element',
               color: '#45B7D1',
-              size: 20,
-              x: -25,
-              y: -43,
+              size: 30,
+              x: -50,
+              y: -86,
               z: 0,
               value: sampleTrinity.pledge
             }
@@ -122,7 +122,7 @@ export async function GET() {
             name: 'Trinity Core',
             group: 'trinity',
             color: '#FFD700',
-            size: 30,
+            size: 40,
             x: 0,
             y: 0,
             z: 0
@@ -132,8 +132,8 @@ export async function GET() {
             name: 'Quest',
             group: 'trinity-element',
             color: '#FF6B6B',
-            size: 20,
-            x: 50,
+            size: 30,
+            x: 100,
             y: 0,
             z: 0,
             value: trinity.quest
@@ -143,9 +143,9 @@ export async function GET() {
             name: 'Service',
             group: 'trinity-element',
             color: '#4ECDC4',
-            size: 20,
-            x: -25,
-            y: 43,
+            size: 30,
+            x: -50,
+            y: 86,
             z: 0,
             value: trinity.service
           },
@@ -154,9 +154,9 @@ export async function GET() {
             name: 'Pledge',
             group: 'trinity-element',
             color: '#45B7D1',
-            size: 20,
-            x: -25,
-            y: -43,
+            size: 30,
+            x: -50,
+            y: -86,
             z: 0,
             value: trinity.pledge
           }

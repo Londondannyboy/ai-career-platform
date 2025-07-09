@@ -128,19 +128,33 @@ export default function DeepRepoVisualization3DPage() {
         {graphData && (
           <ForceGraph3D
             graphData={graphData}
-            nodeLabel="name"
+            nodeLabel={node => `${(node as any).name}: ${(node as any).value || ''}`}
             nodeVal={node => (node as any).size || 10}
             nodeColor={node => (node as any).color || '#ffffff'}
-            linkColor={() => 'rgba(255,255,255,0.2)'}
+            linkColor={() => 'rgba(255,255,255,0.3)'}
+            linkWidth={3}
+            linkOpacity={0.8}
             backgroundColor="#000000"
             showNavInfo={false}
-            nodeOpacity={0.9}
-            linkOpacity={0.6}
-            nodeResolution={16}
-            linkWidth={2}
+            nodeOpacity={1}
+            nodeResolution={32}
+            enableNodeDrag={false}
+            enableNavigationControls={true}
+            controlType="orbit"
+            cameraPosition={{ x: 0, y: 0, z: 400 }}
+            onEngineStop={() => {
+              // Center camera on Trinity after initial render
+              const cameraDistance = 350;
+              const angle = Math.PI / 4;
+              return {
+                x: cameraDistance * Math.sin(angle),
+                y: cameraDistance * 0.3,
+                z: cameraDistance * Math.cos(angle)
+              };
+            }}
             onNodeClick={(node: any) => {
               if (node.value) {
-                console.log('Node clicked:', node.name, node.value);
+                alert(`${node.name}: ${node.value}`);
               }
             }}
             onNodeHover={(node: any) => {
