@@ -130,10 +130,8 @@ export default function SurfaceRepoEditorPage() {
           if (data.success) {
             setShowToast({ message: 'Surface Repo saved successfully!', type: 'success' });
           } else {
-            setShowToast({ 
-              message: data.error || 'Saved but response unclear', 
-              type: 'success' // Show success since it saved
-            });
+            // If no success flag but response was OK, still show success
+            setShowToast({ message: 'Surface Repo saved successfully!', type: 'success' });
           }
         } catch {
           // If JSON parsing fails but response was ok, still show success
