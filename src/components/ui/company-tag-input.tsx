@@ -46,7 +46,7 @@ export const CompanyTagInput: React.FC<CompanyTagInputProps> = ({
 
     setIsSearching(true);
     try {
-      const response = await fetch(`/api/company/search?query=${encodeURIComponent(query)}`);
+      const response = await fetch(`/api/simple-load?type=companies&q=${encodeURIComponent(query)}`);
       if (response.ok) {
         const data = await response.json();
         setSuggestions(data.companies || []);

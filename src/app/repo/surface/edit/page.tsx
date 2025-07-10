@@ -31,18 +31,10 @@ export default function SurfaceRepoEditorPage() {
   useEffect(() => {
     if (!isLoaded) return;
     
-    // First ensure profile exists
-    fetch('/api/surface-repo/ensure-profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId })
-    })
-    .then(() => {
-      // Then fetch Surface Repo data
-      return fetch(`/api/surface-repo/load?userId=${userId}`);
-    })
-    .then(r => r.json())
-    .then(data => {
+    // Fetch Surface Repo data
+    fetch('/api/simple-load?type=surface-repo')
+      .then(r => r.json())
+      .then(data => {
         if (data.success && data.data) {
           // Transform legacy data to new format
           const transformedExperience = (data.data.experience || []).map((exp: any) => ({
@@ -122,11 +114,11 @@ export default function SurfaceRepoEditorPage() {
         endorsements: surfaceData.endorsements
       };
       
-      const response = await fetch('/api/surface-repo/save', {
+      const response = await fetch('/api/simple-save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
+          type: 'surface-repo',
           data: legacyData
         })
       });

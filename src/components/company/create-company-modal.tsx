@@ -45,20 +45,31 @@ export const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
     setError('');
 
     try {
-      const response = await fetch('/api/company/create-basic', {
+      const response = await fetch('/api/simple-save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: formData.name,
-          website: formData.website.startsWith('http') ? formData.website : `https://${formData.website}`,
-          country: formData.country
+          type: 'company',
+          data: {
+            name: formData.name,
+            website: formData.website,
+            country: formData.country
+          }
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        onCompanyCreated(data.company);
-        onClose();
+        if (data.success && data.company) {
+          onCompanyCreated({
+            ...data.company,
+            isValidated: true,
+            validatedBy: 'manual'
+          });
+          onClose();
+        } else {
+          setError('Failed to create company');
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to create company');
