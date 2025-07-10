@@ -45,7 +45,7 @@ export const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
     setError('');
 
     try {
-      const response = await fetch('/api/company/create', {
+      const response = await fetch('/api/company/create-basic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -86,10 +86,18 @@ export const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
           </button>
         </div>
 
-        <p className="text-gray-400 text-sm mb-6">
-          Help us build the company database by providing the company website. 
-          We'll automatically gather logo and description.
-        </p>
+        <div className="space-y-3 mb-6">
+          <p className="text-gray-400 text-sm">
+            Help us build the company database by providing the company website.
+          </p>
+          <div className="bg-yellow-900/20 border border-yellow-700 rounded p-3">
+            <p className="text-yellow-400 text-xs">
+              <strong>Note:</strong> This creates a basic company schema for reference only. 
+              This is NOT an official company page and the company has not approved this information. 
+              We're simply building a database to help connect professionals.
+            </p>
+          </div>
+        </div>
 
         <div className="space-y-4">
           <div>
