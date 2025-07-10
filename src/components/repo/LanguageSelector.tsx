@@ -162,7 +162,9 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                   <div className="flex items-center gap-3">
                     <span className="font-medium">{language.name}</span>
                     {language.certified && (
-                      <CheckCircle className="w-4 h-4 text-green-500" title="Certified" />
+                      <span title="Certified">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      </span>
                     )}
                   </div>
                   
