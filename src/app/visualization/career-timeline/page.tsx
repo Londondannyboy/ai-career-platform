@@ -126,6 +126,29 @@ export default function CareerTimelinePage() {
     );
   }
 
+  // Check if there's no data
+  if (graphData.nodes.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <h2 className="text-2xl font-bold mb-4">No Career Data Yet</h2>
+          <p className="text-gray-400 mb-6">
+            Your career timeline will appear here once you add experience data to your profile.
+          </p>
+          <div className="bg-gray-800 p-4 rounded-lg text-left">
+            <p className="text-sm text-gray-300 mb-2">To get started:</p>
+            <ol className="text-sm text-gray-400 space-y-1 list-decimal list-inside">
+              <li>Go to your profile settings</li>
+              <li>Add your work experiences</li>
+              <li>Include skills and achievements</li>
+              <li>Return here to see your 3D timeline</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}

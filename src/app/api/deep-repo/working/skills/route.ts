@@ -8,45 +8,44 @@ export async function GET(request: NextRequest) {
     const { userId } = await auth();
     
     if (!userId) {
-      // If no auth, return empty data instead of using test user
+      // Return empty skills array for unauthenticated users
       return NextResponse.json({ 
         success: true, 
-        data: {},
+        data: { skills: [] },
         message: 'No authenticated user'
       });
     }
     
-    // First check if user profile exists
+    // Try to get working repo data
     const result = await sql`
-      SELECT surface_repo 
+      SELECT working_repo 
       FROM user_profiles 
       WHERE user_id = ${userId}
       LIMIT 1
     `;
 
     if (result.rows.length === 0) {
-      // Create profile if it doesn't exist
-      await sql`
-        INSERT INTO user_profiles (user_id, surface_repo, working_repo, personal_repo, deep_repo)
-        VALUES (${userId}, '{}', '{}', '{}', '{}')
-        ON CONFLICT (user_id) DO NOTHING
-      `;
-      
+      // User profile doesn't exist yet
       return NextResponse.json({ 
         success: true, 
-        data: {},
-        message: 'New profile created'
+        data: { skills: [] },
+        message: 'No profile found'
       });
     }
 
+    const workingRepo = result.rows[0]?.working_repo || {};
+    const skills = workingRepo.skills || [];
+
     return NextResponse.json({ 
       success: true, 
-      data: result.rows[0]?.surface_repo || {} 
+      data: { skills }
     });
   } catch (error: any) {
-    console.error('Load error:', error);
+    console.error('Skills load error:', error);
     return NextResponse.json({ 
-      error: error.message || 'Failed to load' 
-    }, { status: 500 });
+      success: true,
+      data: { skills: [] },
+      error: error.message
+    });
   }
 }

@@ -144,6 +144,32 @@ export default function SkillsUniversePage() {
     );
   }
 
+  // Check if there's no data
+  if (graphData.nodes.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <h2 className="text-2xl font-bold mb-4 flex items-center justify-center gap-2">
+            <Zap className="w-6 h-6" />
+            No Skills Data Yet
+          </h2>
+          <p className="text-gray-400 mb-6">
+            Your skills universe will appear here once you add skills to your profile.
+          </p>
+          <div className="bg-gray-800 p-4 rounded-lg text-left">
+            <p className="text-sm text-gray-300 mb-2">To get started:</p>
+            <ol className="text-sm text-gray-400 space-y-1 list-decimal list-inside">
+              <li>Go to your profile settings</li>
+              <li>Add your technical and professional skills</li>
+              <li>Specify proficiency levels and experience</li>
+              <li>Return here to see your 3D skills universe</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
