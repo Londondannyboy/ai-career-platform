@@ -1,10 +1,20 @@
 // Work Experience Types with Future Aspirations Support
 // Part of Quest's Repo UI Sprint - Chunk 1
 
+export interface CompanyReference {
+  id?: string           // Optional - only for validated companies
+  name: string          // Always present - display name
+  location?: string     // For disambiguation (e.g., "San Francisco, CA")
+  isValidated: boolean  // Whether this company has been verified
+  validatedBy?: 'email' | 'enrichment' | 'manual' | 'community'
+  linkedInUrl?: string  // For validated companies
+  domain?: string       // Company domain for validation
+}
+
 export interface WorkExperienceBase {
   id: string
   title: string
-  company: string
+  company: string | CompanyReference  // Support both legacy string and new object
   location?: string
   startDate: string
   endDate?: string
@@ -172,4 +182,40 @@ export const sortExperiencesByDate = (
     // Then sort by start date (most recent first)
     return new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
   })
+}
+
+// Helper to get company name from either string or CompanyReference
+export const getCompanyName = (company: string | CompanyReference): string => {
+  return typeof company === 'string' ? company : company.name
+}
+
+// Helper to normalize company data
+export const normalizeCompany = (company: string | CompanyReference): CompanyReference => {
+  if (typeof company === 'string') {
+    return {
+      name: company,
+      isValidated: false
+    }
+  }
+  return company
+}
+
+// Validation helper for date ranges
+export const validateDateRange = (startDate: string, endDate?: string, isCurrent?: boolean): string | null => {
+  if (!startDate) return 'Start date is required'
+  
+  const start = new Date(startDate)
+  const now = new Date()
+  
+  // Check if dates are valid
+  if (isNaN(start.getTime())) return 'Invalid start date'
+  
+  // For future experiences, start date should be in the future
+  if (endDate && !isCurrent) {
+    const end = new Date(endDate)
+    if (isNaN(end.getTime())) return 'Invalid end date'
+    if (end < start) return 'End date must be after start date'
+  }
+  
+  return null
 }

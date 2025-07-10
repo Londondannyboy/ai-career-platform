@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { Save, Loader2, Plus, X, Target, Calendar, TrendingUp, Users, CheckCircle } from 'lucide-react';
+import { Save, Loader2, Plus, X, Target, Calendar, TrendingUp, Users, CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { WorkExperienceWithFuture, sortExperiencesByDate } from '@/types/work-experience';
+import { WorkExperienceWithFuture, sortExperiencesByDate, CompanyReference, getCompanyName, normalizeCompany, validateDateRange } from '@/types/work-experience';
+import { CompanyAutocomplete } from '@/components/ui/company-autocomplete';
+import { Toast } from '@/components/ui/toast';
 
 export default function SurfaceRepoEditorPage() {
   const { user, isLoaded, isSignedIn } = useUser();
@@ -12,6 +14,8 @@ export default function SurfaceRepoEditorPage() {
   const [saving, setSaving] = useState(false);
   const [newSkill, setNewSkill] = useState('');
   const [skillCategory, setSkillCategory] = useState('technical');
+  const [showToast, setShowToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   
   const [surfaceData, setSurfaceData] = useState({
     headline: '',
@@ -65,7 +69,40 @@ export default function SurfaceRepoEditorPage() {
   }, [isLoaded, userId]);
 
   const save = async () => {
+    // Validate required fields
+    const errors: Record<string, string> = {};
+    let hasErrors = false;
+    
+    surfaceData.experience.forEach((exp, index) => {
+      if (!exp.title) {
+        errors[`exp-${exp.id}-title`] = 'Title is required';
+        hasErrors = true;
+      }
+      if (!getCompanyName(exp.company)) {
+        errors[`exp-${exp.id}-company`] = 'Company is required';
+        hasErrors = true;
+      }
+      if (!exp.startDate) {
+        errors[`exp-${exp.id}-startDate`] = 'Start date is required';
+        hasErrors = true;
+      }
+      
+      const dateError = validateDateRange(exp.startDate, exp.endDate, exp.isCurrent);
+      if (dateError) {
+        errors[`exp-${exp.id}-dates`] = dateError;
+        hasErrors = true;
+      }
+    });
+    
+    if (hasErrors) {
+      setValidationErrors(errors);
+      setShowToast({ message: 'Please fix validation errors before saving', type: 'error' });
+      return;
+    }
+    
     setSaving(true);
+    setValidationErrors({});
+    
     try {
       // Transform back to legacy format for compatibility
       const legacyData = {
@@ -85,13 +122,22 @@ export default function SurfaceRepoEditorPage() {
         })
       });
       
-      if (response.ok) {
-        alert('Surface Repo saved successfully!');
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setShowToast({ message: 'Surface Repo saved successfully!', type: 'success' });
       } else {
-        alert('Failed to save');
+        setShowToast({ 
+          message: data.error || 'Failed to save Surface Repo', 
+          type: 'error' 
+        });
       }
     } catch (error) {
-      alert('Error saving data');
+      console.error('Save error:', error);
+      setShowToast({ 
+        message: 'Network error while saving. Please try again.', 
+        type: 'error' 
+      });
     }
     setSaving(false);
   };
@@ -324,20 +370,42 @@ export default function SurfaceRepoEditorPage() {
                     type="text"
                     value={exp.title}
                     onChange={(e) => updateExperience(exp.id, { title: e.target.value })}
-                    className="w-full bg-gray-600 px-3 py-2 rounded focus:ring-2 focus:ring-blue-500"
+                    className={`w-full bg-gray-600 px-3 py-2 rounded focus:ring-2 focus:ring-blue-500 ${
+                      validationErrors[`exp-${exp.id}-title`] ? 'border-red-500' : ''
+                    }`}
                     placeholder={exp.isFuture ? "Target Role" : "Job Title"}
                   />
+                  {validationErrors[`exp-${exp.id}-title`] && (
+                    <p className="text-red-400 text-xs mt-1">
+                      {validationErrors[`exp-${exp.id}-title`]}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Company</label>
-                  <input
-                    type="text"
+                  <CompanyAutocomplete
                     value={exp.company}
-                    onChange={(e) => updateExperience(exp.id, { company: e.target.value })}
-                    className="w-full bg-gray-600 px-3 py-2 rounded focus:ring-2 focus:ring-blue-500"
+                    onChange={(company) => updateExperience(exp.id, { company })}
                     placeholder={exp.isFuture ? "Target Company" : "Company"}
+                    location={exp.location}
                   />
+                  {validationErrors[`exp-${exp.id}-company`] && (
+                    <p className="text-red-400 text-xs mt-1">
+                      {validationErrors[`exp-${exp.id}-company`]}
+                    </p>
+                  )}
                 </div>
+              </div>
+
+              <div className="mb-3">
+                <label className="block text-xs text-gray-400 mb-1">Location</label>
+                <input
+                  type="text"
+                  value={exp.location || ''}
+                  onChange={(e) => updateExperience(exp.id, { location: e.target.value })}
+                  className="w-full bg-gray-600 px-3 py-2 rounded focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., San Francisco, CA"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-3">
@@ -558,6 +626,14 @@ export default function SurfaceRepoEditorPage() {
           })}
         </div>
       </div>
+      
+      {showToast && (
+        <Toast
+          message={showToast.message}
+          type={showToast.type}
+          onClose={() => setShowToast(null)}
+        />
+      )}
     </div>
   );
 }
