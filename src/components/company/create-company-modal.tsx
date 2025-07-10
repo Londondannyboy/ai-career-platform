@@ -45,16 +45,13 @@ export const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
     setError('');
 
     try {
-      const response = await fetch('/api/neon-save', {
+      const response = await fetch('/api/surface-repo/create-company', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: 'company',
-          data: {
-            name: formData.name,
-            website: formData.website,
-            country: formData.country
-          }
+          name: formData.name,
+          website: formData.website,
+          country: formData.country
         })
       });
 

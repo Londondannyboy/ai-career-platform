@@ -47,7 +47,7 @@ export const CompanyTagInput: React.FC<CompanyTagInputProps> = ({
 
     setIsSearching(true);
     try {
-      const response = await fetch(`/api/neon-load?type=companies&q=${encodeURIComponent(query)}`);
+      const response = await fetch(`/api/surface-repo/search-companies?q=${encodeURIComponent(query)}`);
       if (response.ok) {
         const data = await response.json();
         setSuggestions(data.companies || []);
