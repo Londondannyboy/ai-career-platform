@@ -17,8 +17,8 @@ export async function GET() {
 
     // Check database connection
     let dbStatus = 'not tested';
-    let userProfiles = [];
-    let dbError = null;
+    let userProfiles: any[] = [];
+    let dbError: any = null;
     
     try {
       const result = await sql`SELECT COUNT(*) as count FROM user_profiles`;

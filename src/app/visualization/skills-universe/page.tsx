@@ -14,6 +14,7 @@ export default function SkillsUniversePage() {
   const { user, isLoaded } = useUser();
   const [loading, setLoading] = useState(true);
   const [graphData, setGraphData] = useState<any>({ nodes: [], links: [] });
+  const [hasData, setHasData] = useState(false);
   const fgRef = useRef<any>(null);
 
   useEffect(() => {
@@ -127,7 +128,27 @@ export default function SkillsUniversePage() {
           }
         });
         
-        setGraphData({ nodes, links });
+        if (nodes.length > 0) {
+          setGraphData({ nodes, links });
+          setHasData(true);
+        } else {
+          setHasData(false);
+          // Set a minimal graph with a welcome node
+          setGraphData({
+            nodes: [{
+              id: 'welcome',
+              name: 'Add Your First Skill',
+              type: 'skill',
+              category: 'Getting Started',
+              x: 0,
+              y: 0,
+              z: 0,
+              size: 20,
+              color: '#6B7280'
+            }],
+            links: []
+          });
+        }
         setLoading(false);
       })
       .catch(err => {
@@ -207,6 +228,24 @@ export default function SkillsUniversePage() {
           </div>
         </div>
       </div>
+
+      {/* Empty State Overlay */}
+      {!hasData && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center">
+          <div className="bg-gray-800/90 backdrop-blur p-8 rounded-lg text-center max-w-md">
+            <h2 className="text-2xl font-bold mb-4">Welcome to Your Skills Universe</h2>
+            <p className="text-gray-400 mb-6">
+              Add your skills to see them organized in a beautiful 3D visualization.
+            </p>
+            <a
+              href="/repo/working/skills"
+              className="inline-block px-6 py-3 bg-blue-600 rounded hover:bg-blue-700 transition-colors"
+            >
+              Add Your Skills
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* 3D Graph */}
       <div className="w-full h-screen">

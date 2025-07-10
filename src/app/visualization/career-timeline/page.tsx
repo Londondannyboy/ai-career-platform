@@ -15,6 +15,7 @@ export default function CareerTimelinePage() {
   const [loading, setLoading] = useState(true);
   const [graphData, setGraphData] = useState<any>({ nodes: [], links: [] });
   const [isAnimating, setIsAnimating] = useState(true);
+  const [hasData, setHasData] = useState(false);
   const fgRef = useRef<any>(null);
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export default function CareerTimelinePage() {
     fetch('/api/surface-repo/load-simple')
       .then(r => r.json())
       .then(data => {
-        if (data.success && data.data?.experience) {
+        if (data.success && data.data?.experience && data.data.experience.length > 0) {
           const experiences = data.data.experience;
           const nodes: any[] = [];
           const links: any[] = [];
@@ -96,6 +97,24 @@ export default function CareerTimelinePage() {
           });
           
           setGraphData({ nodes, links });
+          setHasData(true);
+        } else {
+          setHasData(false);
+          // Set a minimal graph with a welcome node
+          setGraphData({
+            nodes: [{
+              id: 'welcome',
+              name: 'Add Your First Experience',
+              company: 'Get Started',
+              year: new Date().getFullYear(),
+              x: 0,
+              y: 0,
+              z: 0,
+              color: '#6B7280',
+              size: 20
+            }],
+            links: []
+          });
         }
         setLoading(false);
       })
@@ -195,6 +214,24 @@ export default function CareerTimelinePage() {
           <RotateCw className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Empty State Overlay */}
+      {!hasData && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center">
+          <div className="bg-gray-800/90 backdrop-blur p-8 rounded-lg text-center max-w-md">
+            <h2 className="text-2xl font-bold mb-4">Welcome to Your Career Timeline</h2>
+            <p className="text-gray-400 mb-6">
+              Add your work experiences to see your professional journey visualized in 3D.
+            </p>
+            <a
+              href="/repo/surface/edit"
+              className="inline-block px-6 py-3 bg-blue-600 rounded hover:bg-blue-700 transition-colors"
+            >
+              Add Your First Experience
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* 3D Graph */}
       <div className="w-full h-screen">
