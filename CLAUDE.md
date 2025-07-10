@@ -17,6 +17,7 @@ This streamlined guide helps new Claude sessions understand the Quest Trinity Sy
 ## Essential Documentation Index
 
 ### 🏛️ Core System Documentation
+- **`QUEST_MISSION.md`** 🆕 - "LinkedIn shows who you were. Quest shows who you're becoming."
 - **`QUEST_TRINITY_PHILOSOPHY.md`** - Trinity system design & three eternal questions
 - **`QUEST_DEEP_REPO_PRIVACY.md`** - Four-layer privacy architecture (Surface/Working/Personal/Deep)
 - **`QUEST_TRINITY_IMPLEMENTATION_COMPLETE.md`** - Current implementation status & working features
@@ -34,6 +35,8 @@ This streamlined guide helps new Claude sessions understand the Quest Trinity Sy
 - **`QUEST_COLE_MEDIN_COMPLETE_IMPLEMENTATION.md`** - Advanced AI architecture
 
 ### 📋 Implementation Modules
+- **`QUEST_SPRINT_REPO_UI.md`** 🆕 - Current sprint: 6 chunks of repo UI features
+- **`QUEST_FUTURE_ROADMAP.md`** 🆕 - AI intelligence & advanced visualization phases
 - **`QUEST_3D_GRAPH_VISUALIZATION_MODULE.md`** - 3D visualization specifications
 - **`QUEST_JOB_DISCOVERY_MODULE.md`** - Job matching system (standalone)
 - **`QUEST_WEB_INTELLIGENCE_IMPLEMENTATION.md`** - Web search integration
@@ -52,7 +55,8 @@ This streamlined guide helps new Claude sessions understand the Quest Trinity Sy
 - ✅ **Voice AI**: Hume EVI integration with personalized coaching
 - ✅ **3D Visualization**: Trinity and Surface Repo working with react-force-graph-3d
 - ✅ **Deep Repo**: Four-layer privacy architecture implemented
-- 🚧 **Next**: Personal OKR and Career Path visualizations
+- 🚧 **Current Sprint**: Personal Repo UI - 6 micro-deliveries (see `QUEST_SPRINT_REPO_UI.md`)
+- 🔮 **Next Phase**: AI Intelligence Layer for skill clustering & relationships
 
 ## Technical Stack
 
@@ -131,11 +135,19 @@ git push             # Auto-deploy to Vercel
 
 ## Current Priorities
 
-### Immediate Tasks
-1. **Personal OKR 3D Visualization** - Goals and objectives in 3D space
-2. **Career Path 3D Mapping** - Role progression with skill bridges
-3. **Working Repo UI** - Curated professional achievements
-4. **Mode Switcher** - Toggle between Trinity/OKR/Career views
+### Active Sprint: Personal Repo UI (6 Chunks)
+1. **Chunk 1**: Surface Repo Work Experience UI with future aspirations
+2. **Chunk 2**: Skills & Languages editor components  
+3. **Chunk 3**: Education & Certification management
+4. **Chunk 4**: Personal Repo OKR management system
+5. **Chunk 5**: Goals & Task management
+6. **Chunk 6**: Data relationships & navigation
+
+### Key Innovation: Future Experience
+- Revolutionary feature: Users can define future career aspirations
+- Lives in Personal Repo (private by default) 
+- Links to OKRs and Trinity identity
+- "Quest shows who you're becoming"
 
 ### Known Issues
 - Sentry integration not capturing errors (attempted Dec 9)
