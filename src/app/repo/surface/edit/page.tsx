@@ -32,7 +32,7 @@ export default function SurfaceRepoEditorPage() {
     if (!isLoaded) return;
     
     // Fetch Surface Repo data
-    fetch('/api/simple-load?type=surface-repo')
+    fetch('/api/neon-load?type=surface-repo')
       .then(r => r.json())
       .then(data => {
         if (data.success && data.data) {
@@ -114,7 +114,7 @@ export default function SurfaceRepoEditorPage() {
         endorsements: surfaceData.endorsements
       };
       
-      const response = await fetch('/api/simple-save', {
+      const response = await fetch('/api/neon-save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

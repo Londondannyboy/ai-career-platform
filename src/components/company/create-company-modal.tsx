@@ -45,7 +45,7 @@ export const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
     setError('');
 
     try {
-      const response = await fetch('/api/simple-save', {
+      const response = await fetch('/api/neon-save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

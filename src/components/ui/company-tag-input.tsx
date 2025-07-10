@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, CheckCircle, AlertCircle, Plus, Building2, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { X, CheckCircle, AlertCircle, Plus, Building2, Loader2, ExternalLink } from 'lucide-react';
 import { CompanyReference, normalizeCompany } from '@/types/work-experience';
 import { CreateCompanyModal } from '@/components/company/create-company-modal';
 
@@ -46,7 +47,7 @@ export const CompanyTagInput: React.FC<CompanyTagInputProps> = ({
 
     setIsSearching(true);
     try {
-      const response = await fetch(`/api/simple-load?type=companies&q=${encodeURIComponent(query)}`);
+      const response = await fetch(`/api/neon-load?type=companies&q=${encodeURIComponent(query)}`);
       if (response.ok) {
         const data = await response.json();
         setSuggestions(data.companies || []);
@@ -127,6 +128,15 @@ export const CompanyTagInput: React.FC<CompanyTagInputProps> = ({
         </span>
         {company.location && (
           <span className="text-sm text-gray-400">• {company.location}</span>
+        )}
+        {company.id && (
+          <Link 
+            href={`/company/${company.id}`}
+            className="text-gray-400 hover:text-blue-400"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExternalLink className="w-3 h-3" />
+          </Link>
         )}
         {onRemove && (
           <button

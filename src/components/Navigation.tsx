@@ -8,7 +8,8 @@ import {
   Users, 
   Briefcase, 
   Bell,
-  Compass
+  Compass,
+  Building2
 } from 'lucide-react'
 
 export default function Navigation() {
@@ -111,6 +112,14 @@ export default function Navigation() {
               >
                 <Users className="h-4 w-4" />
                 <span>Network</span>
+              </Link>
+              
+              <Link
+                href="/companies"
+                className="flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              >
+                <Building2 className="h-4 w-4" />
+                <span>Companies</span>
               </Link>
               
               <Link
