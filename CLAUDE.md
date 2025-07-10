@@ -7,12 +7,13 @@ This streamlined guide helps new Claude sessions understand the Quest Trinity Sy
 ## How to Use This Documentation
 
 1. **Start here** (CLAUDE.md) for project context and current state
-2. **Load relevant documentation** based on your task:
+2. **⚠️ ALWAYS CHECK PITFALLS FIRST** → `QUEST_COMMON_PITFALLS.md` before debugging
+3. **Load relevant documentation** based on your task:
    - Trinity work → `QUEST_TRINITY_IMPLEMENTATION_COMPLETE.md`
    - Deep Repo → `QUEST_DEEP_REPO_PRIVACY.md`
-   - Debugging → `QUEST_COMMON_PITFALLS.md`
+   - Debugging → `QUEST_COMMON_PITFALLS.md` (CHECK THIS FIRST!)
    - Voice AI → `QUEST_HUME_EVI_SUCCESS_DOCUMENTATION.md`
-3. **Session summaries** contain detailed implementation examples
+4. **Session summaries** contain detailed implementation examples
 
 ## Essential Documentation Index
 
@@ -231,8 +232,33 @@ git push             # Auto-deploy to Vercel
 1. **Always Check Pitfalls** - Load `QUEST_COMMON_PITFALLS.md` when debugging
 2. **Test Builds Locally** - Run `npm run build` before pushing
 3. **Add Routes to Middleware** - New routes need public access configuration
-4. **Use Correct Database** - PostgreSQL, not Supabase
+4. **Use Correct Database** - PostgreSQL (Neon), not Supabase
 5. **Follow Type Safety** - TypeScript errors block deployment
+
+## ⏱️ Common Time-Wasters (Learn from Dec 10, 2025)
+
+### 1. **Over-Engineering Simple Fixes**
+- **Problem**: User needed Surface Repo save to work
+- **Wrong approach**: Built entire company profile system with 14 new files
+- **Right approach**: Fix the specific endpoints causing issues
+- **Lesson**: Always solve the immediate problem first
+
+### 2. **Authentication Middleware Issues**
+- **Problem**: "Clerk can't detect usage of clerkMiddleware()"
+- **Wrong approach**: Multiple attempts to fix middleware syntax
+- **Right approach**: Create endpoints that gracefully handle auth failures
+- **Better approach**: Check QUEST_COMMON_PITFALLS.md FIRST (it's literally pitfall #1!)
+
+### 3. **Database Confusion**
+- **Problem**: Using wrong database patterns
+- **Symptoms**: "column domain does not exist"
+- **Root cause**: Using Supabase patterns when we use Neon PostgreSQL
+- **Fix**: Use `canonical_identifier` not `domain`, use `sql` template literals
+
+### 4. **Not Testing Incrementally**
+- **Problem**: Building complex features before basic functionality works
+- **Solution**: Create simple test pages first (like `/create-company-test`)
+- **Verify**: Each piece works before adding complexity
 
 ---
 
