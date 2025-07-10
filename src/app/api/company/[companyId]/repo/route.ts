@@ -94,17 +94,41 @@ export async function POST(
       LIMIT 1
     `;
 
-    const columnName = `${layer}_repo`;
-
     if (existing.rows.length > 0) {
-      // Update existing
-      await sql`
-        UPDATE company_repos 
-        SET ${sql(columnName)} = ${JSON.stringify(data)},
-            updated_at = NOW(),
-            updated_by = ${userId}
-        WHERE company_id = ${companyId}
-      `;
+      // Update existing based on layer
+      if (layer === 'surface') {
+        await sql`
+          UPDATE company_repos 
+          SET surface_repo = ${JSON.stringify(data)},
+              updated_at = NOW(),
+              updated_by = ${userId}
+          WHERE company_id = ${companyId}
+        `;
+      } else if (layer === 'working') {
+        await sql`
+          UPDATE company_repos 
+          SET working_repo = ${JSON.stringify(data)},
+              updated_at = NOW(),
+              updated_by = ${userId}
+          WHERE company_id = ${companyId}
+        `;
+      } else if (layer === 'personal') {
+        await sql`
+          UPDATE company_repos 
+          SET personal_repo = ${JSON.stringify(data)},
+              updated_at = NOW(),
+              updated_by = ${userId}
+          WHERE company_id = ${companyId}
+        `;
+      } else if (layer === 'deep') {
+        await sql`
+          UPDATE company_repos 
+          SET deep_repo = ${JSON.stringify(data)},
+              updated_at = NOW(),
+              updated_by = ${userId}
+          WHERE company_id = ${companyId}
+        `;
+      }
     } else {
       // Create new
       const repoData = {
