@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 
 export default function RepoEditorPage() {
@@ -82,9 +82,15 @@ export default function RepoEditorPage() {
             <span className="text-sm text-gray-400">
               User: {isSignedIn ? user.firstName || user.username : 'test-user-123'}
             </span>
-            <Link href="/visualization" className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">
-              View Visualizations
-            </Link>
+            <div className="flex gap-2">
+              <Link href="/repo/dashboard" className="bg-purple-600 px-4 py-2 rounded hover:bg-purple-700 flex items-center gap-2">
+                <LayoutDashboard className="w-4 h-4" />
+                Repository Dashboard
+              </Link>
+              <Link href="/visualization" className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">
+                View Visualizations
+              </Link>
+            </div>
           </div>
         </div>
 
