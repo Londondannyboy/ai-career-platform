@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Database, User, Briefcase, Target, Network, TestTube } from 'lucide-react';
+import { Database, User, Briefcase, Target, Network, TestTube, Sparkles, Clock, Zap } from 'lucide-react';
 
 interface VisualizationItem {
   href: string;
@@ -49,6 +49,32 @@ const visualizationPages: { title: string; items: VisualizationItem[] }[] = [
         description: 'Professional profile with experience & skills',
         icon: Briefcase,
         color: 'text-green-400'
+      }
+    ]
+  },
+  {
+    title: 'Career Visualizations 🎉 NEW',
+    items: [
+      {
+        href: '/visualization/career',
+        title: 'Career Dashboard',
+        description: 'All career visualizations in one place',
+        icon: Sparkles,
+        color: 'text-yellow-400'
+      },
+      {
+        href: '/visualization/career-timeline',
+        title: 'Career Timeline',
+        description: 'Your journey: past, present, and future',
+        icon: Clock,
+        color: 'text-blue-400'
+      },
+      {
+        href: '/visualization/skills-universe',
+        title: 'Skills Universe',
+        description: 'Skills as gravitational clusters',
+        icon: Zap,
+        color: 'text-orange-400'
       }
     ]
   },
