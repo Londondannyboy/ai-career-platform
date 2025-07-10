@@ -40,10 +40,10 @@ const isPublicRoute = createRouteMatcher([
   '/api/surface-repo/(.*)' // Surface Repo endpoints for testing
 ]);
 
-export default clerkMiddleware((auth, req) => {
+export default clerkMiddleware(async (auth, req) => {
   // Only protect routes that are not public
   if (!isPublicRoute(req)) {
-    auth().protect();
+    await auth.protect();
   }
 });
 
