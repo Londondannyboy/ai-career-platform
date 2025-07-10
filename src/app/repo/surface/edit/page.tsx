@@ -656,6 +656,22 @@ export default function SurfaceRepoEditorPage() {
             );
           })}
         </div>
+
+        {/* Education & Certifications */}
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Education & Certifications</h2>
+            <Link 
+              href="/repo/surface/education" 
+              className="text-blue-400 hover:underline text-sm"
+            >
+              Manage →
+            </Link>
+          </div>
+          <p className="text-gray-400">
+            Track your educational background, professional certifications, and plan future learning goals.
+          </p>
+        </div>
       </div>
       
       {showToast && (
