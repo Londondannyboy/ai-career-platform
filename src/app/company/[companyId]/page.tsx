@@ -63,7 +63,7 @@ export default function CompanyProfilePage() {
   }
 
   const countryName = company.headquarters?.country 
-    ? COUNTRIES.find(c => c.code === company.headquarters.country)?.name 
+    ? COUNTRIES.find(c => c.code === company.headquarters?.country)?.name 
     : undefined;
 
   return (
