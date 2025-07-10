@@ -591,7 +591,15 @@ export default function SurfaceRepoEditorPage() {
 
         {/* Skills */}
         <div className="bg-gray-800 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold mb-4">Skills & Endorsements</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Skills & Endorsements</h2>
+            <Link 
+              href="/repo/surface/skills" 
+              className="text-blue-400 hover:underline text-sm flex items-center gap-1"
+            >
+              Advanced Editor →
+            </Link>
+          </div>
           
           <div className="flex gap-2 mb-4">
             <select
