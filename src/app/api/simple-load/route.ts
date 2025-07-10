@@ -15,6 +15,19 @@ export async function GET(request: NextRequest) {
     // Get Supabase client
     const supabase = await createClient();
     
+    // Test connection
+    const { error: testError } = await supabase.from('user_profiles').select('count').limit(1);
+    if (testError) {
+      console.error('Supabase connection error:', testError);
+      // Return empty data instead of error for now
+      if (type === 'surface-repo') {
+        return NextResponse.json({ success: true, data: {} });
+      }
+      if (type === 'companies') {
+        return NextResponse.json({ success: true, companies: [] });
+      }
+    }
+    
     if (type === 'surface-repo') {
       const { data, error } = await supabase
         .from('user_profiles')
