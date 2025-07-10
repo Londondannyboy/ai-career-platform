@@ -4,10 +4,10 @@ import { CompanyProfile } from '@/types/company';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  { params }: { params: Promise<{ companyId: string }> }
 ) {
   try {
-    const companyId = params.companyId;
+    const { companyId } = await params;
     
     // Fetch company by ID
     const result = await sql`

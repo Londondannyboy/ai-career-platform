@@ -5,11 +5,11 @@ import { CompanyRepo } from '@/types/company';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  { params }: { params: Promise<{ companyId: string }> }
 ) {
   try {
     const { userId } = await auth();
-    const companyId = params.companyId;
+    const { companyId } = await params;
     
     // Fetch company repo data
     const result = await sql`
@@ -66,7 +66,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  { params }: { params: Promise<{ companyId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -74,7 +74,7 @@ export async function POST(
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const companyId = params.companyId;
+    const { companyId } = await params;
     const { layer, data } = await request.json();
 
     if (!['surface', 'working', 'personal', 'deep'].includes(layer)) {
