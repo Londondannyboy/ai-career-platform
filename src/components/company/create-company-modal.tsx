@@ -158,7 +158,7 @@ export const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
             {isCreating ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Creating...
+                Building Profile...
               </>
             ) : (
               'Create Company'
