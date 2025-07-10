@@ -6,6 +6,7 @@ import Navigation from '@/components/Navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Download, Edit3 } from 'lucide-react'
+import Link from 'next/link'
 
 export default function SurfaceRepoPage() {
   const { user, isLoaded } = useUser()
@@ -50,13 +51,15 @@ export default function SurfaceRepoPage() {
               <span>Export PDF</span>
             </Button>
             
-            <Button
-              variant="default"
-              className="flex items-center space-x-2"
-            >
-              <Edit3 className="h-4 w-4" />
-              <span>Edit</span>
-            </Button>
+            <Link href="/repo/surface/edit">
+              <Button
+                variant="default"
+                className="flex items-center space-x-2"
+              >
+                <Edit3 className="h-4 w-4" />
+                <span>Edit</span>
+              </Button>
+            </Link>
           </div>
         </div>
 
