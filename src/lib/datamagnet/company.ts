@@ -293,6 +293,35 @@ class DataMagnetCompanyService {
   }
 
   /**
+   * Enrich company data using name and website
+   */
+  async enrichCompany(companyName: string, website: string): Promise<any> {
+    try {
+      // Try to find LinkedIn URL from company name
+      const result = await this.searchCompany(companyName);
+      
+      if (!result.success || !result.company) {
+        throw new Error('Company not found');
+      }
+
+      return {
+        name: result.company.name,
+        description: result.company.description,
+        logo: result.company.logoUrl,
+        industry: result.company.industry,
+        employee_count_text: result.company.companySize,
+        headquarters: result.company.headquarters,
+        domain: website.replace(/^https?:\/\//, ''),
+        linkedin_url: result.company.linkedinUrl,
+        founded_year: result.company.founded
+      };
+    } catch (error) {
+      console.error(`❌ DataMagnet company enrichment failed:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Process raw DataMagnet company API response
    */
   private processCompanyData(rawData: any, originalUrl: string): DataMagnetCompanyData {
@@ -477,4 +506,5 @@ export const getDataMagnetCompanyService = (): DataMagnetCompanyService => {
   return dataMagnetCompanyInstance
 }
 
+export { DataMagnetCompanyService };
 export default DataMagnetCompanyService
