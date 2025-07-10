@@ -308,7 +308,7 @@ const SkillTag: React.FC<{
   return (
     <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-full border ${categoryStyle.borderColor} bg-gray-700`}>
       <span className="font-medium">{skill.name}</span>
-      {showEndorsements && skill.endorsements > 0 && (
+      {showEndorsements && skill.endorsements && skill.endorsements > 0 && (
         <span className="text-xs text-gray-400">({skill.endorsements})</span>
       )}
       <button
