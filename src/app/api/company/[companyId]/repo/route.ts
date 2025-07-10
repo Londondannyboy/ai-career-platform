@@ -37,7 +37,7 @@ export async function GET(
     }
 
     const row = result.rows[0];
-    const repo: CompanyRepo = {
+    const fullRepo: CompanyRepo = {
       surface: row.surface_repo || { profile: {}, jobPostings: [], news: [], employees: [] },
       working: row.working_repo || { projects: [], culture: {}, growth: {} },
       personal: row.personal_repo || { internalNotes: [], interviewExperiences: [], employeeReviews: [] },
@@ -48,13 +48,19 @@ export async function GET(
     // For now, everyone can see surface and working layers
     // Personal and deep layers require authentication and specific permissions
     if (!userId) {
-      delete repo.personal;
-      delete repo.deep;
+      // Return only public layers for unauthenticated users
+      return NextResponse.json({ 
+        success: true, 
+        repo: {
+          surface: fullRepo.surface,
+          working: fullRepo.working
+        }
+      });
     }
 
     return NextResponse.json({ 
       success: true, 
-      repo 
+      repo: fullRepo 
     });
   } catch (error) {
     console.error('Company repo fetch error:', error);
