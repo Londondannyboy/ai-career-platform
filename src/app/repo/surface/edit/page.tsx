@@ -123,15 +123,35 @@ export default function SurfaceRepoEditorPage() {
         })
       });
       
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        setShowToast({ message: 'Surface Repo saved successfully!', type: 'success' });
+      // Check if response is ok first before trying to parse JSON
+      if (response.ok) {
+        try {
+          const data = await response.json();
+          if (data.success) {
+            setShowToast({ message: 'Surface Repo saved successfully!', type: 'success' });
+          } else {
+            setShowToast({ 
+              message: data.error || 'Saved but response unclear', 
+              type: 'success' // Show success since it saved
+            });
+          }
+        } catch {
+          // If JSON parsing fails but response was ok, still show success
+          setShowToast({ message: 'Surface Repo saved successfully!', type: 'success' });
+        }
       } else {
-        setShowToast({ 
-          message: data.error || 'Failed to save Surface Repo', 
-          type: 'error' 
-        });
+        try {
+          const data = await response.json();
+          setShowToast({ 
+            message: data.error || 'Failed to save Surface Repo', 
+            type: 'error' 
+          });
+        } catch {
+          setShowToast({ 
+            message: 'Failed to save Surface Repo', 
+            type: 'error' 
+          });
+        }
       }
     } catch (error) {
       console.error('Save error:', error);
