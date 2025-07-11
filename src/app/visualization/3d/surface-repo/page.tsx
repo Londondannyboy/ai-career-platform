@@ -30,7 +30,7 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode, fallback
 }
 
 export default function SurfaceRepoVisualization3DPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded, isSignedIn } = useUser();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [graphData, setGraphData] = useState<any>(null);
@@ -90,7 +90,7 @@ export default function SurfaceRepoVisualization3DPage() {
       });
   }, [user, isLoaded]);
 
-  if (loading) {
+  if (!isLoaded || loading) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -110,8 +110,15 @@ export default function SurfaceRepoVisualization3DPage() {
             Back
           </Link>
         </div>
-        <div className="flex items-center justify-center h-[80vh]">
-          <p className="text-red-400">{error}</p>
+        <div className="flex flex-col items-center justify-center h-[80vh] space-y-4">
+          <p className="text-red-400 text-xl">{error}</p>
+          <div className="text-gray-400 text-sm">
+            <p>User ID: {user?.id || 'Not available'}</p>
+            <p>Signed in: {isSignedIn ? 'Yes' : 'No'}</p>
+          </div>
+          <Link href="/debug-user" className="text-blue-400 hover:underline">
+            Debug User Info
+          </Link>
         </div>
       </div>
     );
