@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     // Create timeline nodes from experiences
     let xPosition = -150;
     const xStep = 60;
-    let lastNodeId = null;
+    let lastNodeId: string | null = null;
 
     // Add career start node
     const startNode = {
