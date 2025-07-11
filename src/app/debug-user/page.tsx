@@ -25,8 +25,8 @@ export default function DebugUserPage() {
 
       const data = await response.json();
       setTestResult(data);
-    } catch (error) {
-      setTestResult({ error: error.toString() });
+    } catch (error: any) {
+      setTestResult({ error: error?.toString() || 'Unknown error' });
     }
   };
 
