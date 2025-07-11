@@ -11,8 +11,8 @@ export async function GET(request: NextRequest) {
     try {
       const authResult = await auth();
       userId = authResult.userId;
-    } catch (e) {
-      console.log('Load auth method 1 failed:', e.message);
+    } catch (e: any) {
+      console.log('Load auth method 1 failed:', e?.message || 'Unknown error');
     }
     
     // Method 2: Try currentUser() if auth() failed
@@ -20,8 +20,8 @@ export async function GET(request: NextRequest) {
       try {
         const user = await currentUser();
         userId = user?.id;
-      } catch (e) {
-        console.log('Load auth method 2 failed:', e.message);
+      } catch (e: any) {
+        console.log('Load auth method 2 failed:', e?.message || 'Unknown error');
       }
     }
     
