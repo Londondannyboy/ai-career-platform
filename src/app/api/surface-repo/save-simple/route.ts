@@ -4,16 +4,17 @@ import { sql } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get user ID - if auth fails, use a test ID
-    let userId = 'test-user';
-    try {
-      const authResult = await auth();
-      if (authResult.userId) {
-        userId = authResult.userId;
-      }
-    } catch (e) {
-      console.log('Auth failed, using test user');
+    // Get user ID from auth
+    const { userId } = await auth();
+    
+    if (!userId) {
+      console.error('No authenticated user for save');
+      return NextResponse.json({ 
+        error: 'Authentication required' 
+      }, { status: 401 });
     }
+    
+    console.log('Saving surface repo for user:', userId);
 
     const { data } = await request.json();
     
@@ -55,7 +56,8 @@ export async function POST(request: NextRequest) {
       `;
     }
 
-    return NextResponse.json({ success: true });
+    console.log('Surface repo saved successfully for user:', userId);
+    return NextResponse.json({ success: true, userId });
   } catch (error: any) {
     console.error('Save error:', error);
     return NextResponse.json({ 

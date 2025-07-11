@@ -2,208 +2,209 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Database, User, Briefcase, Target, Network, TestTube, Sparkles, Clock, Zap } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
+import { 
+  Clock, 
+  Zap, 
+  Mountain, 
+  Network, 
+  Play, 
+  Lock,
+  ArrowRight,
+  Sparkles,
+  Home
+} from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
-interface VisualizationItem {
-  href: string;
+interface VisualizationCard {
+  id: string;
   title: string;
   description: string;
-  icon: any;
+  icon: React.ReactNode;
+  href: string;
+  status: 'available' | 'coming-soon' | 'locked';
   color: string;
-  disabled?: boolean;
+  demoHref?: string;
 }
 
-const visualizationPages: { title: string; items: VisualizationItem[] }[] = [
+const visualizations: VisualizationCard[] = [
   {
-    title: 'Test Pages',
-    items: [
-      {
-        href: '/visualization/3d',
-        title: 'Original 3D Test',
-        description: 'Original Trinity visualization with hardcoded data',
-        icon: TestTube,
-        color: 'text-gray-400'
-      },
-      {
-        href: '/visualization/3d/deep-repo',
-        title: 'Deep Repo Test',
-        description: 'Test Trinity visualization from Deep Repo (test-user-123)',
-        icon: Database,
-        color: 'text-purple-400'
-      }
-    ]
+    id: 'career-timeline',
+    title: 'Career Timeline',
+    description: 'Your professional journey visualized in 3D space - past experiences, current role, and future aspirations',
+    icon: <Clock className="w-6 h-6" />,
+    href: '/visualization/career-timeline',
+    demoHref: '/visualization/demo/career-timeline',
+    status: 'available',
+    color: 'from-blue-500 to-purple-600'
   },
   {
-    title: 'Live User Data',
-    items: [
-      {
-        href: '/visualization/3d/my-trinity',
-        title: 'My Trinity (Live)',
-        description: 'Your actual Trinity from Deep Repo - requires sign in',
-        icon: User,
-        color: 'text-blue-400'
-      },
-      {
-        href: '/visualization/3d/surface-repo',
-        title: 'Surface Repo (LinkedIn-style)',
-        description: 'Professional profile with experience & skills',
-        icon: Briefcase,
-        color: 'text-green-400'
-      }
-    ]
+    id: 'skills-universe',
+    title: 'Skills Universe',
+    description: 'Your skills organized by category with gravitational clustering, showing proficiency and experience',
+    icon: <Zap className="w-6 h-6" />,
+    href: '/visualization/skills-universe',
+    demoHref: '/visualization/demo/skills-universe',
+    status: 'available',
+    color: 'from-purple-500 to-pink-600'
   },
   {
-    title: 'Career Visualizations 🎉 NEW',
-    items: [
-      {
-        href: '/visualization/career',
-        title: 'Career Dashboard',
-        description: 'All career visualizations in one place',
-        icon: Sparkles,
-        color: 'text-yellow-400'
-      },
-      {
-        href: '/visualization/career-timeline',
-        title: 'Career Timeline',
-        description: 'Your journey: past, present, and future',
-        icon: Clock,
-        color: 'text-blue-400'
-      },
-      {
-        href: '/visualization/skills-universe',
-        title: 'Skills Universe',
-        description: 'Skills as gravitational clusters',
-        icon: Zap,
-        color: 'text-orange-400'
-      }
-    ]
+    id: 'okr-mountains',
+    title: 'OKR Progress Mountains',
+    description: 'Topographical visualization of your objectives and key results, showing progress as elevation',
+    icon: <Mountain className="w-6 h-6" />,
+    href: '/visualization/okr-mountains',
+    status: 'coming-soon',
+    color: 'from-green-500 to-teal-600'
   },
   {
-    title: 'Coming Soon',
-    items: [
-      {
-        href: '#',
-        title: 'Personal OKR',
-        description: 'Goals and objectives in 3D',
-        icon: Target,
-        color: 'text-yellow-400',
-        disabled: true
-      },
-      {
-        href: '#',
-        title: 'Career Path',
-        description: 'Role progression and skill bridges',
-        icon: Network,
-        color: 'text-red-400',
-        disabled: true
-      }
-    ]
+    id: 'network-galaxy',
+    title: 'Network Galaxy',
+    description: 'Your professional network as an interconnected galaxy of relationships and opportunities',
+    icon: <Network className="w-6 h-6" />,
+    href: '/visualization/network-galaxy',
+    status: 'coming-soon',
+    color: 'from-orange-500 to-red-600'
   }
 ];
 
-const editPages = [
-  {
-    href: '/api/deep-repo/edit',
-    title: 'Edit Deep Repo',
-    description: 'Update all 4 repo layers via API'
-  },
-  {
-    href: '/repo/edit',
-    title: 'Repo Editor UI',
-    description: 'Visual editor for all repo layers'
-  }
-];
+export default function VisualizationHubPage() {
+  const { user, isLoaded } = useUser();
 
-export default function VisualizationDashboard() {
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold mb-8">Visualization Dashboard</h1>
-        
-        {/* Demo Banner */}
-        <div className="mb-8 bg-blue-900/20 border border-blue-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-700">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-semibold text-blue-300 mb-1">🎉 Try the Demos First!</h2>
-              <p className="text-gray-400">See the visualizations in action with sample data - no login required</p>
+              <h1 className="text-3xl font-bold mb-2">3D Visualizations</h1>
+              <p className="text-gray-400">
+                Experience your professional data in stunning three-dimensional visualizations
+              </p>
             </div>
-            <Link
-              href="/visualization/demo"
-              className="px-6 py-3 bg-blue-600 rounded hover:bg-blue-700 transition-colors text-white font-medium"
-            >
-              View Demos
+            <Link href="/">
+              <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-800">
+                <Home className="w-4 h-4 mr-2" />
+                Back to Home
+              </Button>
             </Link>
           </div>
         </div>
+      </div>
         
-        {/* Edit Tools */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-semibold mb-4 text-yellow-400">🛠️ Edit Your Repo Data</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {editPages.map((page) => (
-              <Link
-                key={page.href}
-                href={page.href}
-                className="bg-gray-800 p-4 rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                <h3 className="font-semibold mb-1">{page.title}</h3>
-                <p className="text-sm text-gray-400">{page.description}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Visualization Pages */}
-        {visualizationPages.map((section) => (
-          <div key={section.title} className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">{section.title}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {section.items.map((item) => {
-                const Icon = item.icon;
-                if (item.disabled) {
-                  return (
-                    <div
-                      key={item.href}
-                      className="bg-gray-800 p-6 rounded-lg opacity-50 cursor-not-allowed"
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <Icon className={`w-8 h-8 ${item.color}`} />
-                        <h3 className="text-xl font-semibold">{item.title}</h3>
-                      </div>
-                      <p className="text-gray-400">{item.description}</p>
-                      <p className="text-sm text-gray-500 mt-2">Coming soon...</p>
-                    </div>
-                  );
-                }
-                
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="bg-gray-800 p-6 rounded-lg hover:bg-gray-700 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <Icon className={`w-8 h-8 ${item.color}`} />
-                      <h3 className="text-xl font-semibold">{item.title}</h3>
-                    </div>
-                    <p className="text-gray-400">{item.description}</p>
-                  </Link>
-                );
-              })}
+      {/* Quick Setup Banner */}
+      {user && (
+        <div className="p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 mb-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold mb-2 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    New to Quest?
+                  </h2>
+                  <p className="text-blue-100">
+                    Quickly populate your profile with sample data to see the visualizations in action
+                  </p>
+                </div>
+                <Link href="/profile/quick-setup">
+                  <Button className="bg-white text-purple-600 hover:bg-gray-100">
+                    Quick Setup
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
-        ))}
+        </div>
+      )}
+        
+      {/* Visualization Grid */}
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {visualizations.map((viz) => (
+              <Card 
+                key={viz.id} 
+                className={`bg-gray-800/50 border-gray-700 backdrop-blur-sm hover:shadow-2xl transition-all ${
+                  viz.status === 'available' ? 'hover:scale-105' : ''
+                }`}
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className={`p-3 rounded-lg bg-gradient-to-br ${viz.color} bg-opacity-20`}>
+                      {viz.icon}
+                    </div>
+                    {viz.status === 'coming-soon' && (
+                      <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full">
+                        Coming Soon
+                      </span>
+                    )}
+                    {viz.status === 'locked' && (
+                      <Lock className="w-4 h-4 text-gray-500" />
+                    )}
+                  </div>
+                  <CardTitle className="text-xl mt-4">{viz.title}</CardTitle>
+                  <CardDescription className="text-gray-400">
+                    {viz.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-3">
+                    {viz.status === 'available' ? (
+                      <>
+                        <Link href={viz.href} className="flex-1">
+                          <Button className={`w-full bg-gradient-to-r ${viz.color}`}>
+                            <Play className="w-4 h-4 mr-2" />
+                            View Your Data
+                          </Button>
+                        </Link>
+                        {viz.demoHref && (
+                          <Link href={viz.demoHref}>
+                            <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
+                              Demo
+                            </Button>
+                          </Link>
+                        )}
+                      </>
+                    ) : (
+                      <Button 
+                        disabled 
+                        className="w-full bg-gray-700 text-gray-400 cursor-not-allowed"
+                      >
+                        {viz.status === 'coming-soon' ? 'Coming Soon' : 'Locked'}
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-        {/* Info Box */}
-        <div className="mt-12 bg-gray-800 p-6 rounded-lg">
-          <h3 className="text-xl font-semibold mb-3">📊 How This Works</h3>
-          <ul className="space-y-2 text-gray-300">
-            <li>• <strong>Test Pages</strong> use hardcoded or test user data (test-user-123)</li>
-            <li>• <strong>Live User Data</strong> pages show YOUR actual data from Deep Repo</li>
-            <li>• <strong>Edit Your Data</strong> using the editor or API endpoints above</li>
-            <li>• Changes appear immediately in the 3D visualizations</li>
-            <li>• All data is stored in PostgreSQL JSONB columns (surface_repo, working_repo, personal_repo, deep_repo)</li>
-          </ul>
+          {/* Demo Section */}
+          <div className="mt-12 text-center">
+            <h3 className="text-lg font-semibold mb-4">Want to see examples first?</h3>
+            <p className="text-gray-400 mb-6">
+              Check out our demo visualizations with sample data - no login required
+            </p>
+            <div className="flex justify-center gap-4">
+              <Link href="/visualization/demo">
+                <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
+                  View All Demos
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>

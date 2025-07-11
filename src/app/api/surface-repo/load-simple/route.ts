@@ -8,13 +8,15 @@ export async function GET(request: NextRequest) {
     const { userId } = await auth();
     
     if (!userId) {
-      // If no auth, return empty data instead of using test user
+      console.error('No authenticated user for load');
       return NextResponse.json({ 
         success: true, 
         data: {},
         message: 'No authenticated user'
       });
     }
+    
+    console.log('Loading surface repo for user:', userId);
     
     // First check if user profile exists
     const result = await sql`
@@ -39,9 +41,13 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const data = result.rows[0]?.surface_repo || {};
+    console.log('Loaded surface repo data:', JSON.stringify(data).slice(0, 100) + '...');
+    
     return NextResponse.json({ 
       success: true, 
-      data: result.rows[0]?.surface_repo || {} 
+      data,
+      userId 
     });
   } catch (error: any) {
     console.error('Load error:', error);

@@ -26,15 +26,19 @@ export default function SurfaceRepoEditorPage() {
     endorsements: {} as Record<string, number>
   });
 
-  const userId = user?.id || 'test-user-123';
+  const userId = user?.id;
+  
+  console.log('Surface Edit Page - Auth state:', { isLoaded, isSignedIn, userId });
 
   useEffect(() => {
     if (!isLoaded) return;
     
     // Fetch Surface Repo data
+    console.log('Fetching surface repo data...');
     fetch('/api/surface-repo/load-simple')
       .then(r => r.json())
       .then(data => {
+        console.log('Load response:', data);
         if (data.success && data.data) {
           // Transform legacy data to new format
           const transformedExperience = (data.data.experience || []).map((exp: any) => ({
@@ -114,6 +118,7 @@ export default function SurfaceRepoEditorPage() {
         endorsements: surfaceData.endorsements
       };
       
+      console.log('Saving surface repo data:', legacyData);
       const response = await fetch('/api/surface-repo/save-simple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -126,11 +131,15 @@ export default function SurfaceRepoEditorPage() {
       if (response.ok) {
         try {
           const data = await response.json();
+          console.log('Save response:', data);
           if (data.success) {
             setShowToast({ message: 'Surface Repo saved successfully!', type: 'success' });
+            // Reload data to verify save
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
           } else {
-            // If no success flag but response was OK, still show success
-            setShowToast({ message: 'Surface Repo saved successfully!', type: 'success' });
+            setShowToast({ message: 'Save response unclear', type: 'error' });
           }
         } catch {
           // If JSON parsing fails but response was ok, still show success

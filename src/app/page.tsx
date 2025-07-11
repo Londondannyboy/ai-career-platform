@@ -22,7 +22,11 @@ import {
   Building2,
   Mic,
   User,
-  Briefcase
+  Briefcase,
+  Target,
+  Brain,
+  Sparkles,
+  Eye
 } from 'lucide-react'
 import { EVIWebAudioPlayer } from 'hume'
 
@@ -442,16 +446,16 @@ export default function HomePage() {
           
           {/* Navigation Links */}
           <div className="flex items-center space-x-4">
-            <Link href="/profile">
+            <Link href="/repo/dashboard">
               <Button variant="ghost" size="sm">
                 <User className="w-4 h-4 mr-2" />
-                Complete Profile
+                Repository
               </Button>
             </Link>
-            <Link href="/network">
+            <Link href="/visualization">
               <Button variant="ghost" size="sm">
-                <Users className="w-4 h-4 mr-2" />
-                Network
+                <Eye className="w-4 h-4 mr-2" />
+                Visualizations
               </Button>
             </Link>
             <Button
@@ -496,68 +500,68 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Link href="/profile">
+            <Link href="/repo/surface/edit">
               <Card className="cursor-pointer transition-shadow hover:shadow-md">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center text-sm font-medium">
                     <div className="rounded-lg bg-green-100 p-2 mr-3">
                       <User className="h-4 w-4 text-green-600" />
                     </div>
-                    Complete Profile
+                    Edit Profile
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-xs text-gray-600 mb-3">
-                    Build your professional story and goals
+                    Add experience, skills, and future goals
                   </p>
                   <Button size="sm" className="w-full bg-green-600 hover:bg-green-700">
-                    Complete Repo
+                    Edit Repository
                   </Button>
                 </CardContent>
               </Card>
             </Link>
 
-            <Link href="/network">
+            <Link href="/visualization">
               <Card className="cursor-pointer transition-shadow hover:shadow-md">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center text-sm font-medium">
                     <div className="rounded-lg bg-purple-100 p-2 mr-3">
-                      <Users className="h-4 w-4 text-purple-600" />
+                      <Eye className="h-4 w-4 text-purple-600" />
                     </div>
-                    Connect Network
+                    3D Visualizations
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-xs text-gray-600 mb-3">
-                    Connect with colleagues and expand network
+                    See your career journey in stunning 3D
                   </p>
                   <Button size="sm" className="w-full bg-purple-600 hover:bg-purple-700">
-                    View Colleagues
+                    View 3D Graphs
                   </Button>
                 </CardContent>
               </Card>
             </Link>
 
-            <Card className="cursor-pointer transition-shadow hover:shadow-md">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center text-sm font-medium">
-                  <div className="rounded-lg bg-orange-100 p-2 mr-3">
-                    <Building2 className="h-4 w-4 text-orange-600" />
-                  </div>
-                  Companies
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-gray-600 mb-3">
-                  AI-powered company intelligence
-                </p>
-                <Link href="/admin/companies">
+            <Link href="/profile/quick-setup">
+              <Card className="cursor-pointer transition-shadow hover:shadow-md">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center text-sm font-medium">
+                    <div className="rounded-lg bg-orange-100 p-2 mr-3">
+                      <Sparkles className="h-4 w-4 text-orange-600" />
+                    </div>
+                    Quick Setup
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-gray-600 mb-3">
+                    Populate your profile with sample data
+                  </p>
                   <Button size="sm" className="w-full bg-orange-600 hover:bg-orange-700">
-                    Browse
+                    Get Started Fast
                   </Button>
-                </Link>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
 
           {/* Main Content Grid */}
@@ -617,25 +621,33 @@ export default function HomePage() {
                 </CardContent>
               </Card>
 
-              {/* Debug Tools */}
+              {/* Repository Layers */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Debug Tools</CardTitle>
+                  <CardTitle className="flex items-center">
+                    <Target className="mr-2 h-4 w-4" />
+                    Repository Layers
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Link href="/quest-hume-debug">
-                    <Button variant="outline" size="sm" className="w-full">
-                      Voice Debug Interface
+                  <Link href="/repo/surface/edit">
+                    <Button variant="outline" size="sm" className="w-full justify-start">
+                      <span className="text-xs">Surface Repo - Public Profile</span>
                     </Button>
                   </Link>
-                  <Link href="/test-hume-integration">
-                    <Button variant="outline" size="sm" className="w-full">
-                      Test CLM Integration
+                  <Link href="/repo/working/skills">
+                    <Button variant="outline" size="sm" className="w-full justify-start">
+                      <span className="text-xs">Working Repo - Skills</span>
                     </Button>
                   </Link>
-                  <Link href="/admin/companies">
-                    <Button variant="outline" size="sm" className="w-full">
-                      Company Admin
+                  <Link href="/repo/personal/okr">
+                    <Button variant="outline" size="sm" className="w-full justify-start">
+                      <span className="text-xs">Personal Repo - OKRs</span>
+                    </Button>
+                  </Link>
+                  <Link href="/repo/personal/goals">
+                    <Button variant="outline" size="sm" className="w-full justify-start">
+                      <span className="text-xs">Personal Repo - Goals</span>
                     </Button>
                   </Link>
                 </CardContent>
