@@ -14,7 +14,7 @@ export default function SkillsUniverseVisualization({ username }: Props) {
   const { user } = useUser();
   const [graphData, setGraphData] = useState<any>({ nodes: [], links: [] });
   const [loading, setLoading] = useState(true);
-  const fgRef = useRef<any>();
+  const fgRef = useRef<any>(null);
 
   useEffect(() => {
     loadVisualizationData();

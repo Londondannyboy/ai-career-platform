@@ -14,7 +14,7 @@ interface Props {
 }
 
 export default function TrinityVisualization({ trinity }: Props) {
-  const fgRef = useRef<any>();
+  const fgRef = useRef<any>(null);
 
   const graphData = {
     nodes: [
