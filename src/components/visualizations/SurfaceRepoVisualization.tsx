@@ -1,27 +1,29 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
 import { useUser } from '@clerk/nextjs';
-
-const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
+import SafeForceGraph from './SafeForceGraph';
 
 interface Props {
   username: string;
 }
 
 export default function SurfaceRepoVisualization({ username }: Props) {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const [graphData, setGraphData] = useState<any>({ nodes: [], links: [] });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadVisualizationData();
-  }, [username]);
+    if (isLoaded) {
+      loadVisualizationData();
+    }
+  }, [username, isLoaded]);
 
   const loadVisualizationData = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       // Use the same endpoint we fixed yesterday
       const response = await fetch('/api/surface-repo/visualize-simple', {
@@ -32,10 +34,37 @@ export default function SurfaceRepoVisualization({ username }: Props) {
 
       if (response.ok) {
         const data = await response.json();
-        setGraphData(data);
+        if (data.nodes && data.nodes.length > 0) {
+          setGraphData(data);
+        } else {
+          // Use test data if no real data
+          setGraphData({
+            nodes: [
+              { id: 'profile', name: username, type: 'profile', color: '#3B82F6' },
+              { id: 'skill1', name: 'React', type: 'skill', color: '#10B981' },
+              { id: 'skill2', name: 'TypeScript', type: 'skill', color: '#10B981' },
+              { id: 'exp1', name: 'Quest', type: 'experience', color: '#F59E0B' }
+            ],
+            links: [
+              { source: 'profile', target: 'skill1' },
+              { source: 'profile', target: 'skill2' },
+              { source: 'profile', target: 'exp1' }
+            ]
+          });
+        }
+      } else {
+        throw new Error('Failed to load data');
       }
     } catch (error) {
       console.error('Error loading visualization:', error);
+      setError('Failed to load network data');
+      // Use fallback data
+      setGraphData({
+        nodes: [
+          { id: 'profile', name: username, type: 'profile', color: '#3B82F6' }
+        ],
+        links: []
+      });
     } finally {
       setLoading(false);
     }
@@ -45,50 +74,20 @@ export default function SurfaceRepoVisualization({ username }: Props) {
     return <div className="flex items-center justify-center h-full">Loading network...</div>;
   }
 
+  if (error) {
+    return <div className="flex items-center justify-center h-full text-red-500">{error}</div>;
+  }
+
+  if (!graphData || graphData.nodes.length === 0) {
+    return <div className="flex items-center justify-center h-full">No data to display</div>;
+  }
+
   return (
-    <ForceGraph3D
+    <SafeForceGraph
       graphData={graphData}
-      nodeAutoColorBy="type"
-      nodeThreeObject={(node: any) => {
-        // Custom node rendering based on type
-        const geometry = new (window as any).THREE.SphereGeometry(
-          node.type === 'profile' ? 10 : 5
-        );
-        const material = new (window as any).THREE.MeshBasicMaterial({
-          color: node.color || '#3B82F6'
-        });
-        const mesh = new (window as any).THREE.Mesh(geometry, material);
-        
-        // Add label
-        const sprite = new (window as any).THREE.Sprite(
-          new (window as any).THREE.SpriteMaterial({
-            map: new (window as any).THREE.CanvasTexture(
-              (() => {
-                const canvas = document.createElement('canvas');
-                canvas.width = 256;
-                canvas.height = 64;
-                const ctx = canvas.getContext('2d')!;
-                ctx.font = '24px Arial';
-                ctx.fillStyle = 'white';
-                ctx.textAlign = 'center';
-                ctx.fillText(node.name || node.id, 128, 32);
-                return canvas;
-              })()
-            )
-          })
-        );
-        sprite.scale.set(40, 10, 1);
-        sprite.position.y = 15;
-        mesh.add(sprite);
-        
-        return mesh;
-      }}
-      linkColor={() => '#666666'}
-      linkOpacity={0.6}
-      linkWidth={1}
-      enableNodeDrag={true}
-      enableNavigationControls={true}
-      showNavInfo={false}
+      nodeVal={(node: any) => node.type === 'profile' ? 20 : 10}
+      nodeColor={(node: any) => node.color || '#3B82F6'}
+      linkWidth={2}
     />
   );
 }

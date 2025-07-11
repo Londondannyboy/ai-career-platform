@@ -1,24 +1,24 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import dynamic from 'next/dynamic';
 import { useUser } from '@clerk/nextjs';
-
-const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
+import SafeForceGraph from './SafeForceGraph';
 
 interface Props {
   username: string;
 }
 
 export default function SkillsUniverseVisualization({ username }: Props) {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const [graphData, setGraphData] = useState<any>({ nodes: [], links: [] });
   const [loading, setLoading] = useState(true);
-  const fgRef = useRef<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadVisualizationData();
-  }, [username]);
+    if (isLoaded) {
+      loadVisualizationData();
+    }
+  }, [username, isLoaded]);
 
   const loadVisualizationData = async () => {
     try {
@@ -107,76 +107,25 @@ export default function SkillsUniverseVisualization({ username }: Props) {
       }
     } catch (error) {
       console.error('Error loading skills:', error);
+      setError('Failed to load skills data');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (fgRef.current && graphData.nodes.length > 0) {
-      // Add some physics to make it look like a universe
-      fgRef.current.d3Force('charge').strength(-100);
-      fgRef.current.d3Force('link').distance(30);
-    }
-  }, [graphData]);
-
   if (loading) {
     return <div className="flex items-center justify-center h-full">Loading skills universe...</div>;
   }
 
+  if (error) {
+    return <div className="flex items-center justify-center h-full text-red-500">{error}</div>;
+  }
+
   return (
-    <ForceGraph3D
-      ref={fgRef}
+    <SafeForceGraph
       graphData={graphData}
-      nodeThreeObject={(node: any) => {
-        let geometry;
-        let material;
-        
-        if (node.type === 'category') {
-          // Category nodes as glowing spheres
-          geometry = new (window as any).THREE.SphereGeometry(node.size || 20);
-          material = new (window as any).THREE.MeshPhongMaterial({ 
-            color: node.color,
-            emissive: node.color,
-            emissiveIntensity: 0.5,
-            shininess: 100
-          });
-        } else {
-          // Skill nodes as smaller spheres
-          geometry = new (window as any).THREE.SphereGeometry(node.size || 10);
-          material = new (window as any).THREE.MeshLambertMaterial({ 
-            color: node.color,
-            opacity: 0.8,
-            transparent: true
-          });
-        }
-        
-        const mesh = new (window as any).THREE.Mesh(geometry, material);
-        
-        // Add label
-        const sprite = new (window as any).THREE.Sprite(
-          new (window as any).THREE.SpriteMaterial({
-            map: new (window as any).THREE.CanvasTexture(
-              (() => {
-                const canvas = document.createElement('canvas');
-                canvas.width = 256;
-                canvas.height = 64;
-                const ctx = canvas.getContext('2d')!;
-                ctx.font = node.type === 'category' ? 'bold 28px Arial' : '20px Arial';
-                ctx.fillStyle = '#FFFFFF';
-                ctx.textAlign = 'center';
-                ctx.fillText(node.name, 128, 35);
-                return canvas;
-              })()
-            )
-          })
-        );
-        sprite.scale.set(node.type === 'category' ? 50 : 35, 12, 1);
-        sprite.position.y = node.size + 10;
-        mesh.add(sprite);
-        
-        return mesh;
-      }}
+      nodeVal={(node: any) => node.size || (node.type === 'category' ? 20 : 10)}
+      nodeColor={(node: any) => node.color || '#3B82F6'}
       linkColor={(link: any) => {
         const sourceNode = graphData.nodes.find((n: any) => n.id === link.source);
         return sourceNode?.color || '#666666';
@@ -184,19 +133,6 @@ export default function SkillsUniverseVisualization({ username }: Props) {
       linkOpacity={0.3}
       linkWidth={(link: any) => link.value || 1}
       backgroundColor="#000033"
-      enableNodeDrag={true}
-      enableNavigationControls={true}
-      showNavInfo={false}
-      onNodeClick={(node: any) => {
-        // Zoom to node
-        const distance = 100;
-        const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-        fgRef.current.cameraPosition(
-          { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
-          node,
-          3000
-        );
-      }}
     />
   );
 }

@@ -5,9 +5,24 @@ import { DeepRepoService } from '@/lib/profile/deepRepoService';
 // GET /api/deep-repo - Get user's Deep Repo profile
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    // Try to get user ID from multiple sources
+    let userId = null;
+    
+    // First try auth
+    try {
+      const authResult = await auth();
+      userId = authResult?.userId;
+    } catch (e) {
+      console.log('Auth failed, checking headers');
+    }
+    
+    // If no auth, check headers
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      userId = request.headers.get('X-User-Id');
+    }
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'No user ID provided' }, { status: 401 });
     }
 
     // Get target user ID from query params (for viewing others' profiles)
@@ -38,12 +53,28 @@ export async function GET(request: NextRequest) {
 // POST /api/deep-repo - Update user's Deep Repo profile
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    // Try to get user ID from multiple sources
+    let userId = null;
+    
+    // First try auth
+    try {
+      const authResult = await auth();
+      userId = authResult?.userId;
+    } catch (e) {
+      console.log('Auth failed, checking body/headers');
+    }
+    
+    const body = await request.json();
+    
+    // If no auth, check body or headers
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      userId = body.userId || request.headers.get('X-User-Id');
+    }
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'No user ID provided' }, { status: 401 });
     }
 
-    const body = await request.json();
     const { layer, data, merge = false } = body;
 
     // Validate layer

@@ -41,7 +41,11 @@ export default function RepoPage() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/deep-repo');
+      const response = await fetch('/api/deep-repo', {
+        headers: {
+          'X-User-Id': userId || ''
+        }
+      });
       const data = await response.json();
       
       if (data.success) {
@@ -82,7 +86,10 @@ export default function RepoPage() {
     try {
       const response = await fetch('/api/deep-repo', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-User-Id': userId || ''
+        },
         body: JSON.stringify({
           layer,
           data: editData[layer] || {},
