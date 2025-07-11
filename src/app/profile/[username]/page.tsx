@@ -32,6 +32,11 @@ const TrinityVisualization = dynamic(
   { ssr: false, loading: () => <div className="h-96 flex items-center justify-center">Loading Trinity...</div> }
 );
 
+const SkillIntelligence = dynamic(
+  () => import('@/components/ai/SkillIntelligence'),
+  { ssr: false, loading: () => <div className="h-96 flex items-center justify-center">Loading AI insights...</div> }
+);
+
 interface ProfileData {
   username: string;
   name: string;
@@ -206,11 +211,12 @@ export default function ProfilePage() {
 
       {/* Visualizations */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="network">Network</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="skills">Skills</TabsTrigger>
+          {isOwnProfile && <TabsTrigger value="ai">AI Insights</TabsTrigger>}
           {isOwnProfile && <TabsTrigger value="trinity">Trinity</TabsTrigger>}
         </TabsList>
 
@@ -318,6 +324,22 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isOwnProfile && (
+          <TabsContent value="ai" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>AI Skill Intelligence</CardTitle>
+                <CardDescription>
+                  Personalized skill recommendations and career path analysis powered by AI
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SkillIntelligence userId={user?.id} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {isOwnProfile && (
           <TabsContent value="trinity" className="mt-6">

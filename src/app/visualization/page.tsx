@@ -54,8 +54,9 @@ const visualizations: VisualizationCard[] = [
     title: 'OKR Progress Mountains',
     description: 'Topographical visualization of your objectives and key results, showing progress as elevation',
     icon: <Mountain className="w-6 h-6" />,
-    href: '/visualization/okr-mountains',
-    status: 'coming-soon',
+    href: '/visualization/3d/okr-mountains',
+    demoHref: '/visualization/3d/okr-mountains',
+    status: 'available',
     color: 'from-green-500 to-teal-600'
   },
   {

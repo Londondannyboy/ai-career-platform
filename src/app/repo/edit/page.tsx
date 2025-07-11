@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Plus, X, Save, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import SkillInput from '@/components/skills/SkillInput';
 
 interface Experience {
   id?: string;
@@ -160,16 +161,6 @@ export default function RepoEditPage() {
     setExperiences(updated);
   };
 
-  const addSkill = () => {
-    const skillName = prompt('Enter skill name:');
-    if (skillName) {
-      setSkills([...skills, { name: skillName, category: 'General' }]);
-    }
-  };
-
-  const removeSkill = (index: number) => {
-    setSkills(skills.filter((_, i) => i !== index));
-  };
 
   if (loading || !isLoaded) {
     return (
@@ -274,29 +265,12 @@ export default function RepoEditPage() {
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <Label className="text-white">Skills</Label>
-                <Button onClick={addSkill} size="sm" variant="outline">
-                  <Plus className="h-4 w-4 mr-1" /> Add Skill
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {skills.map((skill, index) => (
-                  <Badge
-                    key={index}
-                    variant="secondary"
-                    className="px-3 py-1 bg-blue-900 text-blue-100"
-                  >
-                    {skill.name}
-                    <button
-                      onClick={() => removeSkill(index)}
-                      className="ml-2 text-blue-300 hover:text-white"
-                    >
-                      ×
-                    </button>
-                  </Badge>
-                ))}
-              </div>
+              <Label className="text-white mb-2 block">Skills</Label>
+              <SkillInput
+                skills={skills}
+                onSkillsChange={setSkills}
+                placeholder="Type to add skills (e.g., React, Python, Leadership)..."
+              />
             </div>
 
             <Button
