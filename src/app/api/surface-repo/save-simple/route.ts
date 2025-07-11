@@ -4,6 +4,10 @@ import { sql } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
+    // Parse request body first
+    const body = await request.json();
+    const { data, userId: bodyUserId } = body;
+    
     // Get user ID - try multiple methods
     let userId = null;
     
@@ -49,9 +53,6 @@ export async function POST(request: NextRequest) {
     } else {
       console.log('Saving surface repo for authenticated user:', userId);
     }
-
-    const body = await request.json();
-    const { data, userId: bodyUserId } = body;
     
     console.log('Save request received:', {
       userId,
