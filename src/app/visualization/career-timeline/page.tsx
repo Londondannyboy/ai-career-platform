@@ -223,12 +223,20 @@ export default function CareerTimelinePage() {
             <p className="text-gray-400 mb-6">
               Add your work experiences to see your professional journey visualized in 3D.
             </p>
-            <a
-              href="/repo/surface/edit"
-              className="inline-block px-6 py-3 bg-blue-600 rounded hover:bg-blue-700 transition-colors"
-            >
-              Add Your First Experience
-            </a>
+            <div className="flex gap-3 justify-center">
+              <a
+                href="/profile/quick-setup"
+                className="inline-block px-6 py-3 bg-blue-600 rounded hover:bg-blue-700 transition-colors"
+              >
+                Quick Setup (Recommended)
+              </a>
+              <a
+                href="/repo/surface/edit"
+                className="inline-block px-6 py-3 bg-gray-700 rounded hover:bg-gray-600 transition-colors"
+              >
+                Manual Entry
+              </a>
+            </div>
           </div>
         </div>
       )}
