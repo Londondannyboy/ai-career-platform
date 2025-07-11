@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     // Get user's surface repo data directly
     const result = await sql`
-      SELECT surface_repo 
+      SELECT surface_repo_data 
       FROM user_profiles 
       WHERE user_id = ${userId}
       LIMIT 1
@@ -67,13 +67,12 @@ export async function POST(request: NextRequest) {
 
     if (result.rows.length === 0) {
       return NextResponse.json({
-        error: 'No profile data found',
-        message: 'Please add some data to your profile first',
-        userId
+        nodes: [],
+        links: []
       });
     }
 
-    const surfaceData = result.rows[0]?.surface_repo || {};
+    const surfaceData = result.rows[0]?.surface_repo_data || {};
     console.log('Found surface data:', Object.keys(surfaceData));
 
     // Create visualization nodes from Surface Repo data
@@ -83,7 +82,7 @@ export async function POST(request: NextRequest) {
     // Central profile node
     nodes.push({
       id: 'profile',
-      name: surfaceData.headline || 'Professional Profile',
+      name: surfaceData.professional_headline || 'Professional Profile',
       group: 'profile',
       color: '#0077B5', // LinkedIn blue
       size: 40,
@@ -94,8 +93,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Experience nodes
-    if (surfaceData?.experience && Array.isArray(surfaceData.experience)) {
-      surfaceData.experience.forEach((exp: any, index: number) => {
+    if (surfaceData?.experiences && Array.isArray(surfaceData.experiences)) {
+      surfaceData.experiences.forEach((exp: any, index: number) => {
         const expId = `exp-${index}`;
         
         // Get company name from either string or object
@@ -107,11 +106,11 @@ export async function POST(request: NextRequest) {
           id: expId,
           name: companyName,
           group: 'experience',
-          color: exp.isFuture ? '#8B5CF6' : (exp.isCurrent ? '#3B82F6' : '#FF6B6B'),
-          size: exp.isCurrent ? 30 : 25,
+          color: exp.type === 'future' ? '#8B5CF6' : (exp.current ? '#3B82F6' : '#FF6B6B'),
+          size: exp.current ? 30 : 25,
           x: 100 * Math.cos(index * Math.PI / 3),
           y: 100 * Math.sin(index * Math.PI / 3),
-          z: exp.isFuture ? 50 : 0,
+          z: exp.type === 'future' ? 50 : 0,
           value: exp.title || 'Role'
         });
         links.push({ source: 'profile', target: expId });
@@ -124,28 +123,28 @@ export async function POST(request: NextRequest) {
         const skillId = `skill-${index}`;
         
         // Handle both string and object formats
-        const skillName = typeof skill === 'string' ? skill : skill.name;
-        const category = typeof skill === 'object' ? skill.category : 'general';
-        const endorsed = typeof skill === 'object' ? skill.endorsed : 0;
-        
-        // Get endorsement count
-        const endorsements = endorsed || surfaceData.endorsements?.[skillName] || 0;
+        const skillName = typeof skill === 'string' ? skill : (skill.name || skill);
+        const category = typeof skill === 'object' ? (skill.category || 'General') : 'General';
+        const endorsements = typeof skill === 'object' ? (skill.endorsements || 0) : 0;
         
         // Color by category
         const categoryColors: Record<string, string> = {
-          technical: '#4ECDC4',
-          business: '#45B7D1',
-          creative: '#F4A261',
-          leadership: '#E76F51',
-          communication: '#2A9D8F',
-          general: '#264653'
+          'Frontend': '#3B82F6',
+          'Backend': '#F59E0B',
+          'AI/ML': '#10B981',
+          'Leadership': '#A855F7',
+          'General': '#6B7280',
+          'Technical': '#4ECDC4',
+          'Business': '#45B7D1',
+          'Creative': '#F4A261',
+          'Communication': '#2A9D8F'
         };
         
         nodes.push({
           id: skillId,
           name: skillName,
           group: 'skill',
-          color: categoryColors[category] || categoryColors.general,
+          color: categoryColors[category] || categoryColors.General,
           size: 10 + (endorsements * 2), // Size based on endorsements
           x: 150 * Math.cos(index * 2 * Math.PI / surfaceData.skills.length),
           y: 150 * Math.sin(index * 2 * Math.PI / surfaceData.skills.length),
@@ -159,13 +158,8 @@ export async function POST(request: NextRequest) {
     console.log(`Created ${nodes.length} nodes and ${links.length} links`);
 
     return NextResponse.json({
-      message: 'Surface Repo visualization ready',
-      userId: userId,
-      surfaceRepo: surfaceData,
-      visualization: {
-        nodes,
-        links
-      }
+      nodes,
+      links
     });
 
   } catch (error: any) {
