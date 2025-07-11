@@ -32,6 +32,34 @@ switch(layer) {
 - **Error**: "column domain does not exist"
 - **Fix**: Use correct schema fields
 
+### 5. **Data Format Consistency** (Added Dec 11, 2025)
+- **Issue**: Skills stored as both strings and objects
+- **Company field**: Can be string or object with name property
+```typescript
+// Handle both formats
+const skillName = typeof skill === 'string' ? skill : skill.name;
+const companyName = typeof exp.company === 'string' 
+  ? exp.company 
+  : (exp.company?.name || 'Unknown');
+```
+
+### 6. **Visualization Loading Pattern** (Added Dec 11, 2025)
+- **Issue**: Visualizations try to load before user is available
+- **Fix**: Wait for user to be loaded
+```typescript
+useEffect(() => {
+  if (!isLoaded || !user?.id) {
+    if (isLoaded && !user) {
+      setError('Please sign in');
+      setLoading(false);
+    }
+    return;
+  }
+  // Now safe to load data
+  loadVisualization();
+}, [user, isLoaded]);
+```
+
 ## 🚨 Authentication & Middleware
 
 ### 1. **Clerk Middleware Blocks Everything**
@@ -73,6 +101,36 @@ if (!userId) {
 }
 ```
 - **Critical**: Even if routes are in middleware public list, auth() can still fail!
+
+### 3. **Client-Server User ID Pattern** (Added Dec 11, 2025)
+- **Issue**: User is authenticated in client but API routes can't access user ID
+- **Symptoms**: "No authenticated user" errors even when signed in
+- **Solution**: Pass user ID from client where it works
+```typescript
+// CLIENT - where auth works
+const { user } = useUser();
+const headers = {
+  'Content-Type': 'application/json',
+  'X-User-Id': user?.id || ''
+};
+
+// Also send in body as backup
+fetch('/api/endpoint', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify({ 
+    userId: user?.id,
+    data: yourData 
+  })
+});
+
+// SERVER - check multiple sources
+const body = await request.json();
+let userId = body.userId; // Start with body
+if (!userId) {
+  userId = request.headers.get('X-User-Id');
+}
+```
 
 ## 🚨 Next.js 15 Specific Issues
 

@@ -235,6 +235,27 @@ git push             # Auto-deploy to Vercel
 4. **Use Correct Database** - PostgreSQL (Neon), not Supabase
 5. **Follow Type Safety** - TypeScript errors block deployment
 
+## 🚨 CRITICAL: Client-Server Auth Pattern (Dec 11, 2025)
+
+**Problem**: Clerk auth works in client but fails in API routes
+**Solution**: ALWAYS pass user ID from client to server
+
+```typescript
+// CLIENT SIDE (where auth works)
+const { user } = useUser();
+await fetch('/api/endpoint', {
+  method: 'POST',
+  headers: { 'X-User-Id': user?.id || '' },
+  body: JSON.stringify({ userId: user?.id, data })
+});
+
+// SERVER SIDE (where auth fails)
+const body = await request.json();
+const userId = body.userId || request.headers.get('X-User-Id');
+```
+
+**This pattern is used in ALL repo save/load endpoints!**
+
 ## ⏱️ Common Time-Wasters (Learn from Dec 10, 2025)
 
 ### 1. **Over-Engineering Simple Fixes**
@@ -248,6 +269,18 @@ git push             # Auto-deploy to Vercel
 - **Wrong approach**: Multiple attempts to fix middleware syntax
 - **Right approach**: Create endpoints that gracefully handle auth failures
 - **Better approach**: Check QUEST_COMMON_PITFALLS.md FIRST (it's literally pitfall #1!)
+
+### 3. **Data Format Assumptions** (Added Dec 11, 2025)
+- **Problem**: Skills/companies can be strings OR objects
+- **Wrong approach**: Assume one format
+- **Right approach**: Handle both formats gracefully
+- **Lesson**: Always check actual data structure in database
+
+### 4. **Visualization Loading Race Conditions**
+- **Problem**: Visualizations load before user is available
+- **Wrong approach**: Complex error boundaries and retries
+- **Right approach**: Simple useEffect with proper dependencies
+- **Lesson**: Wait for isLoaded && user before fetching
 
 ### 3. **Database Confusion**
 - **Problem**: Using wrong database patterns
