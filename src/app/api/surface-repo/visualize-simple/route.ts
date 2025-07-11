@@ -2,67 +2,43 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { sql } from '@/lib/db';
 
-export async function GET(request: NextRequest) {
-  return handleVisualize(request);
-}
-
 export async function POST(request: NextRequest) {
-  return handleVisualize(request);
-}
-
-async function handleVisualize(request: NextRequest) {
   try {
+    // Parse body first to get userId
+    const body = await request.json();
+    const { userId: bodyUserId } = body;
+    
     // Get user ID - try multiple methods
-    let userId = null;
+    let userId = bodyUserId; // Start with body user ID
     
-    // Method 1: Try auth() first
-    try {
-      const authResult = await auth();
-      userId = authResult.userId;
-    } catch (e: any) {
-      console.log('Visualize auth method 1 failed:', e?.message || 'Unknown error');
-    }
-    
-    // Method 2: Try currentUser() if auth() failed
     if (!userId) {
+      // Try auth methods
       try {
-        const user = await currentUser();
-        userId = user?.id;
+        const authResult = await auth();
+        userId = authResult.userId;
       } catch (e: any) {
-        console.log('Visualize auth method 2 failed:', e?.message || 'Unknown error');
+        console.log('Visualize auth failed:', e?.message);
       }
     }
     
-    // Method 3: Check request headers
     if (!userId) {
+      // Try header
       const headerUserId = request.headers.get('X-User-Id');
       if (headerUserId && headerUserId !== '') {
         userId = headerUserId;
-        console.log('Got user ID from header:', userId);
-      }
-    }
-    
-    // Method 4: For POST requests, check body
-    if (!userId && request.method === 'POST') {
-      try {
-        const body = await request.json();
-        if (body.userId) {
-          userId = body.userId;
-          console.log('Got user ID from body:', userId);
-        }
-      } catch (e) {
-        console.log('Could not parse body');
       }
     }
     
     if (!userId) {
       return NextResponse.json({ 
-        error: 'No authenticated user',
-        message: 'Please sign in to view your visualization'
-      }, { status: 401 });
+        error: 'No user ID provided',
+        message: 'Please ensure you are signed in'
+      }, { status: 400 });
     }
 
-    // Get user's surface repo data
+    console.log('Visualizing for user:', userId);
+
+    // Get user's surface repo data directly
     const result = await sql`
       SELECT surface_repo 
       FROM user_profiles 
@@ -73,11 +49,13 @@ async function handleVisualize(request: NextRequest) {
     if (result.rows.length === 0) {
       return NextResponse.json({
         error: 'No profile data found',
-        message: 'Please add some data to your profile first'
+        message: 'Please add some data to your profile first',
+        userId
       });
     }
 
     const surfaceData = result.rows[0]?.surface_repo || {};
+    console.log('Found surface data:', Object.keys(surfaceData));
 
     // Create visualization nodes from Surface Repo data
     const nodes: any[] = [];
@@ -158,6 +136,8 @@ async function handleVisualize(request: NextRequest) {
         links.push({ source: 'profile', target: skillId });
       });
     }
+
+    console.log(`Created ${nodes.length} nodes and ${links.length} links`);
 
     return NextResponse.json({
       message: 'Surface Repo visualization ready',

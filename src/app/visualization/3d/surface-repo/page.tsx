@@ -46,7 +46,13 @@ export default function SurfaceRepoVisualization3DPage() {
       headers['X-User-Id'] = user.id;
     }
     
-    fetch('/api/surface-repo/visualize', { headers })
+    // Use POST to send user ID in body as well
+    // Using simple endpoint that doesn't require DeepRepoService
+    fetch('/api/surface-repo/visualize-simple', { 
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ userId: user?.id || '' })
+    })
       .then(res => res.json())
       .then(data => {
         console.log('Visualization data received:', data);
