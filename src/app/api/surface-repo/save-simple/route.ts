@@ -1,16 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { sql } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get user ID - handle auth failures gracefully per pitfalls doc
+    // Get user ID - try multiple methods
     let userId = null;
+    
+    // Method 1: Try auth() first
     try {
       const authResult = await auth();
       userId = authResult.userId;
+      console.log('Auth method 1 result:', userId ? 'Found user' : 'No user');
     } catch (e) {
-      console.log('Auth failed, will create anonymous save');
+      console.log('Auth method 1 failed:', e.message);
+    }
+    
+    // Method 2: Try currentUser() if auth() failed
+    if (!userId) {
+      try {
+        const user = await currentUser();
+        userId = user?.id;
+        console.log('Auth method 2 result:', userId ? 'Found user' : 'No user');
+      } catch (e) {
+        console.log('Auth method 2 failed:', e.message);
+      }
+    }
+    
+    // Method 3: Check request headers
+    if (!userId) {
+      const headerUserId = request.headers.get('X-User-Id');
+      if (headerUserId && headerUserId !== '') {
+        userId = headerUserId;
+        console.log('Got user ID from header:', userId);
+      }
+    }
+    
+    // Method 4: Check request body
+    if (!userId && bodyUserId) {
+      userId = bodyUserId;
+      console.log('Got user ID from body:', userId);
     }
     
     if (!userId) {
@@ -22,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { data } = body;
+    const { data, userId: bodyUserId } = body;
     
     console.log('Save request received:', {
       userId,

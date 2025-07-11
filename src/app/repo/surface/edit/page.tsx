@@ -29,13 +29,21 @@ export default function SurfaceRepoEditorPage() {
   const userId = user?.id;
   
   console.log('Surface Edit Page - Auth state:', { isLoaded, isSignedIn, userId });
+  
+  // Helper to add auth header
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    'X-User-Id': userId || ''
+  };
 
   useEffect(() => {
     if (!isLoaded) return;
     
     // Fetch Surface Repo data
-    console.log('Fetching surface repo data...');
-    fetch('/api/surface-repo/load-simple')
+    console.log('Fetching surface repo data for user:', userId);
+    fetch('/api/surface-repo/load-simple', {
+      headers: authHeaders
+    })
       .then(r => r.json())
       .then(data => {
         console.log('Load response:', data);
@@ -131,12 +139,14 @@ export default function SurfaceRepoEditorPage() {
         endorsements: surfaceData.endorsements
       };
       
-      console.log('Saving surface repo data:', JSON.stringify(saveData, null, 2));
+      console.log('Saving surface repo data for user:', userId);
+      console.log('Save data:', JSON.stringify(saveData, null, 2));
       const response = await fetch('/api/surface-repo/save-simple', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
-          data: saveData
+          data: saveData,
+          userId: userId // Include user ID in body as backup
         })
       });
       

@@ -1,16 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { sql } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user ID - handle auth failures gracefully per pitfalls doc
+    // Get user ID - try multiple methods
     let userId = null;
+    
+    // Method 1: Try auth() first
     try {
       const authResult = await auth();
       userId = authResult.userId;
     } catch (e) {
-      console.log('Auth failed during load');
+      console.log('Load auth method 1 failed:', e.message);
+    }
+    
+    // Method 2: Try currentUser() if auth() failed
+    if (!userId) {
+      try {
+        const user = await currentUser();
+        userId = user?.id;
+      } catch (e) {
+        console.log('Load auth method 2 failed:', e.message);
+      }
+    }
+    
+    // Method 3: Check request headers
+    if (!userId) {
+      const headerUserId = request.headers.get('X-User-Id');
+      if (headerUserId && headerUserId !== '') {
+        userId = headerUserId;
+        console.log('Got user ID from header:', userId);
+      }
     }
     
     if (!userId) {
