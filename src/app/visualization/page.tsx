@@ -12,7 +12,8 @@ import {
   Lock,
   ArrowRight,
   Sparkles,
-  Home
+  Home,
+  TrendingUp
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,15 @@ const visualizations: VisualizationCard[] = [
     href: '/visualization/network-galaxy',
     status: 'coming-soon',
     color: 'from-orange-500 to-red-600'
+  },
+  {
+    id: 'career-trajectory',
+    title: 'Career Trajectory',
+    description: 'Your complete career path in 3D - education, experiences, skills, and future aspirations connected through time',
+    icon: <TrendingUp className="w-6 h-6" />,
+    href: '/visualization/3d/career-trajectory',
+    status: 'available',
+    color: 'from-indigo-500 to-purple-600'
   }
 ];
 

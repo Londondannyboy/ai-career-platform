@@ -2,6 +2,10 @@ import { sql } from '@vercel/postgres';
 import { openai } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
 import { z } from 'zod';
+import { Skill, SkillProficiency } from '../skills/skillTypes';
+import { Experience } from '../experience/experienceTypes';
+import { Education } from '../education/educationTypes';
+import { skillNormalizer } from '../skills/skillNormalization';
 
 // Schema for repository updates
 const repoUpdateSchema = z.object({
@@ -43,10 +47,22 @@ const repoUpdateSchema = z.object({
       pledge: z.string().optional()
     }).optional(),
     
-    // Skills updates
+    // Skills updates with proficiency
     skills: z.array(z.object({
       name: z.string(),
-      category: z.string()
+      category: z.string(),
+      proficiency: z.enum(['beginner', 'intermediate', 'advanced', 'expert']).optional(),
+      yearsOfExperience: z.number().optional()
+    })).optional(),
+    
+    // Experience updates with rich data
+    experiences: z.array(z.object({
+      title: z.string(),
+      company: z.string(),
+      impact: z.array(z.object({
+        description: z.string(),
+        metric: z.string()
+      })).optional()
     })).optional()
   }),
   reason: z.string()
@@ -75,10 +91,13 @@ export class RepoUpdateAgent {
         .map(m => `${m.role}: ${m.content}`)
         .join('\n');
       
+      // Build rich context summary
+      const profileSummary = this.buildProfileSummary(context.currentRepos);
+      
       const systemPrompt = `You are an AI assistant that analyzes coaching conversations to determine if the user's professional repository should be updated.
 
-Current Repository State:
-${JSON.stringify(context.currentRepos, null, 2)}
+Current User Profile:
+${profileSummary}
 
 Guidelines:
 1. Only update when user explicitly mentions new goals, achievements, or aspirations
@@ -87,12 +106,18 @@ Guidelines:
 4. Deep repo Trinity should rarely change - only with major life shifts
 5. Be conservative - only update when clearly needed
 6. Extract specific, actionable information
+7. For skills, assess proficiency based on context:
+   - Beginner: Just learning, following tutorials
+   - Intermediate: Can work independently, 6mo-2yrs experience
+   - Advanced: Deep expertise, mentors others, 2-5yrs
+   - Expert: Industry leader, 5+ years
 
 Examples of when to update:
 - "I want to become a VP of Engineering in 2 years" → Add to futureExperiences
 - "My goal is to increase team velocity by 30%" → Add to OKRs
-- "I just completed a project that saved $2M" → Add to achievements
-- "I'm working on improving my Python skills" → Add to skills
+- "I just completed a project that saved $2M" → Add to achievements with impact metrics
+- "I'm working on improving my Python skills" → Update skill proficiency
+- "I've been leading a team of 12 engineers" → Update experience with team size
 
 Do NOT update for:
 - Casual conversation
@@ -192,6 +217,97 @@ Do NOT update for:
   }
 
   /**
+   * Builds a rich summary of the user's profile for context
+   */
+  private buildProfileSummary(repos: any): string {
+    const summary: string[] = [];
+    
+    // Surface Repo Summary
+    if (repos.surface) {
+      const surface = repos.surface;
+      summary.push('=== Professional Profile ===');
+      
+      if (surface.professional_headline) {
+        summary.push(`Current Role: ${surface.professional_headline}`);
+      }
+      
+      // Current experience
+      if (surface.experiences && surface.experiences.length > 0) {
+        const current = surface.experiences.find((exp: any) => exp.current);
+        if (current) {
+          summary.push(`Current Position: ${current.title} at ${current.company}`);
+          if (current.teamSize) {
+            summary.push(`Team Size: ${current.teamSize}`);
+          }
+          if (current.impact && current.impact.length > 0) {
+            summary.push('Recent Impact:');
+            current.impact.forEach((impact: any) => {
+              summary.push(`  - ${impact.description}: ${impact.metric}`);
+            });
+          }
+        }
+      }
+      
+      // Skills with proficiency
+      if (surface.skills && surface.skills.length > 0) {
+        summary.push('\nTop Skills:');
+        surface.skills.slice(0, 5).forEach((skill: any) => {
+          if (typeof skill === 'object' && skill.proficiency) {
+            summary.push(`  - ${skill.name} (${skill.proficiency})`);
+          } else if (typeof skill === 'object') {
+            summary.push(`  - ${skill.name}`);
+          } else {
+            summary.push(`  - ${skill}`);
+          }
+        });
+      }
+      
+      // Education
+      if (surface.education && surface.education.length > 0) {
+        summary.push('\nEducation:');
+        surface.education.forEach((edu: any) => {
+          if (typeof edu === 'object') {
+            summary.push(`  - ${edu.degree} in ${edu.field} from ${edu.institution}`);
+          } else {
+            summary.push(`  - ${edu}`);
+          }
+        });
+      }
+    }
+    
+    // Personal Repo Summary
+    if (repos.personal) {
+      const personal = repos.personal;
+      summary.push('\n=== Personal Goals & OKRs ===');
+      
+      if (personal.futureExperiences && personal.futureExperiences.length > 0) {
+        summary.push('Future Career Aspirations:');
+        personal.futureExperiences.forEach((exp: any) => {
+          summary.push(`  - ${exp.title} at ${exp.company || 'target company'}`);
+        });
+      }
+      
+      if (personal.okrs && personal.okrs.length > 0) {
+        summary.push('\nActive OKRs:');
+        personal.okrs.forEach((okr: any) => {
+          summary.push(`  - ${okr.objective} (${okr.progress}% complete)`);
+        });
+      }
+    }
+    
+    // Deep Repo Summary
+    if (repos.deep && repos.deep.trinity) {
+      const trinity = repos.deep.trinity;
+      summary.push('\n=== Trinity (Core Identity) ===');
+      if (trinity.quest) summary.push(`Quest: ${trinity.quest}`);
+      if (trinity.service) summary.push(`Service: ${trinity.service}`);
+      if (trinity.pledge) summary.push(`Pledge: ${trinity.pledge}`);
+    }
+    
+    return summary.join('\n');
+  }
+
+  /**
    * Intelligently merges updates with existing data
    */
   private mergeUpdates(currentData: any, updates: any, layer: string): any {
@@ -226,15 +342,56 @@ Do NOT update for:
       };
     }
 
-    // Surface repo updates (skills)
+    // Surface repo updates (skills with proficiency)
     if (layer === 'surface' && updates.skills) {
       const existingSkills = currentData.skills || [];
-      const newSkills = updates.skills.filter((skill: any) => 
-        !existingSkills.some((existing: any) => 
-          (typeof existing === 'string' ? existing : existing.name) === skill.name
-        )
-      );
-      merged.skills = [...existingSkills, ...newSkills];
+      
+      updates.skills.forEach((newSkill: any) => {
+        const existingIndex = existingSkills.findIndex((existing: any) => {
+          const existingName = typeof existing === 'string' ? existing : existing.name;
+          return skillNormalizer.areEqual(existingName, newSkill.name);
+        });
+        
+        if (existingIndex >= 0) {
+          // Update existing skill with new proficiency
+          const existing = existingSkills[existingIndex];
+          if (typeof existing === 'object') {
+            existingSkills[existingIndex] = {
+              ...existing,
+              ...newSkill,
+              name: skillNormalizer.normalize(newSkill.name)
+            };
+          } else {
+            // Convert string to object
+            existingSkills[existingIndex] = {
+              name: skillNormalizer.normalize(newSkill.name),
+              category: skillNormalizer.getCategory(newSkill.name),
+              proficiency: newSkill.proficiency || 'intermediate',
+              activelyUsing: true,
+              ...newSkill
+            };
+          }
+        } else {
+          // Add new skill
+          const enrichedSkill: Skill = {
+            id: `skill-${Date.now()}-${Math.random()}`,
+            name: skillNormalizer.normalize(newSkill.name),
+            category: newSkill.category || skillNormalizer.getCategory(newSkill.name),
+            proficiency: newSkill.proficiency || 'beginner',
+            activelyUsing: true,
+            isCustom: !skillNormalizer.isKnownSkill(newSkill.name),
+            ...newSkill
+          };
+          existingSkills.push(enrichedSkill);
+        }
+      });
+      
+      merged.skills = existingSkills;
+    }
+    
+    // Surface repo updates (experiences)
+    if (layer === 'surface' && updates.experiences) {
+      merged.experiences = [...(currentData.experiences || []), ...updates.experiences];
     }
 
     return merged;

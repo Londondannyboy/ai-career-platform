@@ -10,26 +10,15 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Plus, X, Save, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import SkillInput from '@/components/skills/SkillInput';
+import EnhancedSkillInput from '@/components/skills/EnhancedSkillInput';
 import EducationInput from '@/components/education/EducationInput';
+import ExperienceInput from '@/components/experience/ExperienceInput';
 import { Education } from '@/lib/education/educationTypes';
+import { Experience as RichExperience } from '@/lib/experience/experienceTypes';
+import { Skill as EnhancedSkill } from '@/lib/skills/skillTypes';
+import { migrateUserData, needsMigration } from '@/lib/migration/dataEnrichmentMigration';
 
-interface Experience {
-  id?: string;
-  title: string;
-  company: string;
-  startDate: string;
-  endDate?: string;
-  current: boolean;
-  description: string;
-  type?: 'past' | 'current' | 'future';
-}
-
-interface Skill {
-  name: string;
-  category: string;
-  endorsements?: number;
-}
+// Use RichExperience from experienceTypes and EnhancedSkill from skillTypes
 
 interface Achievement {
   title: string;
@@ -53,8 +42,8 @@ export default function RepoEditPage() {
   // Surface Public
   const [headline, setHeadline] = useState('');
   const [summary, setSummary] = useState('');
-  const [experiences, setExperiences] = useState<Experience[]>([]);
-  const [skills, setSkills] = useState<Skill[]>([]);
+  const [experiences, setExperiences] = useState<RichExperience[]>([]);
+  const [skills, setSkills] = useState<EnhancedSkill[]>([]);
   const [education, setEducation] = useState<Education[]>([]);
   
   // Surface Private
@@ -62,7 +51,7 @@ export default function RepoEditPage() {
   const [expectedSalary, setExpectedSalary] = useState('');
   
   // Personal
-  const [futureExperiences, setFutureExperiences] = useState<Experience[]>([]);
+  const [futureExperiences, setFutureExperiences] = useState<RichExperience[]>([]);
   const [okrs, setOkrs] = useState<OKR[]>([]);
   const [personalGoals, setPersonalGoals] = useState<string[]>([]);
   
@@ -91,6 +80,26 @@ export default function RepoEditPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.profile) {
+          // Check if Surface Public data needs migration
+          if (data.profile.surfaceRepo && needsMigration(data.profile.surfaceRepo)) {
+            const migrated = migrateUserData(data.profile.surfaceRepo);
+            data.profile.surfaceRepo.skills = migrated.skills;
+            data.profile.surfaceRepo.experiences = migrated.experiences;
+            data.profile.surfaceRepo.education = migrated.education;
+            
+            // Save migrated data back to server
+            await saveSection('surface', data.profile.surfaceRepo);
+          }
+          
+          // Check if Personal repo data needs migration
+          if (data.profile.personalRepo && needsMigration({ experiences: data.profile.personalRepo.futureExperiences })) {
+            const migrated = migrateUserData({ experiences: data.profile.personalRepo.futureExperiences });
+            data.profile.personalRepo.futureExperiences = migrated.experiences;
+            
+            // Save migrated data back to server
+            await saveSection('personal', data.profile.personalRepo);
+          }
+          
           // Load Surface Public
           setHeadline(data.profile.surfaceRepo?.professional_headline || '');
           setSummary(data.profile.surfaceRepo?.summary || '');
@@ -145,25 +154,7 @@ export default function RepoEditPage() {
     }
   };
 
-  const addExperience = () => {
-    setExperiences([...experiences, {
-      title: '',
-      company: '',
-      startDate: '',
-      current: false,
-      description: ''
-    }]);
-  };
-
-  const removeExperience = (index: number) => {
-    setExperiences(experiences.filter((_, i) => i !== index));
-  };
-
-  const updateExperience = (index: number, field: keyof Experience, value: any) => {
-    const updated = [...experiences];
-    updated[index] = { ...updated[index], [field]: value };
-    setExperiences(updated);
-  };
+  // Experience handlers are now in ExperienceInput component
 
 
   if (loading || !isLoaded) {
@@ -211,68 +202,20 @@ export default function RepoEditPage() {
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <Label className="text-white">Experience</Label>
-                <Button onClick={addExperience} size="sm" variant="outline">
-                  <Plus className="h-4 w-4 mr-1" /> Add Experience
-                </Button>
-              </div>
-              {experiences.map((exp, index) => (
-                <Card key={index} className="mb-4 bg-gray-800 border-gray-700">
-                  <CardContent className="pt-4">
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <Input
-                          placeholder="Job Title"
-                          value={exp.title}
-                          onChange={(e) => updateExperience(index, 'title', e.target.value)}
-                          className="bg-gray-700 border-gray-600 text-white"
-                        />
-                      </div>
-                      <div>
-                        <Input
-                          placeholder="Company"
-                          value={exp.company}
-                          onChange={(e) => updateExperience(index, 'company', e.target.value)}
-                          className="bg-gray-700 border-gray-600 text-white"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div className="flex gap-4">
-                        <Input
-                          type="date"
-                          value={exp.startDate}
-                          onChange={(e) => updateExperience(index, 'startDate', e.target.value)}
-                          className="bg-gray-700 border-gray-600 text-white"
-                        />
-                        <Input
-                          type="date"
-                          value={exp.endDate || ''}
-                          onChange={(e) => updateExperience(index, 'endDate', e.target.value)}
-                          disabled={exp.current}
-                          className="bg-gray-700 border-gray-600 text-white"
-                        />
-                      </div>
-                      <Button
-                        onClick={() => removeExperience(index)}
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-400"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              <Label className="text-white mb-2 block">Experience</Label>
+              <ExperienceInput
+                experiences={experiences}
+                onExperiencesChange={setExperiences}
+              />
             </div>
 
             <div>
               <Label className="text-white mb-2 block">Skills</Label>
-              <SkillInput
+              <EnhancedSkillInput
                 skills={skills}
                 onSkillsChange={setSkills}
+                showProficiency={true}
+                showTemporal={true}
                 placeholder="Type to add skills (e.g., React, Python, Leadership)..."
               />
             </div>
@@ -378,48 +321,13 @@ export default function RepoEditPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
-              <Label className="text-white">Future Career Aspirations</Label>
-              <p className="text-sm text-gray-400 mb-2">Where do you want to be in 1, 3, 5 years?</p>
-              {futureExperiences.map((exp, index) => (
-                <Card key={index} className="mb-4 bg-gray-800 border-gray-700">
-                  <CardContent className="pt-4">
-                    <Input
-                      placeholder="Future role (e.g., CTO, VP Engineering)"
-                      value={exp.title}
-                      className="mb-2 bg-gray-700 border-gray-600 text-white"
-                      onChange={(e) => {
-                        const updated = [...futureExperiences];
-                        updated[index].title = e.target.value;
-                        setFutureExperiences(updated);
-                      }}
-                    />
-                    <Input
-                      placeholder="Target company or type"
-                      value={exp.company}
-                      className="bg-gray-700 border-gray-600 text-white"
-                      onChange={(e) => {
-                        const updated = [...futureExperiences];
-                        updated[index].company = e.target.value;
-                        setFutureExperiences(updated);
-                      }}
-                    />
-                  </CardContent>
-                </Card>
-              ))}
-              <Button
-                onClick={() => setFutureExperiences([...futureExperiences, {
-                  title: '',
-                  company: '',
-                  startDate: '',
-                  current: false,
-                  description: '',
-                  type: 'future'
-                }])}
-                variant="outline"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-1" /> Add Future Goal
-              </Button>
+              <Label className="text-white mb-2 block">Future Career Aspirations</Label>
+              <p className="text-sm text-gray-400 mb-4">Where do you want to be in 1, 3, 5 years?</p>
+              <ExperienceInput
+                experiences={futureExperiences}
+                onExperiencesChange={setFutureExperiences}
+                isFutureExperience={true}
+              />
             </div>
 
             <div>
