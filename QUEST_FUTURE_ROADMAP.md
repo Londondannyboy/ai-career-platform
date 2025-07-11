@@ -73,7 +73,7 @@ interface SkillIntelligence {
 ## Phase 3: Advanced Visualization (February 2025)
 
 ### Objective
-Create stunning, informative 3D visualizations that make career data actionable and inspiring.
+Create stunning, informative 3D visualizations that make career data actionable and inspiring, incorporating the quë.st visual identity.
 
 ### 3.1 Career Timeline Visualization
 
@@ -136,6 +136,38 @@ interface CareerNode {
 - Shared skills as constellation lines
 - Potential connections as dim stars
 - Interaction strength as brightness
+
+### 3.5 Visual Identity Integration
+
+**Concept**: Incorporate quë.st brand elements throughout visualizations
+
+**Features**:
+- **Dot-Based Transitions**: Loading states show two dots finding each other
+- **Network Formation**: Connections animate to form the ë pattern
+- **Node Design**: User nodes incorporate subtle dot patterns
+- **Success Animations**: Dots pulse and celebrate achievements
+- **Color Language**: Dots change color based on data context
+
+**Technical Implementation**:
+```typescript
+interface QuestVisualIdentity {
+  loadingAnimation: 'dots-seeking' | 'dots-connecting' | 'dots-pulsing';
+  nodePattern: 'subtle-dots' | 'ë-formation' | 'constellation';
+  transitionStyle: 'dot-morph' | 'network-build' | 'pulse-expand';
+  colorScheme: {
+    primary: string; // Main quest color
+    connection: string; // Link color
+    achievement: string; // Success state
+    aspiration: string; // Future/goals
+  };
+}
+```
+
+**Interaction Patterns**:
+- Hover effects reveal dot connections
+- Click interactions trigger dot animations
+- Drag actions show trailing dot patterns
+- Zoom transitions use dot-based morphing
 
 ---
 
