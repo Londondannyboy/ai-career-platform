@@ -71,52 +71,56 @@ export default function ProfilePage() {
       setLoading(true);
       setError(null);
       
-      // For now, use test data - in production this would fetch real user data
-      const isOwnProfile = user?.username === username;
+      const isOwnProfile = user?.username === username || user?.id === username;
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setProfile({
-        username,
-        name: username === 'dankeegan' ? 'Dan Keegan' : 'Test User',
-        headline: 'Building the future of professional identity',
-        imageUrl: user?.imageUrl,
-        surface: {
-          experiences: [
-            { title: 'Founder', company: 'Quest', current: true },
-            { title: 'Senior Engineer', company: 'Previous Co', current: false }
-          ],
-          skills: ['TypeScript', 'React', 'AI/ML', 'Voice Interfaces', 'Leadership'],
-          education: [{ school: 'University', degree: 'Computer Science' }]
-        },
-        hasPrivateAccess: isOwnProfile,
-        surfacePrivate: isOwnProfile ? {
-          achievements: [
-            { title: 'Revenue Growth', metric: 'Increased by 47%' },
-            { title: 'Team Scaling', metric: 'Grew from 5 to 25 engineers' }
-          ]
-        } : null,
-        personal: isOwnProfile ? {
-          okrs: [
-            { objective: 'Launch Quest Platform', progress: 75 },
-            { objective: 'Build Voice AI Coach', progress: 90 }
-          ]
-        } : null,
-        deep: isOwnProfile ? {
-          trinity: {
-            quest: 'Enable every professional to find their authentic voice',
-            service: 'Building AI that understands human potential',
-            pledge: 'Ethical technology that empowers, not replaces'
-          }
-        } : null,
-        stats: {
-          experiences: 5,
-          skills: 12,
-          achievements: 8,
-          completeness: 85
+      // Fetch real user data from API
+      const response = await fetch('/api/deep-repo', {
+        headers: {
+          'X-User-Id': username // Try username as user ID
         }
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch profile');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.profile) {
+        const profile = data.profile;
+        
+        setProfile({
+          username,
+          name: profile.surfaceRepo?.professional_headline?.split('|')[0]?.trim() || username,
+          headline: profile.surfaceRepo?.professional_headline || 'Professional',
+          imageUrl: user?.imageUrl,
+          surface: {
+            experiences: profile.surfaceRepo?.experiences || [],
+            skills: profile.surfaceRepo?.skills || [],
+            education: profile.surfaceRepo?.education || []
+          },
+          hasPrivateAccess: isOwnProfile,
+          surfacePrivate: isOwnProfile ? {
+            achievements: profile.surfacePrivateRepo?.achievements || []
+          } : null,
+          personal: isOwnProfile ? {
+            okrs: profile.personalRepo?.okrs || [],
+            futureExperiences: profile.personalRepo?.futureExperiences || [],
+            goals: profile.personalRepo?.goals || []
+          } : null,
+          deep: isOwnProfile ? {
+            trinity: profile.deepRepo?.trinity || null
+          } : null,
+          stats: {
+            experiences: profile.surfaceRepo?.experiences?.length || 0,
+            skills: profile.surfaceRepo?.skills?.length || 0,
+            achievements: profile.surfacePrivateRepo?.achievements?.length || 0,
+            completeness: profile.profileCompleteness || 0
+          }
+        });
+      } else {
+        throw new Error('No profile data found');
+      }
     } catch (err) {
       setError('Failed to load profile');
       console.error(err);
