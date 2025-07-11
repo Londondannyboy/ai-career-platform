@@ -9,6 +9,26 @@ import { useUser } from '@clerk/nextjs';
 // Dynamically import 3D component to avoid SSR issues
 const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
 
+// Simple error boundary
+class ErrorBoundary extends React.Component<{children: React.ReactNode, fallback: React.ReactNode}> {
+  state = { hasError: false };
+  
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('3D Visualization error:', error, errorInfo);
+  }
+  
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
 export default function SurfaceRepoVisualization3DPage() {
   const { user } = useUser();
   const [loading, setLoading] = useState(true);
@@ -29,17 +49,25 @@ export default function SurfaceRepoVisualization3DPage() {
     fetch('/api/surface-repo/visualize', { headers })
       .then(res => res.json())
       .then(data => {
+        console.log('Visualization data received:', data);
         if (data.error) {
           setError(data.error);
         } else if (data.visualization) {
-          setGraphData(data.visualization);
-          setSurfaceData(data.surfaceRepo);
+          // Ensure we have valid graph data
+          if (data.visualization.nodes && data.visualization.nodes.length > 0) {
+            setGraphData(data.visualization);
+            setSurfaceData(data.surfaceRepo);
+          } else {
+            setError('No visualization data available. Please add data to your profile.');
+          }
+        } else {
+          setError('Invalid response format');
         }
         setLoading(false);
       })
       .catch(err => {
         console.error('Failed to fetch Surface Repo data:', err);
-        setError('Failed to load Surface Repo data');
+        setError('Failed to load Surface Repo data: ' + err.message);
         setLoading(false);
       });
   }, [user]);
@@ -98,12 +126,17 @@ export default function SurfaceRepoVisualization3DPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <h3 className="text-lg font-medium mb-2 text-red-400">Experience</h3>
-              {surfaceData.experience?.map((exp: any, idx: number) => (
-                <div key={idx} className="mb-2 text-sm">
-                  <div className="font-medium">{exp.title}</div>
-                  <div className="text-gray-400">{exp.company}</div>
-                </div>
-              ))}
+              {surfaceData.experience?.map((exp: any, idx: number) => {
+                const companyName = typeof exp.company === 'string' 
+                  ? exp.company 
+                  : (exp.company?.name || 'Unknown Company');
+                return (
+                  <div key={idx} className="mb-2 text-sm">
+                    <div className="font-medium">{exp.title || 'Role'}</div>
+                    <div className="text-gray-400">{companyName}</div>
+                  </div>
+                );
+              })}
             </div>
             
             <div>
@@ -126,31 +159,42 @@ export default function SurfaceRepoVisualization3DPage() {
 
       {/* 3D Visualization */}
       <div className="relative h-[600px] bg-black m-4 rounded-lg overflow-hidden">
-        {graphData && (
-          <ForceGraph3D
-            graphData={graphData}
-            nodeLabel={node => `${(node as any).name}: ${(node as any).value || ''}`}
-            nodeVal={node => (node as any).size || 10}
-            nodeColor={node => (node as any).color || '#ffffff'}
-            linkColor={() => 'rgba(255,255,255,0.3)'}
-            linkWidth={2}
-            linkOpacity={0.6}
-            backgroundColor="#000000"
-            showNavInfo={false}
-            nodeOpacity={1}
-            nodeResolution={16}
-            enableNodeDrag={false}
-            enableNavigationControls={true}
-            controlType="orbit"
-            onNodeClick={(node: any) => {
-              if (node.value) {
-                alert(`${node.name}: ${node.value}`);
-              }
-            }}
-            onNodeHover={(node: any) => {
-              document.body.style.cursor = node ? 'pointer' : 'default';
-            }}
-          />
+        {graphData && graphData.nodes && graphData.nodes.length > 0 ? (
+          <ErrorBoundary fallback={<div className="flex items-center justify-center h-full text-red-400">Error loading 3D visualization</div>}>
+            <ForceGraph3D
+              graphData={graphData}
+              nodeLabel={node => {
+                const n = node as any;
+                return `${n.name || 'Unknown'}: ${n.value || ''}`;
+              }}
+              nodeVal={node => (node as any).size || 10}
+              nodeColor={node => (node as any).color || '#ffffff'}
+              linkColor={() => 'rgba(255,255,255,0.3)'}
+              linkWidth={2}
+              linkOpacity={0.6}
+              backgroundColor="#000000"
+              showNavInfo={false}
+              nodeOpacity={1}
+              nodeResolution={16}
+              enableNodeDrag={false}
+              enableNavigationControls={true}
+              controlType="orbit"
+              onNodeClick={(node: any) => {
+                if (node && node.value) {
+                  alert(`${node.name}: ${node.value}`);
+                }
+              }}
+              onNodeHover={(node: any) => {
+                if (typeof document !== 'undefined') {
+                  document.body.style.cursor = node ? 'pointer' : 'default';
+                }
+              }}
+            />
+          </ErrorBoundary>
+        ) : (
+          <div className="flex items-center justify-center h-full text-gray-400">
+            <p>No data to visualize. Add some experiences and skills to your profile.</p>
+          </div>
         )}
       </div>
 
