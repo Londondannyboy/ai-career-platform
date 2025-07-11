@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, X, Save, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SkillInput from '@/components/skills/SkillInput';
+import EducationInput from '@/components/education/EducationInput';
+import { Education } from '@/lib/education/educationTypes';
 
 interface Experience {
   id?: string;
@@ -53,6 +55,7 @@ export default function RepoEditPage() {
   const [summary, setSummary] = useState('');
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [education, setEducation] = useState<Education[]>([]);
   
   // Surface Private
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -93,6 +96,7 @@ export default function RepoEditPage() {
           setSummary(data.profile.surfaceRepo?.summary || '');
           setExperiences(data.profile.surfaceRepo?.experiences || []);
           setSkills(data.profile.surfaceRepo?.skills || []);
+          setEducation(data.profile.surfaceRepo?.education || []);
           
           // Load Surface Private
           setAchievements(data.profile.surfacePrivateRepo?.achievements || []);
@@ -273,12 +277,21 @@ export default function RepoEditPage() {
               />
             </div>
 
+            <div>
+              <Label className="text-white mb-2 block">Education</Label>
+              <EducationInput
+                education={education}
+                onEducationChange={setEducation}
+              />
+            </div>
+
             <Button
               onClick={() => saveSection('surface', {
                 professional_headline: headline,
                 summary,
                 experiences,
-                skills
+                skills,
+                education
               })}
               disabled={saving}
               className="w-full"
