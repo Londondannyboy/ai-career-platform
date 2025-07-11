@@ -47,6 +47,11 @@ const SkillLearningPath = dynamic(
   { ssr: false, loading: () => <div className="h-96 flex items-center justify-center">Loading learning paths...</div> }
 );
 
+const CareerRecommendations = dynamic(
+  () => import('@/components/ai/CareerRecommendations'),
+  { ssr: false, loading: () => <div className="h-96 flex items-center justify-center">Loading career recommendations...</div> }
+);
+
 interface ProfileData {
   username: string;
   name: string;
@@ -364,17 +369,35 @@ export default function ProfilePage() {
 
         {isOwnProfile && (
           <TabsContent value="ai" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>AI Skill Intelligence</CardTitle>
-                <CardDescription>
-                  Personalized skill recommendations and career path analysis powered by AI
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <SkillIntelligence userId={user?.id} />
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <CareerRecommendations 
+                profile={{
+                  currentRole: profile.surface.experiences.find((exp: any) => exp.current),
+                  experiences: profile.surface.experiences || [],
+                  futureExperiences: profile.personal?.futureExperiences || [],
+                  skills: profile.surface.skills || [],
+                  education: profile.surface.education || [],
+                  okrs: profile.personal?.okrs || [],
+                  trinity: profile.deep?.trinity
+                }}
+                onRecommendationSelect={(rec) => {
+                  console.log('Selected recommendation:', rec);
+                  // Could integrate with repo update to add to goals
+                }}
+              />
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>AI Skill Intelligence</CardTitle>
+                  <CardDescription>
+                    Advanced skill analysis and recommendations
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <SkillIntelligence userId={user?.id} />
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         )}
 
