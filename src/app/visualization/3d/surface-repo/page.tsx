@@ -4,19 +4,29 @@ import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { ArrowLeft, Briefcase, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useUser } from '@clerk/nextjs';
 
 // Dynamically import 3D component to avoid SSR issues
 const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
 
 export default function SurfaceRepoVisualization3DPage() {
+  const { user } = useUser();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [graphData, setGraphData] = useState<any>(null);
   const [surfaceData, setSurfaceData] = useState<any>(null);
 
   useEffect(() => {
-    // Fetch Surface Repo data
-    fetch('/api/surface-repo/visualize')
+    // Fetch Surface Repo data with user ID
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json'
+    };
+    
+    if (user?.id) {
+      headers['X-User-Id'] = user.id;
+    }
+    
+    fetch('/api/surface-repo/visualize', { headers })
       .then(res => res.json())
       .then(data => {
         if (data.error) {
@@ -32,7 +42,7 @@ export default function SurfaceRepoVisualization3DPage() {
         setError('Failed to load Surface Repo data');
         setLoading(false);
       });
-  }, []);
+  }, [user]);
 
   if (loading) {
     return (
@@ -99,11 +109,15 @@ export default function SurfaceRepoVisualization3DPage() {
             <div>
               <h3 className="text-lg font-medium mb-2 text-cyan-400">Top Skills</h3>
               <div className="flex flex-wrap gap-2">
-                {surfaceData.skills?.slice(0, 5).map((skill: string, idx: number) => (
-                  <span key={idx} className="bg-gray-700 px-3 py-1 rounded-full text-sm">
-                    {skill} ({surfaceData.endorsements?.[skill] || 0})
-                  </span>
-                ))}
+                {surfaceData.skills?.slice(0, 5).map((skill: any, idx: number) => {
+                  const skillName = typeof skill === 'string' ? skill : skill.name;
+                  const endorsed = typeof skill === 'object' ? skill.endorsed : (surfaceData.endorsements?.[skillName] || 0);
+                  return (
+                    <span key={idx} className="bg-gray-700 px-3 py-1 rounded-full text-sm">
+                      {skillName} ({endorsed})
+                    </span>
+                  );
+                })}
               </div>
             </div>
           </div>

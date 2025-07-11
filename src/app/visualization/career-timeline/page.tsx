@@ -22,7 +22,12 @@ export default function CareerTimelinePage() {
     if (!isLoaded) return;
     
     // Load user's work experience data
-    fetch('/api/surface-repo/load-simple')
+    const headers: HeadersInit = {};
+    if (user?.id) {
+      headers['X-User-Id'] = user.id;
+    }
+    
+    fetch('/api/surface-repo/load-simple', { headers })
       .then(r => r.json())
       .then(data => {
         if (data.success && data.data?.experience && data.data.experience.length > 0) {
@@ -122,7 +127,7 @@ export default function CareerTimelinePage() {
         console.error('Failed to load timeline data:', err);
         setLoading(false);
       });
-  }, [isLoaded]);
+  }, [isLoaded, user]);
 
   const handleNodeClick = (node: any) => {
     // Center camera on node

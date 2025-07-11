@@ -1,48 +1,62 @@
-import { NextResponse } from 'next/server';
-import { DeepRepoService } from '@/lib/profile/deepRepoService';
+import { NextRequest, NextResponse } from 'next/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
+import { sql } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const testUserId = 'test-user-123';
-
-    // Get or create user profile
-    const profile = await DeepRepoService.getUserProfile(testUserId);
+    // Get user ID - try multiple methods
+    let userId = null;
     
-    if (!profile) {
-      // Create new profile with sample Surface Repo data
-      await DeepRepoService.updateRepoLayer(testUserId, 'surface', {
-        headline: "Founder & CEO at Quest",
-        summary: "Building the future of professional identity through AI-powered networking. Passionate about transforming how professionals connect and grow.",
-        experience: [
-          {
-            id: "exp1",
-            title: "Founder & CEO",
-            company: "Quest",
-            startDate: "2024-01",
-            current: true,
-            description: "Leading the development of revolutionary professional networking platform"
-          },
-          {
-            id: "exp2",
-            title: "Senior Product Manager",
-            company: "TechCorp",
-            startDate: "2021-06",
-            endDate: "2023-12",
-            description: "Led AI product initiatives"
-          }
-        ],
-        skills: ["AI", "Leadership", "Product Strategy", "Machine Learning", "Team Building"],
-        endorsements: {
-          "AI": 45,
-          "Leadership": 38,
-          "Product Strategy": 32,
-          "Machine Learning": 28,
-          "Team Building": 25
-        }
+    // Method 1: Try auth() first
+    try {
+      const authResult = await auth();
+      userId = authResult.userId;
+    } catch (e: any) {
+      console.log('Visualize auth method 1 failed:', e?.message || 'Unknown error');
+    }
+    
+    // Method 2: Try currentUser() if auth() failed
+    if (!userId) {
+      try {
+        const user = await currentUser();
+        userId = user?.id;
+      } catch (e: any) {
+        console.log('Visualize auth method 2 failed:', e?.message || 'Unknown error');
+      }
+    }
+    
+    // Method 3: Check request headers
+    if (!userId) {
+      const headerUserId = request.headers.get('X-User-Id');
+      if (headerUserId && headerUserId !== '') {
+        userId = headerUserId;
+        console.log('Got user ID from header:', userId);
+      }
+    }
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: 'No authenticated user',
+        message: 'Please sign in to view your visualization'
+      }, { status: 401 });
+    }
+
+    // Get user's surface repo data
+    const result = await sql`
+      SELECT surface_repo 
+      FROM user_profiles 
+      WHERE user_id = ${userId}
+      LIMIT 1
+    `;
+
+    if (result.rows.length === 0) {
+      return NextResponse.json({
+        error: 'No profile data found',
+        message: 'Please add some data to your profile first'
       });
     }
 
-    const surfaceData = await DeepRepoService.getRepoLayer(testUserId, 'surface');
+    const surfaceData = result.rows[0]?.surface_repo || {};
 
     // Create visualization nodes from Surface Repo data
     const nodes: any[] = [];
@@ -51,45 +65,70 @@ export async function GET() {
     // Central profile node
     nodes.push({
       id: 'profile',
-      name: 'Professional Profile',
+      name: surfaceData.headline || 'Professional Profile',
       group: 'profile',
       color: '#0077B5', // LinkedIn blue
       size: 40,
       x: 0,
       y: 0,
-      z: 0
+      z: 0,
+      value: surfaceData.summary || 'Add a summary to your profile'
     });
 
     // Experience nodes
-    if (surfaceData?.experience) {
+    if (surfaceData?.experience && Array.isArray(surfaceData.experience)) {
       surfaceData.experience.forEach((exp: any, index: number) => {
         const expId = `exp-${index}`;
+        
+        // Get company name from either string or object
+        const companyName = typeof exp.company === 'string' 
+          ? exp.company 
+          : (exp.company?.name || 'Unknown Company');
+        
         nodes.push({
           id: expId,
-          name: exp.company,
+          name: companyName,
           group: 'experience',
-          color: '#FF6B6B',
-          size: 25,
+          color: exp.isFuture ? '#8B5CF6' : (exp.isCurrent ? '#3B82F6' : '#FF6B6B'),
+          size: exp.isCurrent ? 30 : 25,
           x: 100 * Math.cos(index * Math.PI / 3),
           y: 100 * Math.sin(index * Math.PI / 3),
-          z: 0,
-          value: exp.title
+          z: exp.isFuture ? 50 : 0,
+          value: exp.title || 'Role'
         });
         links.push({ source: 'profile', target: expId });
       });
     }
 
     // Skills nodes
-    if (surfaceData?.skills) {
-      surfaceData.skills.forEach((skill: string, index: number) => {
+    if (surfaceData?.skills && Array.isArray(surfaceData.skills)) {
+      surfaceData.skills.forEach((skill: any, index: number) => {
         const skillId = `skill-${index}`;
-        const endorsements = surfaceData.endorsements?.[skill] || 0;
+        
+        // Handle both string and object formats
+        const skillName = typeof skill === 'string' ? skill : skill.name;
+        const category = typeof skill === 'object' ? skill.category : 'general';
+        const endorsed = typeof skill === 'object' ? skill.endorsed : 0;
+        
+        // Get endorsement count
+        const endorsements = endorsed || surfaceData.endorsements?.[skillName] || 0;
+        
+        // Color by category
+        const categoryColors: Record<string, string> = {
+          technical: '#4ECDC4',
+          business: '#45B7D1',
+          creative: '#F4A261',
+          leadership: '#E76F51',
+          communication: '#2A9D8F',
+          general: '#264653'
+        };
+        
         nodes.push({
           id: skillId,
-          name: skill,
+          name: skillName,
           group: 'skill',
-          color: '#4ECDC4',
-          size: 10 + (endorsements / 5), // Size based on endorsements
+          color: categoryColors[category] || categoryColors.general,
+          size: 10 + (endorsements * 2), // Size based on endorsements
           x: 150 * Math.cos(index * 2 * Math.PI / surfaceData.skills.length),
           y: 150 * Math.sin(index * 2 * Math.PI / surfaceData.skills.length),
           z: 50,
@@ -101,7 +140,7 @@ export async function GET() {
 
     return NextResponse.json({
       message: 'Surface Repo visualization ready',
-      userId: testUserId,
+      userId: userId,
       surfaceRepo: surfaceData,
       visualization: {
         nodes,
@@ -109,11 +148,11 @@ export async function GET() {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Surface Repo visualization error:', error);
     return NextResponse.json({ 
       error: 'Failed to get Surface Repo visualization',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error.message || 'Unknown error'
     }, { status: 500 });
   }
 }

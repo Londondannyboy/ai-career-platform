@@ -21,9 +21,14 @@ export default function SkillsUniversePage() {
     if (!isLoaded) return;
     
     // Load skills and experiences
+    const headers: HeadersInit = {};
+    if (user?.id) {
+      headers['X-User-Id'] = user.id;
+    }
+    
     Promise.all([
-      fetch('/api/deep-repo/working/skills').then(r => r.json()),
-      fetch('/api/surface-repo/load-simple').then(r => r.json())
+      fetch('/api/deep-repo/working/skills', { headers }).then(r => r.json()),
+      fetch('/api/surface-repo/load-simple', { headers }).then(r => r.json())
     ])
       .then(([skillsData, surfaceData]) => {
         const skills = skillsData.data?.skills || [];
@@ -155,7 +160,7 @@ export default function SkillsUniversePage() {
         console.error('Failed to load skills data:', err);
         setLoading(false);
       });
-  }, [isLoaded]);
+  }, [isLoaded, user]);
 
   if (loading || !isLoaded) {
     return (
