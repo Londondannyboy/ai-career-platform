@@ -21,7 +21,15 @@ export async function POST(request: NextRequest) {
       console.log('Saving surface repo for authenticated user:', userId);
     }
 
-    const { data } = await request.json();
+    const body = await request.json();
+    const { data } = body;
+    
+    console.log('Save request received:', {
+      userId,
+      dataKeys: data ? Object.keys(data) : [],
+      hasSkills: data?.skills?.length || 0,
+      hasExperience: data?.experience?.length || 0
+    });
     
     // Check if user profile exists
     const existing = await sql`
@@ -32,15 +40,19 @@ export async function POST(request: NextRequest) {
 
     if (existing.rows.length > 0) {
       // Update existing
-      await sql`
+      console.log('Updating existing profile for user:', userId);
+      const updateResult = await sql`
         UPDATE user_profiles 
         SET surface_repo = ${JSON.stringify(data)},
             updated_at = NOW()
         WHERE user_id = ${userId}
+        RETURNING user_id, updated_at
       `;
+      console.log('Update result:', updateResult.rows);
     } else {
       // Create new
-      await sql`
+      console.log('Creating new profile for user:', userId);
+      const insertResult = await sql`
         INSERT INTO user_profiles (
           user_id, 
           surface_repo, 
@@ -58,11 +70,32 @@ export async function POST(request: NextRequest) {
           NOW(),
           NOW()
         )
+        RETURNING user_id, created_at
       `;
+      console.log('Insert result:', insertResult.rows);
     }
 
-    console.log('Surface repo saved successfully for user:', userId);
-    return NextResponse.json({ success: true, userId });
+    // Verify the save by reading it back
+    const verify = await sql`
+      SELECT user_id, surface_repo, updated_at
+      FROM user_profiles
+      WHERE user_id = ${userId}
+      LIMIT 1
+    `;
+    
+    console.log('Save verification:', {
+      found: verify.rows.length > 0,
+      userId: verify.rows[0]?.user_id,
+      hasData: !!verify.rows[0]?.surface_repo,
+      dataSize: JSON.stringify(verify.rows[0]?.surface_repo || {}).length
+    });
+    
+    return NextResponse.json({ 
+      success: true, 
+      userId,
+      verified: verify.rows.length > 0,
+      timestamp: new Date().toISOString()
+    });
   } catch (error: any) {
     console.error('Save error:', error);
     return NextResponse.json({ 
