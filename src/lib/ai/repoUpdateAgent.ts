@@ -132,25 +132,57 @@ Do NOT update for:
       const column = columnMap[layer];
       if (!column) throw new Error(`Invalid layer: ${layer}`);
 
-      // Get current data
-      const { rows } = await sql`
-        SELECT ${sql.raw(column)} as data
-        FROM user_profiles
-        WHERE user_id = ${userId}
-      `;
+      // Get current data - use dynamic column selection
+      let query;
+      if (column === 'surface_repo_data') {
+        query = sql`SELECT surface_repo_data as data FROM user_profiles WHERE user_id = ${userId}`;
+      } else if (column === 'surface_private_repo_data') {
+        query = sql`SELECT surface_private_repo_data as data FROM user_profiles WHERE user_id = ${userId}`;
+      } else if (column === 'personal_repo_data') {
+        query = sql`SELECT personal_repo_data as data FROM user_profiles WHERE user_id = ${userId}`;
+      } else if (column === 'deep_repo_data') {
+        query = sql`SELECT deep_repo_data as data FROM user_profiles WHERE user_id = ${userId}`;
+      } else {
+        throw new Error(`Invalid column: ${column}`);
+      }
+      
+      const { rows } = await query;
 
       const currentData = rows[0]?.data || {};
 
       // Merge updates intelligently
       const mergedData = this.mergeUpdates(currentData, updates, layer);
 
-      // Update database
-      await sql`
-        UPDATE user_profiles
-        SET ${sql.raw(column)} = ${JSON.stringify(mergedData)}::jsonb,
-            updated_at = NOW()
-        WHERE user_id = ${userId}
-      `;
+      // Update database - use dynamic column update
+      if (column === 'surface_repo_data') {
+        await sql`
+          UPDATE user_profiles
+          SET surface_repo_data = ${JSON.stringify(mergedData)}::jsonb,
+              updated_at = NOW()
+          WHERE user_id = ${userId}
+        `;
+      } else if (column === 'surface_private_repo_data') {
+        await sql`
+          UPDATE user_profiles
+          SET surface_private_repo_data = ${JSON.stringify(mergedData)}::jsonb,
+              updated_at = NOW()
+          WHERE user_id = ${userId}
+        `;
+      } else if (column === 'personal_repo_data') {
+        await sql`
+          UPDATE user_profiles
+          SET personal_repo_data = ${JSON.stringify(mergedData)}::jsonb,
+              updated_at = NOW()
+          WHERE user_id = ${userId}
+        `;
+      } else if (column === 'deep_repo_data') {
+        await sql`
+          UPDATE user_profiles
+          SET deep_repo_data = ${JSON.stringify(mergedData)}::jsonb,
+              updated_at = NOW()
+          WHERE user_id = ${userId}
+        `;
+      }
 
       return { success: true, updatedData: mergedData };
     } catch (error) {
