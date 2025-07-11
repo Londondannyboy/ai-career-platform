@@ -50,12 +50,25 @@ export default function SurfaceRepoEditorPage() {
             skills: exp.skills || []
           }));
           
-          // Transform legacy skills to new format
-          const transformedSkills = (data.data.skills || []).map((skill: string) => ({
-            name: skill,
-            category: 'general',
-            endorsed: data.data.endorsements?.[skill] || 0
-          }));
+          // Transform skills - handle both legacy (string array) and new format (object array)
+          const rawSkills = data.data.skills || [];
+          const transformedSkills = rawSkills.map((skill: string | any) => {
+            if (typeof skill === 'string') {
+              // Legacy format: string array
+              return {
+                name: skill,
+                category: 'general',
+                endorsed: data.data.endorsements?.[skill] || 0
+              };
+            } else {
+              // New format: already an object
+              return {
+                name: skill.name || skill,
+                category: skill.category || 'general',
+                endorsed: skill.endorsed || data.data.endorsements?.[skill.name] || 0
+              };
+            }
+          });
           
           setSurfaceData({
             headline: data.data.headline || '',
@@ -109,21 +122,21 @@ export default function SurfaceRepoEditorPage() {
     setValidationErrors({});
     
     try {
-      // Transform back to legacy format for compatibility
-      const legacyData = {
+      // Save data in current format
+      const saveData = {
         headline: surfaceData.headline,
         summary: surfaceData.summary,
         experience: surfaceData.experience,
-        skills: surfaceData.skills.map(s => s.name),
+        skills: surfaceData.skills, // Keep as objects
         endorsements: surfaceData.endorsements
       };
       
-      console.log('Saving surface repo data:', legacyData);
+      console.log('Saving surface repo data:', JSON.stringify(saveData, null, 2));
       const response = await fetch('/api/surface-repo/save-simple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          data: legacyData
+          data: saveData
         })
       });
       
@@ -139,7 +152,7 @@ export default function SurfaceRepoEditorPage() {
               window.location.reload();
             }, 1500);
           } else {
-            setShowToast({ message: 'Save response unclear', type: 'error' });
+            setShowToast({ message: 'Save failed: ' + (data.error || 'Unknown error'), type: 'error' });
           }
         } catch {
           // If JSON parsing fails but response was ok, still show success
