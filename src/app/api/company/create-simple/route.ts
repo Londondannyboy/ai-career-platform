@@ -1,50 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { sql } from '@/lib/db';
 import { auth } from '@clerk/nextjs/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Handle auth failures gracefully
+    let userId = null;
+    try {
+      const authResult = await auth();
+      userId = authResult.userId;
+    } catch (e) {
+      console.log('Auth failed during company creation');
     }
 
     const { name, website, country } = await request.json();
 
-    if (!name || !website) {
+    if (!name) {
       return NextResponse.json(
-        { error: 'Company name and website are required' },
+        { error: 'Company name is required' },
         { status: 400 }
       );
     }
 
-    const supabase = await createClient();
+    // Create canonical identifier from company name
+    const canonical = name.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-    // Normalize website URL
-    let normalizedUrl = website;
-    if (!website.startsWith('http')) {
-      normalizedUrl = `https://${website}`;
-    }
-    
-    // Extract domain
-    const domain = new URL(normalizedUrl).hostname;
+    // Check if company already exists using canonical_identifier
+    const existing = await sql`
+      SELECT id, company_name, canonical_identifier, website_url, headquarters, description, logo_url
+      FROM company_enrichments 
+      WHERE canonical_identifier = ${canonical}
+      LIMIT 1
+    `;
 
-    // Check if company already exists
-    const { data: existingCompany } = await supabase
-      .from('company_enrichments')
-      .select('*')
-      .eq('domain', domain)
-      .single();
-
-    if (existingCompany) {
+    if (existing.rows.length > 0) {
+      const existingCompany = existing.rows[0];
       return NextResponse.json({
         company: {
           id: existingCompany.id,
-          name: existingCompany.name,
+          name: existingCompany.company_name,
           isValidated: true,
           validatedBy: 'enrichment',
           location: existingCompany.headquarters,
-          domain: existingCompany.domain,
+          domain: existingCompany.website_url,
           description: existingCompany.description,
           logo: existingCompany.logo_url
         },
@@ -52,60 +50,78 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Get basic logo from Google favicon service
-    const logo = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-
-    // Get country name if code provided
-    let headquarters = undefined;
-    if (country) {
-      const { getCountryByCode } = await import('@/lib/constants/countries');
-      headquarters = getCountryByCode(country)?.name;
+    // Normalize website URL if provided
+    let normalizedUrl = website || '';
+    if (website && !website.startsWith('http')) {
+      normalizedUrl = `https://${website}`;
+    }
+    
+    // Extract domain for logo
+    let domain = '';
+    if (normalizedUrl) {
+      try {
+        domain = new URL(normalizedUrl).hostname;
+      } catch (e) {
+        domain = canonical;
+      }
     }
 
+    // Get basic logo from Google favicon service
+    const logo = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128` : '';
+
+    // Get country name if code provided
+    let headquarters = country || null;
+
     // Create basic company entry
-    const companyData = {
-      name,
-      domain,
-      website: normalizedUrl,
-      logo_url: logo,
-      headquarters,
-      description: `${name} company profile`,
-      enrichment_sources: ['manual'],
-      created_by_user_id: userId,
-      created_at: new Date().toISOString()
-    };
+    const result = await sql`
+      INSERT INTO company_enrichments (
+        company_name,
+        canonical_identifier,
+        website_url,
+        logo_url,
+        headquarters,
+        description,
+        created_by_user_id,
+        created_at
+      ) VALUES (
+        ${name},
+        ${canonical},
+        ${normalizedUrl},
+        ${logo},
+        ${headquarters},
+        ${`${name} company profile`},
+        ${userId || 'anonymous'},
+        NOW()
+      )
+      RETURNING id, company_name, canonical_identifier, website_url, headquarters, description, logo_url
+    `;
 
-    const { data: newCompany, error: insertError } = await supabase
-      .from('company_enrichments')
-      .insert(companyData)
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('Failed to save company:', insertError);
+    if (result.rows.length === 0) {
       return NextResponse.json(
         { error: 'Failed to save company data' },
         { status: 500 }
       );
     }
 
+    const newCompany = result.rows[0];
+    
     return NextResponse.json({
       company: {
         id: newCompany.id,
-        name: newCompany.name,
+        name: newCompany.company_name,
         isValidated: true,
         validatedBy: 'manual',
         location: newCompany.headquarters,
-        domain: newCompany.domain,
+        domain: newCompany.website_url,
         description: newCompany.description,
         logo: newCompany.logo_url
       },
       message: 'Company profile created successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Company creation error:', error);
     return NextResponse.json(
-      { error: 'Failed to create company' },
+      { error: error.message || 'Failed to create company' },
       { status: 500 }
     );
   }

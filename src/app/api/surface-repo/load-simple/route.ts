@@ -4,11 +4,17 @@ import { sql } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user ID from auth
-    const { userId } = await auth();
+    // Get user ID - handle auth failures gracefully per pitfalls doc
+    let userId = null;
+    try {
+      const authResult = await auth();
+      userId = authResult.userId;
+    } catch (e) {
+      console.log('Auth failed during load');
+    }
     
     if (!userId) {
-      console.error('No authenticated user for load');
+      console.log('No authenticated user for load, returning empty data');
       return NextResponse.json({ 
         success: true, 
         data: {},

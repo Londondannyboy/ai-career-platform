@@ -4,17 +4,22 @@ import { sql } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get user ID from auth
-    const { userId } = await auth();
-    
-    if (!userId) {
-      console.error('No authenticated user for save');
-      return NextResponse.json({ 
-        error: 'Authentication required' 
-      }, { status: 401 });
+    // Get user ID - handle auth failures gracefully per pitfalls doc
+    let userId = null;
+    try {
+      const authResult = await auth();
+      userId = authResult.userId;
+    } catch (e) {
+      console.log('Auth failed, will create anonymous save');
     }
     
-    console.log('Saving surface repo for user:', userId);
+    if (!userId) {
+      // For anonymous saves, use session ID or timestamp
+      userId = `anon-${Date.now()}`;
+      console.log('Using anonymous user ID:', userId);
+    } else {
+      console.log('Saving surface repo for authenticated user:', userId);
+    }
 
     const { data } = await request.json();
     

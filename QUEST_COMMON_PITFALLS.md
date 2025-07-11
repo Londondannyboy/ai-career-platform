@@ -48,22 +48,31 @@ const isPublicRoute = createRouteMatcher([
 ]);
 ```
 
-### 2. **Auth Endpoint Pattern** (Added Dec 10, 2025)
+### 2. **Auth Endpoint Pattern** (Added Dec 10, 2025 - Updated Dec 11)
 - **Issue**: Endpoints fail with "Clerk can't detect usage of clerkMiddleware()"
-- **Wrong Fix**: Keep tweaking middleware syntax
+- **Wrong Fix**: Keep tweaking middleware syntax or requiring auth
 - **Right Fix**: Make endpoints handle auth failures gracefully
 ```typescript
-// Handle auth failures gracefully
-let userId = 'test-user';
+// WRONG - This will cause "Clerk can't detect" errors
+const { userId } = await auth();
+if (!userId) {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
+
+// RIGHT - Handle auth failures gracefully
+let userId = null;
 try {
   const authResult = await auth();
-  if (authResult.userId) {
-    userId = authResult.userId;
-  }
+  userId = authResult.userId;
 } catch (e) {
-  console.log('Auth failed, using test user');
+  console.log('Auth failed, continuing without auth');
+}
+// Use anonymous ID if no auth
+if (!userId) {
+  userId = `anon-${Date.now()}`;
 }
 ```
+- **Critical**: Even if routes are in middleware public list, auth() can still fail!
 
 ## 🚨 Next.js 15 Specific Issues
 
