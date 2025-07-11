@@ -187,7 +187,7 @@ Do NOT update for:
       return { success: true, updatedData: mergedData };
     } catch (error) {
       console.error('Error applying updates:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 
