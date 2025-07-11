@@ -37,6 +37,16 @@ const SkillIntelligence = dynamic(
   { ssr: false, loading: () => <div className="h-96 flex items-center justify-center">Loading AI insights...</div> }
 );
 
+const SkillRelationshipGraph = dynamic(
+  () => import('@/components/skills/SkillRelationshipGraph'),
+  { ssr: false, loading: () => <div className="h-96 flex items-center justify-center">Loading skill relationships...</div> }
+);
+
+const SkillLearningPath = dynamic(
+  () => import('@/components/skills/SkillLearningPath'),
+  { ssr: false, loading: () => <div className="h-96 flex items-center justify-center">Loading learning paths...</div> }
+);
+
 interface ProfileData {
   username: string;
   name: string;
@@ -310,19 +320,46 @@ export default function ProfilePage() {
         </TabsContent>
 
         <TabsContent value="skills" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Skills Universe</CardTitle>
-              <CardDescription>
-                Explore skill clusters and relationships in 3D space
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[600px] bg-gray-50 rounded">
-                <SkillsUniverseVisualization username={username} />
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Skill Relationships & Clusters</CardTitle>
+                <CardDescription>
+                  Discover how your skills connect and which complementary skills to learn next
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SkillRelationshipGraph 
+                  skills={profile.surface.skills} 
+                  height={400}
+                />
+              </CardContent>
+            </Card>
+            
+            {isOwnProfile && (
+              <SkillLearningPath 
+                currentSkills={profile.surface.skills}
+                onSkillSelect={(skill) => {
+                  // Could integrate with repo update to add to learning goals
+                  console.log('Selected skill for learning:', skill);
+                }}
+              />
+            )}
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Skills Universe</CardTitle>
+                <CardDescription>
+                  Explore skill clusters and relationships in 3D space
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[600px] bg-gray-50 rounded">
+                  <SkillsUniverseVisualization username={username} />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {isOwnProfile && (
