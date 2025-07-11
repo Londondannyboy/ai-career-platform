@@ -34,11 +34,31 @@ export default function SkillInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  // Normalize existing skills on mount
+  // Normalize only known skills on mount, preserve custom skills
   useEffect(() => {
-    const normalized = skillNormalizer.deduplicateSkills(skills);
-    if (normalized.length !== skills.length) {
-      onSkillsChange(normalized);
+    const processedSkills = skills.map(skill => {
+      const skillName = typeof skill === 'string' ? skill : skill.name;
+      if (skillNormalizer.isKnownSkill(skillName)) {
+        const normalized = skillNormalizer.normalize(skillName);
+        return { name: normalized, category: skillNormalizer.getCategory(normalized) };
+      }
+      // Keep custom skills as-is
+      return typeof skill === 'string' 
+        ? { name: skill, category: skillNormalizer.getCategory(skill) }
+        : skill;
+    });
+    
+    // Remove duplicates while preserving custom skills
+    const seen = new Map<string, boolean>();
+    const deduped = processedSkills.filter(skill => {
+      const key = skill.name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.set(key, true);
+      return true;
+    });
+    
+    if (deduped.length !== skills.length) {
+      onSkillsChange(deduped);
     }
   }, []);
 
@@ -59,16 +79,24 @@ export default function SkillInput({
 
   // Add a skill
   const addSkill = (skillName: string) => {
-    const normalized = skillNormalizer.normalize(skillName);
-    const category = skillNormalizer.getCategory(normalized);
+    // First check if it's a known skill - if so, use the normalized version
+    const isKnownSkill = skillNormalizer.isKnownSkill(skillName);
+    const finalSkillName = isKnownSkill ? skillNormalizer.normalize(skillName) : skillName.trim();
+    const category = skillNormalizer.getCategory(finalSkillName);
     
-    // Check for duplicates
-    const normalizedSkills = skills.map(s => 
-      skillNormalizer.normalize(typeof s === 'string' ? s : s.name)
-    );
+    // Check for duplicates - compare normalized versions to catch variations
+    const existingSkillNames = skills.map(s => typeof s === 'string' ? s : s.name);
+    const isDuplicate = existingSkillNames.some(existing => {
+      // If both are known skills, compare normalized versions
+      if (skillNormalizer.isKnownSkill(existing) && isKnownSkill) {
+        return skillNormalizer.normalize(existing) === skillNormalizer.normalize(skillName);
+      }
+      // Otherwise, do case-insensitive comparison
+      return existing.toLowerCase() === finalSkillName.toLowerCase();
+    });
     
-    if (normalizedSkills.includes(normalized)) {
-      setDuplicateWarning(`"${normalized}" is already in your skills`);
+    if (isDuplicate) {
+      setDuplicateWarning(`"${finalSkillName}" is already in your skills`);
       return;
     }
     
@@ -77,10 +105,15 @@ export default function SkillInput({
       return;
     }
     
-    const newSkill: Skill = { name: normalized, category };
-    const updatedSkills = [...skills, newSkill].map(s => 
-      typeof s === 'string' ? { name: skillNormalizer.normalize(s), category: skillNormalizer.getCategory(s) } : s
-    );
+    const newSkill: Skill = { name: finalSkillName, category };
+    const updatedSkills = [...skills, newSkill].map(s => {
+      if (typeof s === 'string') {
+        // Only normalize if it's a known skill
+        const name = skillNormalizer.isKnownSkill(s) ? skillNormalizer.normalize(s) : s;
+        return { name, category: skillNormalizer.getCategory(name) };
+      }
+      return s;
+    });
     
     onSkillsChange(updatedSkills);
     setInput('');
@@ -118,14 +151,17 @@ export default function SkillInput({
 
   // Group skills by category
   const groupedSkills = skills.reduce<Record<string, Skill[]>>((acc, skill) => {
-    const normalized = typeof skill === 'string' 
-      ? { name: skillNormalizer.normalize(skill), category: skillNormalizer.getCategory(skill) }
+    const skillObj = typeof skill === 'string' 
+      ? { 
+          name: skillNormalizer.isKnownSkill(skill) ? skillNormalizer.normalize(skill) : skill,
+          category: skillNormalizer.getCategory(skill) 
+        }
       : skill;
     
-    if (!acc[normalized.category]) {
-      acc[normalized.category] = [];
+    if (!acc[skillObj.category]) {
+      acc[skillObj.category] = [];
     }
-    acc[normalized.category].push(normalized);
+    acc[skillObj.category].push(skillObj);
     return acc;
   }, {});
 
@@ -194,6 +230,16 @@ export default function SkillInput({
                 )}
               </div>
             ))}
+            {/* Show option to add as custom skill if no exact match */}
+            {input.trim() && !suggestions.some(s => s.toLowerCase() === input.toLowerCase()) && (
+              <div
+                className="px-3 py-2 cursor-pointer hover:bg-gray-50 border-t"
+                onClick={() => addSkill(input.trim())}
+              >
+                <span className="text-gray-600">Add "{input.trim()}" as custom skill</span>
+                <p className="text-xs text-gray-400 mt-1">Not in our database, but that's okay!</p>
+              </div>
+            )}
           </Card>
         )}
       </div>
@@ -208,12 +254,18 @@ export default function SkillInput({
                 const globalIndex = skills.findIndex(s => 
                   (typeof s === 'string' ? s : s.name) === skill.name
                 );
+                const isCustom = !skillNormalizer.isKnownSkill(skill.name);
                 return (
                   <Badge
                     key={`${category}-${skill.name}`}
-                    className={`${categoryColors[category] || categoryColors.General} flex items-center gap-1`}
+                    className={`${categoryColors[category] || categoryColors.General} flex items-center gap-1 ${
+                      isCustom ? 'border-dashed' : ''
+                    }`}
                   >
                     {skill.name}
+                    {isCustom && (
+                      <span className="text-xs opacity-60" title="Custom skill">✨</span>
+                    )}
                     <button
                       onClick={() => removeSkill(globalIndex)}
                       className="ml-1 hover:text-red-600"
@@ -231,6 +283,13 @@ export default function SkillInput({
       {/* Stats */}
       <div className="text-sm text-gray-500">
         {skills.length} skills • {Object.keys(groupedSkills).length} categories
+        {(() => {
+          const customCount = skills.filter(s => {
+            const name = typeof s === 'string' ? s : s.name;
+            return !skillNormalizer.isKnownSkill(name);
+          }).length;
+          return customCount > 0 ? ` • ${customCount} custom` : '';
+        })()}
         {skills.length >= maxSkills && <span className="text-orange-500"> • Maximum reached</span>}
       </div>
     </div>
