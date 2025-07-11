@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { openai } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 import { sql } from '@/lib/db'
+import { repoUpdateAgent } from '@/lib/ai/repoUpdateAgent'
 
 interface HumeCLMRequest {
   messages: Array<{
@@ -123,6 +124,52 @@ Use a ${trinityContext.coaching_tone} tone and ${trinityContext.coaching_methodo
     const aiResponse = response.text
 
     console.log('✅ Generated response:', aiResponse.substring(0, 100) + '...')
+
+    // Check if repository updates are needed
+    try {
+      // Get current repos
+      const repoResult = await sql`
+        SELECT 
+          surface_repo_data,
+          surface_private_repo_data,
+          personal_repo_data,
+          deep_repo_data
+        FROM user_profiles
+        WHERE user_id = ${userId}
+      `;
+
+      const currentRepos = repoResult.rows[0] ? {
+        surface: repoResult.rows[0].surface_repo_data,
+        surfacePrivate: repoResult.rows[0].surface_private_repo_data,
+        personal: repoResult.rows[0].personal_repo_data,
+        deep: repoResult.rows[0].deep_repo_data
+      } : {};
+
+      // Analyze conversation for potential updates
+      const updateAnalysis = await repoUpdateAgent.analyzeConversation({
+        userId,
+        messages: body.messages,
+        currentRepos
+      });
+
+      if (updateAnalysis?.shouldUpdate) {
+        console.log('📝 Repository update needed:', updateAnalysis.reason);
+        
+        // Apply the updates
+        const updateResult = await repoUpdateAgent.applyUpdates(
+          userId,
+          updateAnalysis.layer,
+          updateAnalysis.updates
+        );
+        
+        if (updateResult.success) {
+          console.log('✅ Repository updated successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Repository update error:', error);
+      // Continue with response even if update fails
+    }
 
     // Return in Hume's expected SSE format
     const encoder = new TextEncoder()
