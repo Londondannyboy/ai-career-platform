@@ -14,16 +14,16 @@ import { Label } from '@/components/ui/label';
 interface UserProfile {
   id: string;
   userId: string;
-  surfaceRepo: any;
-  workingRepo: any;
-  personalRepo: any;
-  deepRepo: any;
+  surfaceRepo: any; // Public profile
+  surfacePrivateRepo: any; // Private achievements for recruiters
+  personalRepo: any; // OKRs, goals, coaching material
+  deepRepo: any; // Trinity, big hairy goals
   profileCompleteness: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export default function DeepRepoPage() {
+export default function RepoPage() {
   const { userId } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,6 +108,45 @@ export default function DeepRepoPage() {
     const isEditing = editMode && activeTab === layer;
     
     if (!data || Object.keys(data).length === 0) {
+      // Show helpful empty states based on layer
+      if (layer === 'surfacePrivate') {
+        return (
+          <div className="text-gray-500 text-center py-8 space-y-4">
+            <p>Share deeper achievements with select recruiters and connections</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              <Card className="p-4 border-dashed">
+                <h4 className="font-semibold mb-2">🏆 Quantified Achievements</h4>
+                <p className="text-sm text-gray-600">Share real metrics: "Increased revenue by 47%"</p>
+              </Card>
+              <Card className="p-4 border-dashed">
+                <h4 className="font-semibold mb-2">💰 Compensation History</h4>
+                <p className="text-sm text-gray-600">Private salary expectations and history</p>
+              </Card>
+            </div>
+          </div>
+        );
+      }
+      if (layer === 'personal') {
+        return (
+          <div className="text-gray-500 text-center py-8 space-y-4">
+            <p>Your coaching workspace - updated by AI during conversations</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+              <Card className="p-4 border-dashed">
+                <h4 className="font-semibold mb-2">🎯 Personal OKRs</h4>
+                <p className="text-sm text-gray-600">Objectives and key results for your career</p>
+              </Card>
+              <Card className="p-4 border-dashed">
+                <h4 className="font-semibold mb-2">📈 Career Goals</h4>
+                <p className="text-sm text-gray-600">Short and long-term professional goals</p>
+              </Card>
+              <Card className="p-4 border-dashed">
+                <h4 className="font-semibold mb-2">🗣️ Coaching Notes</h4>
+                <p className="text-sm text-gray-600">Insights from your AI coaching sessions</p>
+              </Card>
+            </div>
+          </div>
+        );
+      }
       return (
         <div className="text-gray-500 text-center py-8">
           No data in this layer yet
@@ -157,22 +196,166 @@ export default function DeepRepoPage() {
       return (
         <div className="space-y-4">
           <div>
-            <h4 className="font-semibold mb-2">Trinity</h4>
-            <div className="space-y-2">
-              <div>
-                <Badge variant="outline" className="mb-1">Quest ({data.trinity.type})</Badge>
-                <p className="text-sm">{data.trinity.quest}</p>
-              </div>
-              <div>
-                <Badge variant="outline" className="mb-1">Service</Badge>
-                <p className="text-sm">{data.trinity.service}</p>
-              </div>
-              <div>
-                <Badge variant="outline" className="mb-1">Pledge</Badge>
-                <p className="text-sm">{data.trinity.pledge}</p>
-              </div>
+            <h4 className="font-semibold mb-2">Your Trinity</h4>
+            <div className="space-y-4">
+              <Card className="p-4">
+                <Badge variant="outline" className="mb-2">Quest ({data.trinity.type})</Badge>
+                <p className="text-sm font-medium">{data.trinity.quest}</p>
+              </Card>
+              <Card className="p-4">
+                <Badge variant="outline" className="mb-2">Service</Badge>
+                <p className="text-sm font-medium">{data.trinity.service}</p>
+              </Card>
+              <Card className="p-4">
+                <Badge variant="outline" className="mb-2">Pledge</Badge>
+                <p className="text-sm font-medium">{data.trinity.pledge}</p>
+              </Card>
             </div>
           </div>
+          {data.coachingPreferences && (
+            <div className="mt-4">
+              <h4 className="font-semibold mb-2">AI Coaching Preferences</h4>
+              <p className="text-sm text-gray-600">Methodology: {data.coachingPreferences.methodology || 'Default'}</p>
+              <p className="text-sm text-gray-600">Tone: {data.coachingPreferences.tone || 'Supportive'}</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Surface Private repo structured display
+    if (layer === 'surfacePrivate') {
+      return (
+        <div className="space-y-6">
+          {data.achievements && (
+            <div>
+              <h4 className="font-semibold mb-3">🏆 Quantified Achievements</h4>
+              <div className="space-y-3">
+                {data.achievements.map((achievement: any, idx: number) => (
+                  <Card key={idx} className="p-4">
+                    <div className="space-y-2">
+                      <p className="font-medium">{achievement.title}</p>
+                      <p className="text-sm text-gray-600">{achievement.description}</p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {achievement.metrics?.map((metric: string, midx: number) => (
+                          <Badge key={midx} variant="secondary">
+                            {metric}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {data.compensation && (
+            <div>
+              <h4 className="font-semibold mb-3">💰 Compensation Expectations</h4>
+              <Card className="p-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Expected Range:</span>
+                    <span className="font-medium">{data.compensation.expectedRange}</span>
+                  </div>
+                  {data.compensation.previousRoles && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-sm text-gray-600 mb-2">History (Private)</p>
+                      {data.compensation.previousRoles.map((role: any, idx: number) => (
+                        <div key={idx} className="text-sm mb-1">
+                          {role.company}: {role.compensation}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+          )}
+          
+          {data.references && (
+            <div>
+              <h4 className="font-semibold mb-3">👥 Private References</h4>
+              <div className="space-y-2">
+                {data.references.map((ref: any, idx: number) => (
+                  <Card key={idx} className="p-3">
+                    <p className="font-medium text-sm">{ref.name}</p>
+                    <p className="text-xs text-gray-600">{ref.relationship} • {ref.contact}</p>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Fallback to JSON if structure is different */}
+          {!data.achievements && !data.compensation && !data.references && (
+            <pre className="text-sm bg-gray-50 p-4 rounded overflow-auto max-h-96">
+              {JSON.stringify(data, null, 2)}
+            </pre>
+          )}
+        </div>
+      );
+    }
+
+    // Personal repo structured display
+    if (layer === 'personal') {
+      return (
+        <div className="space-y-6">
+          {data.futureExperiences && (
+            <div>
+              <h4 className="font-semibold mb-3">🚀 Future Aspirations</h4>
+              <div className="space-y-2">
+                {data.futureExperiences.map((exp: any, idx: number) => (
+                  <Card key={idx} className="p-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium">{exp.title}</p>
+                        <p className="text-sm text-gray-600">{exp.company} • {exp.timeframe}</p>
+                      </div>
+                      <Badge variant="secondary">{exp.priority}</Badge>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {data.okrs && (
+            <div>
+              <h4 className="font-semibold mb-3">📊 Personal OKRs</h4>
+              <div className="space-y-2">
+                {data.okrs.map((okr: any, idx: number) => (
+                  <Card key={idx} className="p-3">
+                    <p className="font-medium mb-2">{okr.objective}</p>
+                    <Progress value={okr.progress || 0} className="mb-2" />
+                    <p className="text-xs text-gray-600">{okr.keyResults?.length || 0} key results</p>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {data.goals && (
+            <div>
+              <h4 className="font-semibold mb-3">🎯 Career Goals</h4>
+              <div className="space-y-2">
+                {data.goals.map((goal: any, idx: number) => (
+                  <Card key={idx} className="p-3">
+                    <p className="text-sm">{goal.description}</p>
+                    <p className="text-xs text-gray-600 mt-1">Target: {goal.targetDate}</p>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Fallback to JSON if structure is different */}
+          {!data.futureExperiences && !data.okrs && !data.goals && (
+            <pre className="text-sm bg-gray-50 p-4 rounded overflow-auto max-h-96">
+              {JSON.stringify(data, null, 2)}
+            </pre>
+          )}
         </div>
       );
     }
@@ -210,9 +393,9 @@ export default function DeepRepoPage() {
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle>Deep Repository</CardTitle>
+              <CardTitle>My Repository</CardTitle>
               <CardDescription>
-                Manage your tiered profile data across four privacy layers
+                Your complete professional repository - from public profile to deepest aspirations
               </CardDescription>
             </div>
             <div className="text-right">
@@ -249,17 +432,17 @@ export default function DeepRepoPage() {
                 Surface
                 <Badge variant="outline" className="ml-2 text-xs">Public</Badge>
               </TabsTrigger>
-              <TabsTrigger value="working">
-                Working
-                <Badge variant="outline" className="ml-2 text-xs">Professional</Badge>
+              <TabsTrigger value="surfacePrivate">
+                Surface
+                <Badge variant="outline" className="ml-2 text-xs">Private</Badge>
               </TabsTrigger>
               <TabsTrigger value="personal">
                 Personal
-                <Badge variant="outline" className="ml-2 text-xs">Peers</Badge>
+                <Badge variant="outline" className="ml-2 text-xs">Goals</Badge>
               </TabsTrigger>
               <TabsTrigger value="deep">
                 Deep
-                <Badge variant="outline" className="ml-2 text-xs">Private</Badge>
+                <Badge variant="outline" className="ml-2 text-xs">Core</Badge>
               </TabsTrigger>
             </TabsList>
 
@@ -268,7 +451,7 @@ export default function DeepRepoPage() {
                 <CardHeader>
                   <CardTitle className="text-lg">Surface Repository</CardTitle>
                   <CardDescription>
-                    Public profile information visible to everyone
+                    Your public professional profile - what everyone can see (like LinkedIn)
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -277,16 +460,17 @@ export default function DeepRepoPage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="working" className="mt-4">
+
+            <TabsContent value="surfacePrivate" className="mt-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Working Repository</CardTitle>
+                  <CardTitle className="text-lg">Surface Repository (Private)</CardTitle>
                   <CardDescription>
-                    Professional depth shared with recruiters and hiring managers
+                    Deeper achievements and metrics - visible only to recruiters and connections you approve
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {renderLayerContent('working', profile?.workingRepo)}
+                  {renderLayerContent('surfacePrivate', profile?.surfacePrivateRepo)}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -296,7 +480,7 @@ export default function DeepRepoPage() {
                 <CardHeader>
                   <CardTitle className="text-lg">Personal Repository</CardTitle>
                   <CardDescription>
-                    Authentic sharing with peers and coaches
+                    Your coaching workspace - OKRs, goals, and material for deep career conversations
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -310,7 +494,7 @@ export default function DeepRepoPage() {
                 <CardHeader>
                   <CardTitle className="text-lg">Deep Repository</CardTitle>
                   <CardDescription>
-                    Your Trinity, life goals, and deeply personal mission
+                    Your core identity - Trinity, life mission, and deepest professional aspirations
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

@@ -36,7 +36,7 @@ export interface UserProfile {
   id: string;
   userId: string;
   surfaceRepo: Partial<SurfaceRepo>;
-  workingRepo: Partial<WorkingRepo>;
+  surfacePrivateRepo: Partial<WorkingRepo>; // Using working_repo column
   personalRepo: Partial<PersonalRepo>;
   deepRepo: DeepRepoData;
   profileCompleteness: number;
@@ -44,11 +44,11 @@ export interface UserProfile {
   updatedAt: Date;
 }
 
-export type RepoLayer = 'surface' | 'working' | 'personal' | 'deep';
+export type RepoLayer = 'surface' | 'surfacePrivate' | 'personal' | 'deep';
 
 export interface RepoAccessLevel {
   surface: boolean;
-  working: boolean;
+  surfacePrivate: boolean;
   personal: boolean;
   deep: boolean;
 }
@@ -80,7 +80,7 @@ export class DeepRepoService {
         id: row.id,
         userId: row.user_id,
         surfaceRepo: row.surface_repo || {},
-        workingRepo: row.working_repo || {},
+        surfacePrivateRepo: row.working_repo || {}, // Map working_repo to surfacePrivateRepo
         personalRepo: row.personal_repo || {},
         deepRepo: row.deep_repo || {},
         profileCompleteness: row.profile_completeness || 0,
@@ -98,7 +98,7 @@ export class DeepRepoService {
     try {
       const columnMap = {
         surface: 'surface_repo',
-        working: 'working_repo',
+        surfacePrivate: 'working_repo', // Reuse working_repo column
         personal: 'personal_repo',
         deep: 'deep_repo'
       };
@@ -109,7 +109,7 @@ export class DeepRepoService {
         case 'surface':
           result = await sql`SELECT surface_repo FROM user_profiles WHERE user_id = ${userId} LIMIT 1`;
           break;
-        case 'working':
+        case 'surfacePrivate':
           result = await sql`SELECT working_repo FROM user_profiles WHERE user_id = ${userId} LIMIT 1`;
           break;
         case 'personal':
@@ -138,7 +138,7 @@ export class DeepRepoService {
     try {
       const columnMap = {
         surface: 'surface_repo',
-        working: 'working_repo',
+        surfacePrivate: 'working_repo', // Reuse working_repo column
         personal: 'personal_repo',
         deep: 'deep_repo'
       };
@@ -157,7 +157,7 @@ export class DeepRepoService {
             RETURNING id
           `;
           break;
-        case 'working':
+        case 'surfacePrivate':
           result = await sql`
             UPDATE user_profiles
             SET working_repo = ${JSON.stringify(data)}::jsonb, updated_at = NOW()
@@ -202,7 +202,7 @@ export class DeepRepoService {
     try {
       const columnMap = {
         surface: 'surface_repo',
-        working: 'working_repo',
+        surfacePrivate: 'working_repo', // Reuse working_repo column
         personal: 'personal_repo',
         deep: 'deep_repo'
       };
@@ -221,7 +221,7 @@ export class DeepRepoService {
             RETURNING id
           `;
           break;
-        case 'working':
+        case 'surfacePrivate':
           result = await sql`
             UPDATE user_profiles
             SET working_repo = working_repo || ${JSON.stringify(updates)}::jsonb, updated_at = NOW()
@@ -356,7 +356,7 @@ export class DeepRepoService {
       if (ownerId === viewerId) {
         return {
           surface: true,
-          working: true,
+          surfacePrivate: true,
           personal: true,
           deep: true
         };
@@ -379,7 +379,7 @@ export class DeepRepoService {
         // Default to surface-only access
         return {
           surface: true,
-          working: false,
+          surfacePrivate: false,
           personal: false,
           deep: false
         };
@@ -388,7 +388,7 @@ export class DeepRepoService {
       const access = result.rows[0];
       return {
         surface: access.surface_access || true,
-        working: access.working_access || false,
+        surfacePrivate: access.working_access || false, // Map working_access to surfacePrivate
         personal: access.personal_access || false,
         deep: access.deep_access || false
       };
@@ -397,7 +397,7 @@ export class DeepRepoService {
       // Default to surface-only on error
       return {
         surface: true,
-        working: false,
+        surfacePrivate: false,
         personal: false,
         deep: false
       };
@@ -408,7 +408,7 @@ export class DeepRepoService {
   static async grantRepoAccess(
     ownerId: string, 
     grantedToId: string, 
-    level: 'surface' | 'working' | 'personal' | 'deep',
+    level: 'surface' | 'surfacePrivate' | 'personal' | 'deep',
     relationshipType: string = 'connection',
     reason?: string,
     expiresDays?: number
@@ -466,8 +466,8 @@ export class DeepRepoService {
       if (access.surface) {
         accessControlledProfile.surfaceRepo = profile.surfaceRepo;
       }
-      if (access.working) {
-        accessControlledProfile.workingRepo = profile.workingRepo;
+      if (access.surfacePrivate) {
+        accessControlledProfile.surfacePrivateRepo = profile.surfacePrivateRepo;
       }
       if (access.personal) {
         accessControlledProfile.personalRepo = profile.personalRepo;

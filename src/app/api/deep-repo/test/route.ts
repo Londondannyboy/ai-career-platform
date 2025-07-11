@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
           core_skills: ['TypeScript', 'React', 'AI/ML', 'Voice Interfaces']
         });
         
-        await DeepRepoService.mergeRepoLayer(userId, 'working', {
+        await DeepRepoService.mergeRepoLayer(userId, 'surfacePrivate', {
           achievements: [
             {
               title: 'Built Voice AI Coaching System',

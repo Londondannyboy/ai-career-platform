@@ -47,9 +47,9 @@ export async function POST(request: NextRequest) {
     const { layer, data, merge = false } = body;
 
     // Validate layer
-    if (!['surface', 'working', 'personal', 'deep'].includes(layer)) {
+    if (!['surface', 'surfacePrivate', 'personal', 'deep'].includes(layer)) {
       return NextResponse.json(
-        { error: 'Invalid layer. Must be one of: surface, working, personal, deep' },
+        { error: 'Invalid layer. Must be one of: surface, surfacePrivate, personal, deep' },
         { status: 400 }
       );
     }

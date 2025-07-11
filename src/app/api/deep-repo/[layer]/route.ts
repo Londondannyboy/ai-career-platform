@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DeepRepoService } from '@/lib/profile/deepRepoService';
 
-type ValidLayer = 'surface' | 'working' | 'personal' | 'deep';
+type ValidLayer = 'surface' | 'surfacePrivate' | 'personal' | 'deep';
 
 // GET /api/deep-repo/[layer] - Get specific repo layer
 export async function GET(
@@ -12,7 +12,7 @@ export async function GET(
     const { layer } = await context.params;
     const userId = request.nextUrl.searchParams.get('userId') || 'test-user-123';
     
-    if (!['surface', 'working', 'personal', 'deep'].includes(layer)) {
+    if (!['surface', 'surfacePrivate', 'personal', 'deep'].includes(layer)) {
       return NextResponse.json({ error: 'Invalid layer' }, { status: 400 });
     }
 
@@ -42,7 +42,7 @@ export async function POST(
     const body = await request.json();
     const { userId = 'test-user-123', data } = body;
     
-    if (!['surface', 'working', 'personal', 'deep'].includes(layer)) {
+    if (!['surface', 'surfacePrivate', 'personal', 'deep'].includes(layer)) {
       return NextResponse.json({ error: 'Invalid layer' }, { status: 400 });
     }
 
