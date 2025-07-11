@@ -120,6 +120,22 @@ export default function VisualizationDashboard() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <h1 className="text-4xl font-bold mb-8">Visualization Dashboard</h1>
         
+        {/* Demo Banner */}
+        <div className="mb-8 bg-blue-900/20 border border-blue-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-blue-300 mb-1">🎉 Try the Demos First!</h2>
+              <p className="text-gray-400">See the visualizations in action with sample data - no login required</p>
+            </div>
+            <Link
+              href="/visualization/demo"
+              className="px-6 py-3 bg-blue-600 rounded hover:bg-blue-700 transition-colors text-white font-medium"
+            >
+              View Demos
+            </Link>
+          </div>
+        </div>
+        
         {/* Edit Tools */}
         <div className="mb-12">
           <h2 className="text-2xl font-semibold mb-4 text-yellow-400">🛠️ Edit Your Repo Data</h2>
