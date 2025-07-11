@@ -19,13 +19,18 @@ export default function CareerTimelinePage() {
   const fgRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || !user?.id) {
+      if (isLoaded && !user) {
+        setHasData(false);
+        setLoading(false);
+      }
+      return;
+    }
     
     // Load user's work experience data
-    const headers: HeadersInit = {};
-    if (user?.id) {
-      headers['X-User-Id'] = user.id;
-    }
+    const headers: HeadersInit = {
+      'X-User-Id': user.id
+    };
     
     fetch('/api/surface-repo/load-simple', { headers })
       .then(r => r.json())

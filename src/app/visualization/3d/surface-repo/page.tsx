@@ -9,26 +9,6 @@ import { useUser } from '@clerk/nextjs';
 // Dynamically import 3D component to avoid SSR issues
 const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
 
-// Simple error boundary
-class ErrorBoundary extends React.Component<{children: React.ReactNode, fallback: React.ReactNode}> {
-  state = { hasError: false };
-  
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-  
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('3D Visualization error:', error, errorInfo);
-  }
-  
-  render() {
-    if (this.state.hasError) {
-      return this.props.fallback;
-    }
-    return this.props.children;
-  }
-}
-
 export default function SurfaceRepoVisualization3DPage() {
   const { user, isLoaded, isSignedIn } = useUser();
   const [loading, setLoading] = useState(true);
@@ -37,58 +17,49 @@ export default function SurfaceRepoVisualization3DPage() {
   const [surfaceData, setSurfaceData] = useState<any>(null);
 
   useEffect(() => {
-    // Wait for user to be loaded
-    if (!isLoaded) {
-      console.log('Waiting for user to load...');
-      return;
-    }
-    
-    if (!user) {
-      console.log('No user found');
+    // Only load when we have a user
+    if (!isLoaded) return;
+    if (!user?.id) {
       setError('Please sign in to view your visualization');
       setLoading(false);
       return;
     }
     
-    console.log('Fetching visualization for user:', user.id);
-    
-    // Fetch Surface Repo data with user ID
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      'X-User-Id': user.id
-    };
-    
-    // Use POST to send user ID in body as well
-    // Using simple endpoint that doesn't require DeepRepoService
-    fetch('/api/surface-repo/visualize-simple', { 
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ userId: user.id })
-    })
-      .then(res => res.json())
-      .then(data => {
-        console.log('Visualization data received:', data);
-        if (data.error) {
-          setError(data.error);
-        } else if (data.visualization) {
-          // Ensure we have valid graph data
-          if (data.visualization.nodes && data.visualization.nodes.length > 0) {
-            setGraphData(data.visualization);
-            setSurfaceData(data.surfaceRepo);
-          } else {
-            setError('No visualization data available. Please add data to your profile.');
-          }
-        } else {
-          setError('Invalid response format');
-        }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to fetch Surface Repo data:', err);
-        setError('Failed to load Surface Repo data: ' + err.message);
-        setLoading(false);
-      });
+    loadVisualization();
   }, [user, isLoaded]);
+  
+  const loadVisualization = async () => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/surface-repo/visualize-simple', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user.id
+        },
+        body: JSON.stringify({ userId: user.id })
+      });
+
+      const data = await response.json();
+      
+      if (data.error) {
+        setError(data.error);
+      } else if (data.visualization && data.visualization.nodes && data.visualization.nodes.length > 0) {
+        setGraphData(data.visualization);
+        setSurfaceData(data.surfaceRepo);
+      } else {
+        setError('No visualization data available');
+      }
+    } catch (err: any) {
+      setError('Failed to load: ' + (err.message || 'Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!isLoaded || loading) {
     return (
@@ -185,37 +156,20 @@ export default function SurfaceRepoVisualization3DPage() {
       {/* 3D Visualization */}
       <div className="relative h-[600px] bg-black m-4 rounded-lg overflow-hidden">
         {graphData && graphData.nodes && graphData.nodes.length > 0 ? (
-          <ErrorBoundary fallback={<div className="flex items-center justify-center h-full text-red-400">Error loading 3D visualization</div>}>
-            <ForceGraph3D
-              graphData={graphData}
-              nodeLabel={node => {
-                const n = node as any;
-                return `${n.name || 'Unknown'}: ${n.value || ''}`;
-              }}
-              nodeVal={node => (node as any).size || 10}
-              nodeColor={node => (node as any).color || '#ffffff'}
-              linkColor={() => 'rgba(255,255,255,0.3)'}
-              linkWidth={2}
-              linkOpacity={0.6}
-              backgroundColor="#000000"
-              showNavInfo={false}
-              nodeOpacity={1}
-              nodeResolution={16}
-              enableNodeDrag={false}
-              enableNavigationControls={true}
-              controlType="orbit"
-              onNodeClick={(node: any) => {
-                if (node && node.value) {
-                  alert(`${node.name}: ${node.value}`);
-                }
-              }}
-              onNodeHover={(node: any) => {
-                if (typeof document !== 'undefined') {
-                  document.body.style.cursor = node ? 'pointer' : 'default';
-                }
-              }}
-            />
-          </ErrorBoundary>
+          <ForceGraph3D
+            graphData={graphData}
+            nodeLabel={(node: any) => `${node.name}: ${node.value || ''}`}
+            nodeVal={(node: any) => node.size || 10}
+            nodeColor={(node: any) => node.color || '#ffffff'}
+            linkColor={() => 'rgba(255,255,255,0.3)'}
+            linkWidth={2}
+            backgroundColor="#000000"
+            showNavInfo={false}
+            nodeOpacity={1}
+            enableNodeDrag={false}
+            enableNavigationControls={true}
+            controlType="orbit"
+          />
         ) : (
           <div className="flex items-center justify-center h-full text-gray-400">
             <p>No data to visualize. Add some experiences and skills to your profile.</p>

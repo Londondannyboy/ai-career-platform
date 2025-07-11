@@ -18,13 +18,18 @@ export default function SkillsUniversePage() {
   const fgRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || !user?.id) {
+      if (isLoaded && !user) {
+        setHasData(false);
+        setLoading(false);
+      }
+      return;
+    }
     
     // Load skills and experiences
-    const headers: HeadersInit = {};
-    if (user?.id) {
-      headers['X-User-Id'] = user.id;
-    }
+    const headers: HeadersInit = {
+      'X-User-Id': user.id
+    };
     
     Promise.all([
       fetch('/api/deep-repo/working/skills', { headers }).then(r => r.json()),
