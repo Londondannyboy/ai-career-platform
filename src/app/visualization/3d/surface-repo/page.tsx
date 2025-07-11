@@ -30,28 +30,40 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode, fallback
 }
 
 export default function SurfaceRepoVisualization3DPage() {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [graphData, setGraphData] = useState<any>(null);
   const [surfaceData, setSurfaceData] = useState<any>(null);
 
   useEffect(() => {
+    // Wait for user to be loaded
+    if (!isLoaded) {
+      console.log('Waiting for user to load...');
+      return;
+    }
+    
+    if (!user) {
+      console.log('No user found');
+      setError('Please sign in to view your visualization');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('Fetching visualization for user:', user.id);
+    
     // Fetch Surface Repo data with user ID
     const headers: HeadersInit = {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-User-Id': user.id
     };
-    
-    if (user?.id) {
-      headers['X-User-Id'] = user.id;
-    }
     
     // Use POST to send user ID in body as well
     // Using simple endpoint that doesn't require DeepRepoService
     fetch('/api/surface-repo/visualize-simple', { 
       method: 'POST',
       headers,
-      body: JSON.stringify({ userId: user?.id || '' })
+      body: JSON.stringify({ userId: user.id })
     })
       .then(res => res.json())
       .then(data => {
@@ -76,7 +88,7 @@ export default function SurfaceRepoVisualization3DPage() {
         setError('Failed to load Surface Repo data: ' + err.message);
         setLoading(false);
       });
-  }, [user]);
+  }, [user, isLoaded]);
 
   if (loading) {
     return (

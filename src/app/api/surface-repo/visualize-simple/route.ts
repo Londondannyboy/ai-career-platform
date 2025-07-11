@@ -30,10 +30,29 @@ export async function POST(request: NextRequest) {
     }
     
     if (!userId) {
-      return NextResponse.json({ 
-        error: 'No user ID provided',
-        message: 'Please ensure you are signed in'
-      }, { status: 400 });
+      // Last resort - check for any anonymous saves
+      const anonResult = await sql`
+        SELECT user_id, surface_repo 
+        FROM user_profiles 
+        WHERE user_id LIKE 'anon-%'
+        ORDER BY updated_at DESC
+        LIMIT 1
+      `;
+      
+      if (anonResult.rows.length > 0) {
+        console.log('Using anonymous profile as fallback');
+        userId = anonResult.rows[0].user_id;
+      } else {
+        return NextResponse.json({ 
+          error: 'No user ID provided',
+          message: 'Please ensure you are signed in',
+          debug: {
+            bodyUserId,
+            headerUserId: request.headers.get('X-User-Id'),
+            method: request.method
+          }
+        }, { status: 400 });
+      }
     }
 
     console.log('Visualizing for user:', userId);
