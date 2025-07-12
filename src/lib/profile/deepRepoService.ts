@@ -186,9 +186,10 @@ export class DeepRepoService {
       }
       
       // Update profile completeness
-      await sql`
-        SELECT calculate_profile_completeness(${userId})
-      `;
+      // TODO: Fix this - function doesn't exist in production
+      // await sql`
+      //   SELECT calculate_profile_completeness(${userId})
+      // `;
       
       return result.rows.length > 0;
     } catch (error) {
@@ -250,9 +251,10 @@ export class DeepRepoService {
       }
       
       // Update profile completeness
-      await sql`
-        SELECT calculate_profile_completeness(${userId})
-      `;
+      // TODO: Fix this - function doesn't exist in production
+      // await sql`
+      //   SELECT calculate_profile_completeness(${userId})
+      // `;
       
       return result.rows.length > 0;
     } catch (error) {
@@ -300,9 +302,10 @@ export class DeepRepoService {
       }
       
       // Update profile completeness
-      await sql`
-        SELECT calculate_profile_completeness(${userId})
-      `;
+      // TODO: Fix this - function doesn't exist in production
+      // await sql`
+      //   SELECT calculate_profile_completeness(${userId})
+      // `;
       
       return true;
     } catch (error) {
@@ -328,9 +331,10 @@ export class DeepRepoService {
       `;
       
       // Update profile completeness
-      await sql`
-        SELECT calculate_profile_completeness(${userId})
-      `;
+      // TODO: Fix this - function doesn't exist in production
+      // await sql`
+      //   SELECT calculate_profile_completeness(${userId})
+      // `;
       
       return result.rows.length > 0;
     } catch (error) {
