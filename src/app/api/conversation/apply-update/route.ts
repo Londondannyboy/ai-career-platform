@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/client';
-import sql from '@/lib/neon';
+import { query } from '@/lib/database/neon';
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,17 +43,16 @@ export async function POST(request: NextRequest) {
 
 async function applySkillUpdate(userId: string, skillData: any, layer: string) {
   // Get current repo data
-  const result = await sql`
-    SELECT ${sql(layer + '_repo')} as repo_data 
-    FROM user_profiles 
-    WHERE user_id = ${userId}
-  `;
+  const result = await query(
+    `SELECT ${layer}_repo_data as repo_data FROM user_profiles WHERE user_id = $1`,
+    [userId]
+  );
 
-  if (result.length === 0) {
+  if (result.rows.length === 0) {
     throw new Error('User profile not found');
   }
 
-  const currentRepo = result[0].repo_data || {};
+  const currentRepo = result.rows[0].repo_data || {};
   const currentSkills = currentRepo.skills || [];
 
   // Check if skill already exists
@@ -89,26 +87,24 @@ async function applySkillUpdate(userId: string, skillData: any, layer: string) {
     skills: currentSkills
   };
 
-  await sql`
-    UPDATE user_profiles 
-    SET ${sql(layer + '_repo')} = ${JSON.stringify(updatedRepo)}
-    WHERE user_id = ${userId}
-  `;
+  await query(
+    `UPDATE user_profiles SET ${layer}_repo_data = $1 WHERE user_id = $2`,
+    [JSON.stringify(updatedRepo), userId]
+  );
 }
 
 async function applyExperienceUpdate(userId: string, experienceData: any, layer: string) {
   // Get current repo data
-  const result = await sql`
-    SELECT ${sql(layer + '_repo')} as repo_data 
-    FROM user_profiles 
-    WHERE user_id = ${userId}
-  `;
+  const result = await query(
+    `SELECT ${layer}_repo_data as repo_data FROM user_profiles WHERE user_id = $1`,
+    [userId]
+  );
 
-  if (result.length === 0) {
+  if (result.rows.length === 0) {
     throw new Error('User profile not found');
   }
 
-  const currentRepo = result[0].repo_data || {};
+  const currentRepo = result.rows[0].repo_data || {};
   const currentExperiences = currentRepo.experiences || [];
 
   // Add new experience
@@ -131,26 +127,24 @@ async function applyExperienceUpdate(userId: string, experienceData: any, layer:
     experiences: currentExperiences
   };
 
-  await sql`
-    UPDATE user_profiles 
-    SET ${sql(layer + '_repo')} = ${JSON.stringify(updatedRepo)}
-    WHERE user_id = ${userId}
-  `;
+  await query(
+    `UPDATE user_profiles SET ${layer}_repo_data = $1 WHERE user_id = $2`,
+    [JSON.stringify(updatedRepo), userId]
+  );
 }
 
 async function applyGoalUpdate(userId: string, goalData: any, layer: string) {
   // Get current repo data
-  const result = await sql`
-    SELECT ${sql(layer + '_repo')} as repo_data 
-    FROM user_profiles 
-    WHERE user_id = ${userId}
-  `;
+  const result = await query(
+    `SELECT ${layer}_repo_data as repo_data FROM user_profiles WHERE user_id = $1`,
+    [userId]
+  );
 
-  if (result.length === 0) {
+  if (result.rows.length === 0) {
     throw new Error('User profile not found');
   }
 
-  const currentRepo = result[0].repo_data || {};
+  const currentRepo = result.rows[0].repo_data || {};
   const currentGoals = currentRepo.goals || [];
 
   // Add new goal
@@ -170,26 +164,24 @@ async function applyGoalUpdate(userId: string, goalData: any, layer: string) {
     goals: currentGoals
   };
 
-  await sql`
-    UPDATE user_profiles 
-    SET ${sql(layer + '_repo')} = ${JSON.stringify(updatedRepo)}
-    WHERE user_id = ${userId}
-  `;
+  await query(
+    `UPDATE user_profiles SET ${layer}_repo_data = $1 WHERE user_id = $2`,
+    [JSON.stringify(updatedRepo), userId]
+  );
 }
 
 async function applyAchievementUpdate(userId: string, achievementData: any, layer: string) {
   // Get current repo data
-  const result = await sql`
-    SELECT ${sql(layer + '_repo')} as repo_data 
-    FROM user_profiles 
-    WHERE user_id = ${userId}
-  `;
+  const result = await query(
+    `SELECT ${layer}_repo_data as repo_data FROM user_profiles WHERE user_id = $1`,
+    [userId]
+  );
 
-  if (result.length === 0) {
+  if (result.rows.length === 0) {
     throw new Error('User profile not found');
   }
 
-  const currentRepo = result[0].repo_data || {};
+  const currentRepo = result.rows[0].repo_data || {};
   const currentAchievements = currentRepo.achievements || [];
 
   // Add new achievement
@@ -210,9 +202,8 @@ async function applyAchievementUpdate(userId: string, achievementData: any, laye
     achievements: currentAchievements
   };
 
-  await sql`
-    UPDATE user_profiles 
-    SET ${sql(layer + '_repo')} = ${JSON.stringify(updatedRepo)}
-    WHERE user_id = ${userId}
-  `;
+  await query(
+    `UPDATE user_profiles SET ${layer}_repo_data = $1 WHERE user_id = $2`,
+    [JSON.stringify(updatedRepo), userId]
+  );
 }

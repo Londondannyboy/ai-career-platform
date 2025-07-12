@@ -32,7 +32,7 @@ export default function MiniSkillGraph({ skills, height = 300, onNodeClick }: Pr
   });
   const [dimensions, setDimensions] = useState({ width: 400, height });
   const containerRef = useRef<HTMLDivElement>(null);
-  const graphRef = useRef<any>();
+  const graphRef = useRef<any>(null);
 
   useEffect(() => {
     const updateDimensions = () => {

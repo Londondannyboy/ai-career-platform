@@ -12,11 +12,11 @@ import { Button } from '@/components/ui/button'
 import { Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff } from 'lucide-react'
 import { useVoice, VoiceReadyState } from '@humeai/voice-react'
 import { useStreamingChat } from '@/hooks/useStreamingChat'
-import dynamic from 'next/dynamic'
+import dynamicImport from 'next/dynamic'
 import { repoUpdateAgent } from '@/lib/ai/repoUpdateAgent'
 
 // Dynamically import the realtime updates component to avoid SSR issues
-const RealtimeProfileUpdates = dynamic(() => import('@/components/conversation/RealtimeProfileUpdates'), { 
+const RealtimeProfileUpdates = dynamicImport(() => import('@/components/conversation/RealtimeProfileUpdates'), { 
   ssr: false,
   loading: () => <div className="h-48 bg-gray-800 rounded animate-pulse" />
 })
