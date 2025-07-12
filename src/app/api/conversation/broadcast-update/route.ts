@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { broadcastProfileUpdate } from '../updates-stream/route';
+import { broadcastProfileUpdate } from '@/lib/conversation/broadcast';
 
 export async function POST(request: NextRequest) {
   try {

@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/client';
-
-// Store active connections
-const connections = new Map<string, WritableStreamDefaultWriter>();
+import { registerConnection, unregisterConnection } from '@/lib/conversation/broadcast';
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -29,14 +26,14 @@ export async function GET(request: NextRequest) {
         close: () => controller.close()
       } as any;
       
-      connections.set(userId, writer);
+      registerConnection(userId, writer);
 
       // Send initial connection confirmation
       send({ type: 'connected', timestamp: new Date().toISOString() });
 
       // Clean up when client disconnects
       request.signal.addEventListener('abort', () => {
-        connections.delete(userId);
+        unregisterConnection(userId);
         controller.close();
       });
     }
@@ -51,35 +48,5 @@ export async function GET(request: NextRequest) {
       'Access-Control-Allow-Methods': 'GET',
       'Access-Control-Allow-Headers': 'Cache-Control',
     },
-  });
-}
-
-// Helper function to broadcast updates to specific user
-export function broadcastToUser(userId: string, data: any) {
-  const writer = connections.get(userId);
-  if (writer) {
-    writer.write(data);
-  }
-}
-
-// Helper function to broadcast analysis status
-export function broadcastAnalysisStatus(userId: string, status: 'start' | 'complete') {
-  broadcastToUser(userId, {
-    type: status === 'start' ? 'analysis_start' : 'analysis_complete',
-    timestamp: new Date().toISOString()
-  });
-}
-
-// Helper function to broadcast profile updates
-export function broadcastProfileUpdate(userId: string, update: {
-  updateType: string;
-  updateData: any;
-  confidence: number;
-  reason: string;
-}) {
-  broadcastToUser(userId, {
-    type: 'profile_update',
-    ...update,
-    timestamp: new Date().toISOString()
   });
 }
