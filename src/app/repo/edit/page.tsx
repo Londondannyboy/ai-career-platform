@@ -17,6 +17,7 @@ import { Education } from '@/lib/education/educationTypes';
 import { Experience as RichExperience } from '@/lib/experience/experienceTypes';
 import { Skill as EnhancedSkill } from '@/lib/skills/skillTypes';
 import { migrateUserData, needsMigration } from '@/lib/migration/dataEnrichmentMigration';
+import { simplifyExperiences, simplifyEducations, simplifySkills } from '@/lib/profile/dataConverter';
 
 // Use RichExperience from experienceTypes and EnhancedSkill from skillTypes
 
@@ -130,6 +131,8 @@ export default function RepoEditPage() {
   const saveSection = async (section: string, data: any) => {
     try {
       setSaving(true);
+      console.log('Saving data:', data); // Debug log
+      
       const response = await fetch('/api/deep-repo', {
         method: 'POST',
         headers: {
@@ -139,16 +142,24 @@ export default function RepoEditPage() {
         body: JSON.stringify({
           layer: section,
           data,
-          merge: true
+          merge: false // Replace entire layer to avoid issues
         })
       });
       
+      const result = await response.json();
+      console.log('Save response:', result); // Debug log
+      
       if (response.ok) {
-        // Show success somehow
-        console.log('Saved successfully');
+        // Show success message (you could add a toast here)
+        console.log('✅ Saved successfully');
+        alert('✅ Saved successfully!'); // Temporary feedback
+      } else {
+        console.error('Save failed:', result);
+        alert(`❌ Save failed: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error saving:', error);
+      alert('❌ Error saving profile');
     } finally {
       setSaving(false);
     }
@@ -232,9 +243,9 @@ export default function RepoEditPage() {
               onClick={() => saveSection('surface', {
                 professional_headline: headline,
                 summary,
-                experiences,
-                skills,
-                education
+                experiences: simplifyExperiences(experiences),
+                skills: simplifySkills(skills),
+                education: simplifyEducations(education)
               })}
               disabled={saving}
               className="w-full"

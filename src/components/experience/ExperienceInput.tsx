@@ -270,6 +270,7 @@ export default function ExperienceInput({
                   placeholder="e.g., Quest"
                   className="bg-gray-700 border-gray-600 text-white"
                 />
+                <p className="text-xs text-gray-500 mt-1">Company search coming soon</p>
               </div>
             </div>
 
