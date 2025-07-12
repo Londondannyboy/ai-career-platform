@@ -12,6 +12,14 @@ import { Button } from '@/components/ui/button'
 import { Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff } from 'lucide-react'
 import { useVoice, VoiceReadyState } from '@humeai/voice-react'
 import { useStreamingChat } from '@/hooks/useStreamingChat'
+import dynamic from 'next/dynamic'
+import { repoUpdateAgent } from '@/lib/ai/repoUpdateAgent'
+
+// Dynamically import the realtime updates component to avoid SSR issues
+const RealtimeProfileUpdates = dynamic(() => import('@/components/conversation/RealtimeProfileUpdates'), { 
+  ssr: false,
+  loading: () => <div className="h-48 bg-gray-800 rounded animate-pulse" />
+})
 
 type ConversationState = 'idle' | 'listening' | 'thinking' | 'speaking'
 type PlaybookType = 'career_coaching' | 'job_search' | 'cv_enhancement' | 'peer_feedback' | 'synthetic_intelligence'
@@ -32,6 +40,7 @@ export default function QuestPage() {
   const [isMuted, setIsMuted] = useState(false)
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true)
   const [currentPlaybook, setCurrentPlaybook] = useState<PlaybookType>('career_coaching')
+  const [showLiveUpdates, setShowLiveUpdates] = useState(false)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [conversationHistory, setConversationHistory] = useState<{id: string; title: string; transcript: string; ai_analysis: string; created_at: string}[]>([])
@@ -224,6 +233,11 @@ export default function QuestPage() {
       // Use Vercel AI SDK for streaming response
       await streamingChat.sendMessage(userInput)
       
+      // Trigger profile analysis if user is authenticated
+      if (user?.id && showLiveUpdates) {
+        await analyzeConversationForProfileUpdates(userInput)
+      }
+      
       setConversationState('speaking')
       
     } catch (error) {
@@ -240,6 +254,126 @@ export default function QuestPage() {
       }
       setMessages(prev => [...prev, fallbackMessage])
       setConversationState('listening')
+    }
+  }
+
+  const analyzeConversationForProfileUpdates = async (userInput: string) => {
+    if (!user?.id) return
+
+    try {
+      // Broadcast analysis start
+      await fetch('/api/conversation/broadcast-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, status: 'start' })
+      })
+
+      // Get current repos for context
+      const repoResponse = await fetch(`/api/deep-repo?userId=${user.id}`)
+      const repoData = repoResponse.ok ? await repoResponse.json() : {}
+
+      // Analyze conversation with recent messages
+      const conversationContext = {
+        userId: user.id,
+        messages: [
+          ...messages.slice(-3).map(m => ({
+            role: m.isUser ? 'user' : 'assistant',
+            content: m.text
+          })),
+          { role: 'user', content: userInput }
+        ],
+        currentRepos: repoData.profile || {}
+      }
+
+      const analysis = await repoUpdateAgent.analyzeConversation(conversationContext)
+
+      if (analysis?.shouldUpdate && analysis.updates) {
+        // Broadcast detected updates
+        await broadcastDetectedUpdates(user.id, analysis)
+      }
+
+      // Broadcast analysis complete
+      await fetch('/api/conversation/broadcast-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, status: 'complete' })
+      })
+
+    } catch (error) {
+      console.error('Error analyzing conversation for profile updates:', error)
+    }
+  }
+
+  const broadcastDetectedUpdates = async (userId: string, analysis: any) => {
+    // Extract individual updates and broadcast them
+    const { updates, reason, layer } = analysis
+
+    // Skills updates
+    if (updates.skills && updates.skills.length > 0) {
+      for (const skill of updates.skills) {
+        await fetch('/api/conversation/broadcast-update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            updateType: 'skill',
+            updateData: skill,
+            confidence: 0.85, // Could make this dynamic based on context
+            reason: `Detected skill: ${skill.name} during conversation`
+          })
+        })
+      }
+    }
+
+    // Experience updates
+    if (updates.experiences && updates.experiences.length > 0) {
+      for (const experience of updates.experiences) {
+        await fetch('/api/conversation/broadcast-update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            updateType: 'experience',
+            updateData: experience,
+            confidence: 0.8,
+            reason: `Detected experience: ${experience.title} at ${experience.company}`
+          })
+        })
+      }
+    }
+
+    // Goals updates
+    if (updates.goals && updates.goals.length > 0) {
+      for (const goal of updates.goals) {
+        await fetch('/api/conversation/broadcast-update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            updateType: 'goal',
+            updateData: goal,
+            confidence: 0.9,
+            reason: `Detected goal: ${goal.description}`
+          })
+        })
+      }
+    }
+
+    // Achievements updates
+    if (updates.achievements && updates.achievements.length > 0) {
+      for (const achievement of updates.achievements) {
+        await fetch('/api/conversation/broadcast-update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            updateType: 'achievement',
+            updateData: achievement,
+            confidence: 0.85,
+            reason: `Detected achievement: ${achievement.title}`
+          })
+        })
+      }
     }
   }
 
@@ -373,9 +507,9 @@ export default function QuestPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={`grid gap-6 ${showLiveUpdates ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1 lg:grid-cols-3'}`}>
           {/* Conversation Area */}
-          <div className="lg:col-span-2">
+          <div className={showLiveUpdates ? 'xl:col-span-2' : 'lg:col-span-2'}>
             <Card className="h-[600px] flex flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -470,8 +604,20 @@ export default function QuestPage() {
             </Card>
           </div>
 
+          {/* Live Profile Updates */}
+          {showLiveUpdates && user?.id && (
+            <div className="xl:col-span-1">
+              <RealtimeProfileUpdates 
+                userId={user.id}
+                isVisible={showLiveUpdates}
+                onToggleVisibility={() => setShowLiveUpdates(!showLiveUpdates)}
+                className="h-[600px] overflow-y-auto"
+              />
+            </div>
+          )}
+
           {/* Quest Info */}
-          <div className="space-y-6">
+          <div className={`space-y-6 ${showLiveUpdates ? 'xl:col-span-1' : ''}`}>
             <Card>
               <CardHeader>
                 <CardTitle>Quest Status</CardTitle>
@@ -559,6 +705,15 @@ export default function QuestPage() {
             </Card>
           </div>
         </div>
+
+        {/* Floating Live Updates Toggle (when hidden) */}
+        {!showLiveUpdates && user?.id && (
+          <RealtimeProfileUpdates 
+            userId={user.id}
+            isVisible={showLiveUpdates}
+            onToggleVisibility={() => setShowLiveUpdates(!showLiveUpdates)}
+          />
+        )}
       </main>
     </div>
   )
