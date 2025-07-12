@@ -37,7 +37,7 @@ export function simplifyEducation(education: Education): any {
     endDate: education.endDate,
     gpa: education.gpa,
     achievements: education.achievements || [],
-    skills: education.skills || []
+    skillsGained: education.skillsGained || []
   };
 }
 
