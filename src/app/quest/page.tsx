@@ -13,12 +13,16 @@ import { Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff } from 'lucide-react'
 import { useVoice, VoiceReadyState } from '@humeai/voice-react'
 import { useStreamingChat } from '@/hooks/useStreamingChat'
 import dynamicImport from 'next/dynamic'
-import { repoUpdateAgent } from '@/lib/ai/repoUpdateAgent'
 
-// Dynamically import the realtime updates component to avoid SSR issues
-const RealtimeProfileUpdates = dynamicImport(() => import('@/components/conversation/RealtimeProfileUpdates'), { 
+// Dynamically import components to avoid SSR issues
+const SkillConfirmation = dynamicImport(() => import('@/components/conversation/SkillConfirmation'), { 
   ssr: false,
-  loading: () => <div className="h-48 bg-gray-800 rounded animate-pulse" />
+  loading: () => <div className="h-12 bg-blue-50 rounded animate-pulse" />
+})
+
+const SkillGraph = dynamicImport(() => import('@/components/conversation/MiniSkillGraph'), { 
+  ssr: false,
+  loading: () => <div className="h-64 bg-gray-100 rounded animate-pulse" />
 })
 
 type ConversationState = 'idle' | 'listening' | 'thinking' | 'speaking'
@@ -40,7 +44,9 @@ export default function QuestPage() {
   const [isMuted, setIsMuted] = useState(false)
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true)
   const [currentPlaybook, setCurrentPlaybook] = useState<PlaybookType>('career_coaching')
-  const [showLiveUpdates, setShowLiveUpdates] = useState(false)
+  const [showLiveUpdates, setShowLiveUpdates] = useState(true)
+  const [pendingSkills, setPendingSkills] = useState<Array<{id: string, name: string, category: string}>>([])
+  const [userSkills, setUserSkills] = useState<any[]>([])
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [conversationHistory, setConversationHistory] = useState<{id: string; title: string; transcript: string; ai_analysis: string; created_at: string}[]>([])
@@ -84,6 +90,9 @@ export default function QuestPage() {
         // Detect playbook and process with streaming AI
         const detectedPlaybook = detectPlaybook(content)
         setCurrentPlaybook(detectedPlaybook)
+        
+        // Simple skill detection in user messages
+        detectSkillsInMessage(content)
         
         // Use Vercel AI SDK for response
         setTimeout(() => {
@@ -156,12 +165,27 @@ export default function QuestPage() {
         // Ensure user exists in our database before loading conversations
         ensureUserExists().then(() => {
           loadPreviousConversation(user.id)
+          loadUserSkills()
         })
       } else {
         console.log('ℹ️ Running Quest in debug mode without authentication')
       }
     }
   }, [isLoaded, user]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadUserSkills = async () => {
+    if (!user?.id) return
+    
+    try {
+      const response = await fetch(`/api/skills?userId=${user.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setUserSkills(data.skills || [])
+      }
+    } catch (error) {
+      console.error('Error loading user skills:', error)
+    }
+  }
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -226,17 +250,69 @@ export default function QuestPage() {
     return 'career_coaching'
   }
 
+  const detectSkillsInMessage = (message: string) => {
+    if (!user?.id) return
+
+    // Simple regex patterns for common skill mentions
+    const skillPatterns = [
+      /\b(JavaScript|React|Node\.js|Python|Java|TypeScript|SQL|HTML|CSS)\b/gi,
+      /\b(marketing|sales|leadership|management|communication|design)\b/gi,
+      /\b(AWS|Docker|Kubernetes|Git|MongoDB|PostgreSQL)\b/gi,
+      /\b(machine learning|AI|data science|analytics)\b/gi
+    ]
+
+    const detectedSkills: Array<{name: string, category: string}> = []
+
+    skillPatterns.forEach((pattern, index) => {
+      const matches = message.match(pattern)
+      if (matches) {
+        matches.forEach(match => {
+          const skillName = match.toLowerCase()
+          
+          // Check if user already has this skill
+          const hasSkill = userSkills.some(skill => {
+            const existingName = typeof skill === 'string' ? skill : skill.name
+            return existingName.toLowerCase() === skillName
+          })
+
+          // Check if already pending confirmation
+          const isPending = pendingSkills.some(pending => 
+            pending.name.toLowerCase() === skillName
+          )
+
+          if (!hasSkill && !isPending) {
+            const category = index === 0 ? 'technical' : 
+                           index === 1 ? 'leadership' :
+                           index === 2 ? 'technical' : 'technical'
+            
+            detectedSkills.push({
+              name: match, // Keep original case
+              category
+            })
+          }
+        })
+      }
+    })
+
+    // Add to pending skills for confirmation
+    if (detectedSkills.length > 0) {
+      setPendingSkills(prev => [
+        ...prev,
+        ...detectedSkills.map(skill => ({
+          id: `skill-${Date.now()}-${Math.random()}`,
+          name: skill.name,
+          category: skill.category
+        }))
+      ])
+    }
+  }
+
   const generateQuestResponse = async (userInput: string) => {
     try {
       console.log('🤖 Generating enhanced response with streaming AI for:', userInput)
       
       // Use Vercel AI SDK for streaming response
       await streamingChat.sendMessage(userInput)
-      
-      // Trigger profile analysis if user is authenticated
-      if (user?.id && showLiveUpdates) {
-        await analyzeConversationForProfileUpdates(userInput)
-      }
       
       setConversationState('speaking')
       
@@ -257,125 +333,46 @@ export default function QuestPage() {
     }
   }
 
-  const analyzeConversationForProfileUpdates = async (userInput: string) => {
-    if (!user?.id) return
+  const handleConfirmSkill = async (skillId: string) => {
+    const skill = pendingSkills.find(s => s.id === skillId)
+    if (!skill || !user?.id) return
 
     try {
-      // Broadcast analysis start
-      await fetch('/api/conversation/broadcast-status', {
+      // Add skill to database
+      await fetch('/api/skills', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, status: 'start' })
+        body: JSON.stringify({
+          userId: user.id,
+          skill: {
+            name: skill.name,
+            category: skill.category,
+            proficiency: 'intermediate'
+          }
+        })
       })
 
-      // Get current repos for context
-      const repoResponse = await fetch(`/api/deep-repo?userId=${user.id}`)
-      const repoData = repoResponse.ok ? await repoResponse.json() : {}
+      // Update local state
+      setUserSkills(prev => [...prev, {
+        name: skill.name,
+        category: skill.category,
+        proficiency: 'intermediate',
+        isNew: true
+      }])
 
-      // Analyze conversation with recent messages
-      const conversationContext = {
-        userId: user.id,
-        messages: [
-          ...messages.slice(-3).map(m => ({
-            role: m.isUser ? 'user' : 'assistant',
-            content: m.text
-          })),
-          { role: 'user', content: userInput }
-        ],
-        currentRepos: repoData.profile || {}
-      }
+      // Remove from pending
+      setPendingSkills(prev => prev.filter(s => s.id !== skillId))
 
-      const analysis = await repoUpdateAgent.analyzeConversation(conversationContext)
-
-      if (analysis?.shouldUpdate && analysis.updates) {
-        // Broadcast detected updates
-        await broadcastDetectedUpdates(user.id, analysis)
-      }
-
-      // Broadcast analysis complete
-      await fetch('/api/conversation/broadcast-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, status: 'complete' })
-      })
-
+      console.log('✅ Skill added successfully:', skill.name)
     } catch (error) {
-      console.error('Error analyzing conversation for profile updates:', error)
+      console.error('Error adding skill:', error)
     }
   }
 
-  const broadcastDetectedUpdates = async (userId: string, analysis: any) => {
-    // Extract individual updates and broadcast them
-    const { updates, reason, layer } = analysis
-
-    // Skills updates
-    if (updates.skills && updates.skills.length > 0) {
-      for (const skill of updates.skills) {
-        await fetch('/api/conversation/broadcast-update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            updateType: 'skill',
-            updateData: skill,
-            confidence: 0.85, // Could make this dynamic based on context
-            reason: `Detected skill: ${skill.name} during conversation`
-          })
-        })
-      }
-    }
-
-    // Experience updates
-    if (updates.experiences && updates.experiences.length > 0) {
-      for (const experience of updates.experiences) {
-        await fetch('/api/conversation/broadcast-update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            updateType: 'experience',
-            updateData: experience,
-            confidence: 0.8,
-            reason: `Detected experience: ${experience.title} at ${experience.company}`
-          })
-        })
-      }
-    }
-
-    // Goals updates
-    if (updates.goals && updates.goals.length > 0) {
-      for (const goal of updates.goals) {
-        await fetch('/api/conversation/broadcast-update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            updateType: 'goal',
-            updateData: goal,
-            confidence: 0.9,
-            reason: `Detected goal: ${goal.description}`
-          })
-        })
-      }
-    }
-
-    // Achievements updates
-    if (updates.achievements && updates.achievements.length > 0) {
-      for (const achievement of updates.achievements) {
-        await fetch('/api/conversation/broadcast-update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            updateType: 'achievement',
-            updateData: achievement,
-            confidence: 0.85,
-            reason: `Detected achievement: ${achievement.title}`
-          })
-        })
-      }
-    }
+  const handleRejectSkill = (skillId: string) => {
+    setPendingSkills(prev => prev.filter(s => s.id !== skillId))
   }
+
 
   // 🎉 OFFICIAL SDK CONNECTION FUNCTIONS
   const startQuestConversation = async () => {
@@ -507,9 +504,9 @@ export default function QuestPage() {
           </div>
         </div>
 
-        <div className={`grid gap-6 ${showLiveUpdates ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1 lg:grid-cols-3'}`}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Conversation Area */}
-          <div className={showLiveUpdates ? 'xl:col-span-2' : 'lg:col-span-2'}>
+          <div className="lg:col-span-2">
             <Card className="h-[600px] flex flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -557,6 +554,17 @@ export default function QuestPage() {
                   <div ref={messagesEndRef} />
                 </div>
 
+                {/* Skill Confirmation */}
+                {pendingSkills.length > 0 && (
+                  <div className="border-t pt-4 pb-4">
+                    <SkillConfirmation 
+                      pendingSkills={pendingSkills}
+                      onConfirmSkill={handleConfirmSkill}
+                      onRejectSkill={handleRejectSkill}
+                    />
+                  </div>
+                )}
+
                 {/* Controls */}
                 <div className="border-t pt-4">
                   <div className="flex justify-center space-x-4">
@@ -602,22 +610,27 @@ export default function QuestPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Skills Graph Visualization */}
+            {userSkills.length > 0 && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span>Your Skills Network</span>
+                    <span className="text-sm font-normal text-gray-500">
+                      ({userSkills.length} skills)
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SkillGraph skills={userSkills} height={300} />
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          {/* Live Profile Updates */}
-          {showLiveUpdates && user?.id && (
-            <div className="xl:col-span-1">
-              <RealtimeProfileUpdates 
-                userId={user.id}
-                isVisible={showLiveUpdates}
-                onToggleVisibility={() => setShowLiveUpdates(!showLiveUpdates)}
-                className="h-[600px] overflow-y-auto"
-              />
-            </div>
-          )}
-
           {/* Quest Info */}
-          <div className={`space-y-6 ${showLiveUpdates ? 'xl:col-span-1' : ''}`}>
+          <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Quest Status</CardTitle>
@@ -706,14 +719,6 @@ export default function QuestPage() {
           </div>
         </div>
 
-        {/* Floating Live Updates Toggle (when hidden) */}
-        {!showLiveUpdates && user?.id && (
-          <RealtimeProfileUpdates 
-            userId={user.id}
-            isVisible={showLiveUpdates}
-            onToggleVisibility={() => setShowLiveUpdates(!showLiveUpdates)}
-          />
-        )}
       </main>
     </div>
   )
