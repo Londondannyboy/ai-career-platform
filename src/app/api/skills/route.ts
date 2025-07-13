@@ -10,18 +10,46 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
     }
 
-    // Get user's surface repo skills
+    console.log('📚 Fetching skills from user_skills table for:', userId);
+
+    // Get user's skills from dedicated user_skills table
     const result = await query(
-      'SELECT surface_repo_data FROM user_profiles WHERE user_id = $1',
+      `SELECT 
+        skill_name as name,
+        skill_category as category,
+        proficiency_level,
+        years_experience,
+        evidence_sources,
+        last_used_date,
+        improvement_goals,
+        market_demand,
+        growth_potential,
+        related_skills,
+        created_at,
+        updated_at
+      FROM user_skills 
+      WHERE user_id = $1 
+      ORDER BY created_at DESC`,
       [userId]
     );
 
-    if (result.rows.length === 0) {
-      return NextResponse.json({ skills: [] });
-    }
+    console.log(`📚 Found ${result.rows.length} skills in user_skills table`);
 
-    const surfaceRepo = result.rows[0].surface_repo_data || {};
-    const skills = (surfaceRepo as any).skills || [];
+    // Transform to match expected format
+    const skills = result.rows.map((row: any) => ({
+      name: row.name,
+      category: row.category || 'technical',
+      proficiency: getProficiencyText(row.proficiency_level),
+      years_experience: row.years_experience,
+      evidence_sources: row.evidence_sources || [],
+      last_used_date: row.last_used_date,
+      improvement_goals: row.improvement_goals,
+      market_demand: row.market_demand,
+      growth_potential: row.growth_potential,
+      related_skills: row.related_skills || [],
+      addedAt: row.created_at,
+      isNew: isRecentlyAdded(row.created_at)
+    }));
 
     return NextResponse.json({ skills });
 
@@ -29,6 +57,21 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching skills:', error);
     return NextResponse.json({ error: 'Failed to fetch skills' }, { status: 500 });
   }
+}
+
+function getProficiencyText(level: number): string {
+  if (level >= 4) return 'expert';
+  if (level >= 3) return 'advanced';
+  if (level >= 2) return 'intermediate';
+  return 'beginner';
+}
+
+function isRecentlyAdded(createdAt: string): boolean {
+  if (!createdAt) return false;
+  const created = new Date(createdAt);
+  const now = new Date();
+  const diffMinutes = (now.getTime() - created.getTime()) / (1000 * 60);
+  return diffMinutes < 10; // Consider "new" if added in last 10 minutes
 }
 
 export async function POST(request: NextRequest) {
@@ -39,67 +82,67 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing userId or skill data' }, { status: 400 });
     }
 
-    // Get current surface repo
-    const result = await query(
-      'SELECT surface_repo_data FROM user_profiles WHERE user_id = $1',
-      [userId]
+    console.log('💾 Saving skill to user_skills table:', { userId, skill: skill.name });
+
+    // Check if skill already exists
+    const existingResult = await query(
+      'SELECT id FROM user_skills WHERE user_id = $1 AND skill_name = $2',
+      [userId, skill.name]
     );
 
-    let surfaceRepo = {};
-    if (result.rows.length > 0) {
-      surfaceRepo = result.rows[0].surface_repo_data || {};
-    }
-
-    // Add new skill
-    const currentSkills = (surfaceRepo as any).skills || [];
-    
-    // Check if skill already exists
-    const exists = currentSkills.some((existingSkill: any) => {
-      const existingName = typeof existingSkill === 'string' ? existingSkill : existingSkill.name;
-      return existingName.toLowerCase() === skill.name.toLowerCase();
-    });
-
-    if (exists) {
+    if (existingResult.rows.length > 0) {
       return NextResponse.json({ error: 'Skill already exists' }, { status: 400 });
     }
 
-    // Add the new skill
-    const newSkill = {
-      name: skill.name,
-      category: skill.category || 'technical',
-      proficiency: skill.proficiency || 'intermediate',
-      addedAt: new Date().toISOString(),
+    // Convert proficiency text to level
+    const proficiencyLevel = getProficiencyLevel(skill.proficiency || 'intermediate');
+
+    // Insert into user_skills table
+    const insertResult = await query(
+      `INSERT INTO user_skills (
+        user_id, 
+        skill_name, 
+        skill_category, 
+        proficiency_level,
+        created_at,
+        updated_at
+      ) VALUES ($1, $2, $3, $4, NOW(), NOW())
+      RETURNING *`,
+      [
+        userId,
+        skill.name,
+        skill.category || 'technical',
+        proficiencyLevel
+      ]
+    );
+
+    const savedSkill = insertResult.rows[0];
+    console.log('✅ Skill saved to user_skills table:', savedSkill);
+
+    // Transform back to expected format
+    const responseSkill = {
+      name: savedSkill.skill_name,
+      category: savedSkill.skill_category,
+      proficiency: getProficiencyText(savedSkill.proficiency_level),
+      addedAt: savedSkill.created_at,
       isNew: true
     };
 
-    currentSkills.push(newSkill);
-
-    // Update the surface repo
-    const updatedSurfaceRepo = {
-      ...surfaceRepo,
-      skills: currentSkills
-    };
-
-    // Save to database
-    if (result.rows.length === 0) {
-      // Create new profile
-      await query(
-        'INSERT INTO user_profiles (user_id, surface_repo_data) VALUES ($1, $2)',
-        [userId, JSON.stringify(updatedSurfaceRepo)]
-      );
-    } else {
-      // Update existing profile
-      await query(
-        'UPDATE user_profiles SET surface_repo_data = $1 WHERE user_id = $2',
-        [JSON.stringify(updatedSurfaceRepo), userId]
-      );
-    }
-
-    return NextResponse.json({ success: true, skill: newSkill });
+    return NextResponse.json({ success: true, skill: responseSkill });
 
   } catch (error) {
     console.error('Error adding skill:', error);
     return NextResponse.json({ error: 'Failed to add skill' }, { status: 500 });
+  }
+}
+
+function getProficiencyLevel(proficiency: string): number {
+  switch (proficiency.toLowerCase()) {
+    case 'expert': return 4;
+    case 'advanced': return 3;
+    case 'intermediate': return 2;
+    case 'beginner': return 1;
+    default: return 2;
   }
 }
 
@@ -111,37 +154,19 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Missing userId or skillName' }, { status: 400 });
     }
 
-    // Get current surface repo
+    console.log('🗑️ Deleting skill from user_skills table:', { userId, skillName });
+
+    // Delete from user_skills table
     const result = await query(
-      'SELECT surface_repo_data FROM user_profiles WHERE user_id = $1',
-      [userId]
+      'DELETE FROM user_skills WHERE user_id = $1 AND skill_name = $2 RETURNING *',
+      [userId, skillName]
     );
 
     if (result.rows.length === 0) {
-      return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Skill not found' }, { status: 404 });
     }
 
-    const surfaceRepo = result.rows[0].surface_repo_data || {};
-    const currentSkills = (surfaceRepo as any).skills || [];
-
-    // Remove the skill
-    const updatedSkills = currentSkills.filter((skill: any) => {
-      const name = typeof skill === 'string' ? skill : skill.name;
-      return name.toLowerCase() !== skillName.toLowerCase();
-    });
-
-    // Update the surface repo
-    const updatedSurfaceRepo = {
-      ...surfaceRepo,
-      skills: updatedSkills
-    };
-
-    // Save to database
-    await query(
-      'UPDATE user_profiles SET surface_repo_data = $1 WHERE user_id = $2',
-      [JSON.stringify(updatedSurfaceRepo), userId]
-    );
-
+    console.log('✅ Skill deleted from user_skills table:', result.rows[0]);
     return NextResponse.json({ success: true });
 
   } catch (error) {
