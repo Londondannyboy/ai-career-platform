@@ -214,18 +214,25 @@ export default function QuestPage() {
         })
       } else {
         console.log('ℹ️ Running Quest in debug mode without authentication')
+        // Load skills even in debug mode
+        loadUserSkills()
+        loadAvailableAgents()
       }
     }
   }, [isLoaded, user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUserSkills = async () => {
-    if (!user?.id) return
+    const effectiveUserId = user?.id || 'debug-user-001'
     
     try {
-      const response = await fetch(`/api/skills?userId=${user.id}`)
+      console.log('📚 Loading skills for user:', effectiveUserId)
+      const response = await fetch(`/api/skills?userId=${effectiveUserId}`)
       if (response.ok) {
         const data = await response.json()
+        console.log('📚 Skills loaded:', data.skills)
         setUserSkills(data.skills || [])
+      } else {
+        console.error('❌ Failed to load skills:', response.status, await response.text())
       }
     } catch (error) {
       console.error('Error loading user skills:', error)
@@ -689,9 +696,18 @@ export default function QuestPage() {
 
   const handleConfirmSkill = async (skillId: string) => {
     const skill = pendingSkills.find(s => s.id === skillId)
-    if (!skill || !user?.id) return
+    if (!skill) {
+      console.error('❌ Skill not found in pending skills:', skillId)
+      return
+    }
 
-    console.log('🎯 Adding skill:', skill.name)
+    // Use debug user ID if no authenticated user
+    const effectiveUserId = user?.id || 'debug-user-001'
+    console.log('🎯 Adding skill:', skill.name, 'for user:', effectiveUserId)
+
+    if (!user?.id) {
+      console.warn('⚠️ Running in debug mode - using fallback user ID:', effectiveUserId)
+    }
 
     try {
       // Add skill to PostgreSQL database
@@ -700,7 +716,7 @@ export default function QuestPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
+          userId: effectiveUserId,
           skill: {
             name: skill.name,
             category: skill.category,
@@ -721,7 +737,7 @@ export default function QuestPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
+          userId: effectiveUserId,
           skill: {
             name: skill.name,
             category: skill.category,
@@ -1085,7 +1101,7 @@ export default function QuestPage() {
             )}
 
             {/* AI-Powered Skills Graph Visualization */}
-            {user?.id && (
+            {(user?.id || true) && (
               <Card className="mt-6">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -1099,14 +1115,14 @@ export default function QuestPage() {
                   {useNeo4jFallback ? (
                     <PostgreSQLSkillGraph 
                       key={`postgres-${graphRefreshKey}`}
-                      userId={user.id} 
+                      userId={user?.id || 'debug-user-001'} 
                       height={400}
                       refreshTrigger={graphRefreshKey}
                     />
                   ) : (
                     <Neo4jSkillGraph 
                       key={`neo4j-${graphRefreshKey}`}
-                      userId={user.id} 
+                      userId={user?.id || 'debug-user-001'} 
                       height={400}
                       refreshTrigger={graphRefreshKey}
                     />
@@ -1153,7 +1169,7 @@ export default function QuestPage() {
             </Card>
 
             {/* Skills Debug Display */}
-            {user?.id && (
+            {(user?.id || true) && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
