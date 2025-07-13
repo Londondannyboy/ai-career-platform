@@ -11,6 +11,7 @@ interface PendingSkill {
   name: string;
   category: string;
   confidence?: number;
+  reason?: string;
 }
 
 interface Props {
@@ -51,14 +52,22 @@ export default function SkillConfirmation({ pendingSkills, onConfirmSkill, onRej
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-gray-900">
-                      I noticed you mentioned <strong>{skill.name}</strong>
+                      I detected the skill <strong>{skill.name}</strong>
                     </span>
                     <Badge variant="secondary" className="text-xs">
                       {skill.category}
                     </Badge>
+                    {skill.confidence && (
+                      <Badge 
+                        variant={skill.confidence > 0.8 ? "default" : "outline"} 
+                        className="text-xs"
+                      >
+                        {Math.round(skill.confidence * 100)}% confident
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-sm text-gray-600">
-                    Would you like me to add this as a skill to your profile?
+                    {skill.reason || 'Would you like me to add this as a skill to your profile?'}
                   </p>
                 </div>
               </div>

@@ -91,7 +91,7 @@ export default function QuestPage() {
         const detectedPlaybook = detectPlaybook(content)
         setCurrentPlaybook(detectedPlaybook)
         
-        // Simple skill detection in user messages
+        // AI-powered skill detection in user messages
         detectSkillsInMessage(content)
         
         // Use Vercel AI SDK for response
@@ -250,43 +250,93 @@ export default function QuestPage() {
     return 'career_coaching'
   }
 
-  const detectSkillsInMessage = (message: string) => {
+  const detectSkillsInMessage = async (message: string) => {
     if (!user?.id) return
 
-    // Simple regex patterns for common skill mentions
-    const skillPatterns = [
-      /\b(JavaScript|React|Node\.js|Python|Java|TypeScript|SQL|HTML|CSS)\b/gi,
-      /\b(marketing|sales|leadership|management|communication|design)\b/gi,
-      /\b(AWS|Docker|Kubernetes|Git|MongoDB|PostgreSQL)\b/gi,
-      /\b(machine learning|AI|data science|analytics)\b/gi
+    // Use AI to intelligently detect skills from natural conversation
+    try {
+      const response = await fetch('/api/skills/detect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          userId: user.id,
+          existingSkills: userSkills.map(s => typeof s === 'string' ? s : s.name),
+          pendingSkills: pendingSkills.map(p => p.name)
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        
+        if (data.skills && data.skills.length > 0) {
+          // Add detected skills to pending confirmation
+          setPendingSkills(prev => [
+            ...prev,
+            ...data.skills.map((skill: any) => ({
+              id: `skill-${Date.now()}-${Math.random()}`,
+              name: skill.name,
+              category: skill.category,
+              confidence: skill.confidence
+            }))
+          ])
+        }
+      }
+    } catch (error) {
+      console.error('Error detecting skills with AI:', error)
+      
+      // Fallback to simple detection
+      fallbackSkillDetection(message)
+    }
+  }
+
+  const fallbackSkillDetection = (message: string) => {
+    // Enhanced patterns including broader terms
+    const skillIndicators = [
+      // Technical skills - broader detection
+      /\b(development|programming|coding|software|web|frontend|backend|fullstack|devops)\b/gi,
+      /\b(JavaScript|React|Node|Python|Java|TypeScript|SQL|HTML|CSS|PHP|Ruby|Go|Rust)\b/gi,
+      /\b(AWS|Azure|GCP|cloud|Docker|Kubernetes|Git|database|API|framework)\b/gi,
+      
+      // Business/Marketing skills
+      /\b(marketing|sales|business|strategy|growth|analytics|SEO|social media|advertising)\b/gi,
+      /\b(leadership|management|team|project|communication|presentation|negotiation)\b/gi,
+      
+      // Design skills
+      /\b(design|UI|UX|graphics|visual|creative|Figma|Photoshop|brand)\b/gi,
+      
+      // Data skills
+      /\b(data|analytics|science|machine learning|AI|statistics|analysis|visualization)\b/gi
     ]
 
     const detectedSkills: Array<{name: string, category: string}> = []
 
-    skillPatterns.forEach((pattern, index) => {
+    skillIndicators.forEach((pattern, index) => {
       const matches = message.match(pattern)
       if (matches) {
         matches.forEach(match => {
-          const skillName = match.toLowerCase()
+          const skillName = normalizeSkillName(match)
           
           // Check if user already has this skill
           const hasSkill = userSkills.some(skill => {
             const existingName = typeof skill === 'string' ? skill : skill.name
-            return existingName.toLowerCase() === skillName
+            return existingName.toLowerCase() === skillName.toLowerCase()
           })
 
           // Check if already pending confirmation
           const isPending = pendingSkills.some(pending => 
-            pending.name.toLowerCase() === skillName
+            pending.name.toLowerCase() === skillName.toLowerCase()
           )
 
           if (!hasSkill && !isPending) {
-            const category = index === 0 ? 'technical' : 
-                           index === 1 ? 'leadership' :
-                           index === 2 ? 'technical' : 'technical'
+            let category = 'technical'
+            if (index === 3) category = 'marketing'
+            else if (index === 4) category = 'leadership'
+            else if (index === 5) category = 'design'
+            else if (index === 6) category = 'data'
             
             detectedSkills.push({
-              name: match, // Keep original case
+              name: skillName,
               category
             })
           }
@@ -305,6 +355,26 @@ export default function QuestPage() {
         }))
       ])
     }
+  }
+
+  const normalizeSkillName = (skill: string): string => {
+    const skillMap: Record<string, string> = {
+      'development': 'Software Development',
+      'programming': 'Programming',
+      'coding': 'Programming',
+      'web': 'Web Development',
+      'frontend': 'Frontend Development',
+      'backend': 'Backend Development',
+      'fullstack': 'Full-Stack Development',
+      'devops': 'DevOps',
+      'cloud': 'Cloud Computing',
+      'database': 'Database Management',
+      'api': 'API Development',
+      'framework': 'Framework Development'
+    }
+    
+    const normalized = skill.toLowerCase().trim()
+    return skillMap[normalized] || skill.charAt(0).toUpperCase() + skill.slice(1).toLowerCase()
   }
 
   const generateQuestResponse = async (userInput: string) => {
