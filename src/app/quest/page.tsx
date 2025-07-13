@@ -103,9 +103,11 @@ export default function QuestPage() {
         setCurrentPlaybook(detectedPlaybook)
         
         // AI-powered skill detection in user messages
+        console.log('🔍 Detecting skills in message:', content)
         detectSkillsInMessage(content)
         
         // Analyze for potential agent handover
+        console.log('🤖 Analyzing for agent handover:', content)
         analyzeForHandover(content)
         
         // Use Vercel AI SDK for response or specialized agent
@@ -233,7 +235,27 @@ export default function QuestPage() {
   const analyzeForHandover = async (message: string) => {
     if (!user?.id) return
 
+    console.log('🤖 Starting handover analysis for:', message)
+
+    // Simple keyword-based triggers (more reliable)
+    const simpleHandoverCheck = checkSimpleHandoverTriggers(message)
+    if (simpleHandoverCheck) {
+      console.log('🤖 Simple trigger detected:', simpleHandoverCheck)
+      setHandoverSuggestion({
+        shouldHandover: true,
+        targetAgent: simpleHandoverCheck.agentId,
+        confidence: simpleHandoverCheck.confidence,
+        reason: `Detected ${simpleHandoverCheck.agentId} keywords: ${simpleHandoverCheck.keywords.join(', ')}`,
+        suggestedMessage: `I noticed you mentioned ${simpleHandoverCheck.keywords[0]}. Would you like me to connect you with our ${simpleHandoverCheck.agentName}?`,
+        urgency: 'medium'
+      })
+      return
+    }
+
+    // Fallback to AI analysis
     try {
+      console.log('🤖 Calling AI handover analysis...')
+      
       const messageHistory = messages.slice(-3).map(m => ({
         role: m.isUser ? 'user' : 'assistant',
         content: m.text,
@@ -252,15 +274,65 @@ export default function QuestPage() {
         })
       })
 
+      console.log('🤖 Handover analysis response status:', response.status)
+
       if (response.ok) {
         const data = await response.json()
+        console.log('🤖 Handover analysis result:', data)
+        
         if (data.shouldHandover) {
           setHandoverSuggestion(data)
         }
+      } else {
+        console.error('Handover analysis failed:', response.status, await response.text())
       }
     } catch (error) {
       console.error('Error analyzing for handover:', error)
     }
+  }
+
+  const checkSimpleHandoverTriggers = (message: string): {
+    agentId: string
+    agentName: string
+    confidence: number
+    keywords: string[]
+  } | null => {
+    const messageLower = message.toLowerCase()
+    
+    const triggers = [
+      {
+        agentId: 'productivity',
+        agentName: 'Productivity Assistant',
+        keywords: ['todo', 'task', 'organize', 'list', 'deadline', 'priority', 'productivity', 'checklist']
+      },
+      {
+        agentId: 'goal',
+        agentName: 'Goal Setting Agent',
+        keywords: ['goal', 'objective', 'target', 'okr', 'plan', 'aim', 'vision', 'aspiration']
+      },
+      {
+        agentId: 'calendar',
+        agentName: 'Calendar Agent',
+        keywords: ['meeting', 'schedule', 'calendar', 'appointment', 'time', 'book']
+      }
+    ]
+
+    for (const trigger of triggers) {
+      const matchedKeywords = trigger.keywords.filter(keyword => 
+        messageLower.includes(keyword)
+      )
+      
+      if (matchedKeywords.length > 0) {
+        return {
+          agentId: trigger.agentId,
+          agentName: trigger.agentName,
+          confidence: Math.min(0.9, matchedKeywords.length * 0.4),
+          keywords: matchedKeywords
+        }
+      }
+    }
+    
+    return null
   }
 
   const handleAcceptHandover = async (targetAgent: string) => {
@@ -423,8 +495,14 @@ export default function QuestPage() {
   const detectSkillsInMessage = async (message: string) => {
     if (!user?.id) return
 
+    console.log('🔍 Starting skill detection for:', message)
+
+    // ALWAYS try fallback detection first (more reliable)
+    fallbackSkillDetection(message)
+
     // Use AI to intelligently detect skills from natural conversation
     try {
+      console.log('🤖 Calling AI skill detection API...')
       const response = await fetch('/api/skills/detect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -436,8 +514,11 @@ export default function QuestPage() {
         })
       })
 
+      console.log('🔍 AI detection response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('🔍 AI detected skills:', data)
         
         if (data.skills && data.skills.length > 0) {
           // Add detected skills to pending confirmation
@@ -451,18 +532,22 @@ export default function QuestPage() {
             }))
           ])
         }
+      } else {
+        console.error('AI skill detection failed:', response.status, await response.text())
       }
     } catch (error) {
       console.error('Error detecting skills with AI:', error)
-      
-      // Fallback to simple detection
-      fallbackSkillDetection(message)
     }
   }
 
   const fallbackSkillDetection = (message: string) => {
-    // Enhanced patterns including broader terms
+    console.log('🔍 Fallback skill detection for:', message)
+    
+    // Enhanced patterns including "I'm skilled in" type phrases
     const skillIndicators = [
+      // Explicit skill mentions
+      /\b(?:I'm skilled in|I know|I'm good at|I have experience with|I work with|I use|I'm experienced in)\s+(\w+(?:\s+\w+)?)/gi,
+      
       // Technical skills - broader detection
       /\b(development|programming|coding|software|web|frontend|backend|fullstack|devops)\b/gi,
       /\b(JavaScript|React|Node|Python|Java|TypeScript|SQL|HTML|CSS|PHP|Ruby|Go|Rust)\b/gi,
@@ -484,8 +569,20 @@ export default function QuestPage() {
     skillIndicators.forEach((pattern, index) => {
       const matches = message.match(pattern)
       if (matches) {
+        console.log(`🔍 Pattern ${index} matches:`, matches)
+        
         matches.forEach(match => {
-          const skillName = normalizeSkillName(match)
+          let skillName = match
+          
+          // For "I'm skilled in X" patterns, extract just the skill name
+          if (index === 0) {
+            const skillMatch = match.match(/(?:I'm skilled in|I know|I'm good at|I have experience with|I work with|I use|I'm experienced in)\s+(.+)/i)
+            if (skillMatch && skillMatch[1]) {
+              skillName = skillMatch[1].trim()
+            }
+          }
+          
+          skillName = normalizeSkillName(skillName)
           
           // Check if user already has this skill
           const hasSkill = userSkills.some(skill => {
@@ -498,12 +595,14 @@ export default function QuestPage() {
             pending.name.toLowerCase() === skillName.toLowerCase()
           )
 
-          if (!hasSkill && !isPending) {
+          if (!hasSkill && !isPending && skillName.length > 2) {
             let category = 'technical'
-            if (index === 3) category = 'marketing'
-            else if (index === 4) category = 'leadership'
-            else if (index === 5) category = 'design'
-            else if (index === 6) category = 'data'
+            if (index === 4) category = 'marketing'
+            else if (index === 5) category = 'leadership'
+            else if (index === 6) category = 'design'
+            else if (index === 7) category = 'data'
+            
+            console.log('🔍 Adding detected skill:', skillName, 'category:', category)
             
             detectedSkills.push({
               name: skillName,
@@ -516,6 +615,7 @@ export default function QuestPage() {
 
     // Add to pending skills for confirmation
     if (detectedSkills.length > 0) {
+      console.log('🔍 Adding skills to pending:', detectedSkills)
       setPendingSkills(prev => [
         ...prev,
         ...detectedSkills.map(skill => ({
@@ -524,6 +624,8 @@ export default function QuestPage() {
           category: skill.category
         }))
       ])
+    } else {
+      console.log('🔍 No skills detected in message')
     }
   }
 
