@@ -25,6 +25,11 @@ const Neo4jSkillGraph = dynamicImport(() => import('@/components/conversation/Ne
   loading: () => <div className="h-64 bg-gray-100 rounded animate-pulse" />
 })
 
+const AgentHandover = dynamicImport(() => import('@/components/conversation/AgentHandover'), { 
+  ssr: false,
+  loading: () => <div className="h-16 bg-gray-100 rounded animate-pulse" />
+})
+
 type ConversationState = 'idle' | 'listening' | 'thinking' | 'speaking'
 type PlaybookType = 'career_coaching' | 'job_search' | 'cv_enhancement' | 'peer_feedback' | 'synthetic_intelligence'
 
@@ -47,6 +52,12 @@ export default function QuestPage() {
   const [showLiveUpdates, setShowLiveUpdates] = useState(true)
   const [pendingSkills, setPendingSkills] = useState<Array<{id: string, name: string, category: string}>>([])
   const [userSkills, setUserSkills] = useState<any[]>([])
+  
+  // Agent orchestration state
+  const [currentAgent, setCurrentAgent] = useState('quest')
+  const [handoverSuggestion, setHandoverSuggestion] = useState<any>(null)
+  const [availableAgents, setAvailableAgents] = useState<any[]>([])
+  const [agentTodos, setAgentTodos] = useState<any[]>([])
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [conversationHistory, setConversationHistory] = useState<{id: string; title: string; transcript: string; ai_analysis: string; created_at: string}[]>([])
@@ -94,9 +105,28 @@ export default function QuestPage() {
         // AI-powered skill detection in user messages
         detectSkillsInMessage(content)
         
-        // Use Vercel AI SDK for response
-        setTimeout(() => {
-          generateQuestResponse(content)
+        // Analyze for potential agent handover
+        analyzeForHandover(content)
+        
+        // Use Vercel AI SDK for response or specialized agent
+        setTimeout(async () => {
+          // Check if we should use specialized agent
+          const agentResponse = await sendAgentMessage(content)
+          if (agentResponse) {
+            // Agent handled the message
+            const agentMessage: Message = {
+              id: Date.now().toString(),
+              text: agentResponse,
+              isUser: false,
+              timestamp: new Date(),
+              playbook: currentPlaybook
+            }
+            setMessages(prev => [...prev, agentMessage])
+            setConversationState('listening')
+          } else {
+            // Use Quest's standard response
+            generateQuestResponse(content)
+          }
         }, 1000)
         
       } else if (latestMessage.type === 'assistant_message' && latestMessage.message?.content) {
@@ -166,6 +196,7 @@ export default function QuestPage() {
         ensureUserExists().then(() => {
           loadPreviousConversation(user.id)
           loadUserSkills()
+          loadAvailableAgents()
         })
       } else {
         console.log('ℹ️ Running Quest in debug mode without authentication')
@@ -185,6 +216,145 @@ export default function QuestPage() {
     } catch (error) {
       console.error('Error loading user skills:', error)
     }
+  }
+
+  const loadAvailableAgents = async () => {
+    try {
+      const response = await fetch('/api/agents/orchestrate?action=agents')
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableAgents(data.agents || [])
+      }
+    } catch (error) {
+      console.error('Error loading available agents:', error)
+    }
+  }
+
+  const analyzeForHandover = async (message: string) => {
+    if (!user?.id) return
+
+    try {
+      const messageHistory = messages.slice(-3).map(m => ({
+        role: m.isUser ? 'user' : 'assistant',
+        content: m.text,
+        timestamp: m.timestamp.toISOString()
+      }))
+
+      const response = await fetch('/api/agents/orchestrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'analyze_handover',
+          userId: user.id,
+          message,
+          currentAgent,
+          messageHistory
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.shouldHandover) {
+          setHandoverSuggestion(data)
+        }
+      }
+    } catch (error) {
+      console.error('Error analyzing for handover:', error)
+    }
+  }
+
+  const handleAcceptHandover = async (targetAgent: string) => {
+    if (!user?.id) return
+
+    try {
+      const response = await fetch('/api/agents/orchestrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'execute_handover',
+          userId: user.id,
+          targetAgent,
+          message: handoverSuggestion?.reason || 'User requested handover',
+          context: {
+            currentAgent,
+            messageHistory: messages.slice(-5)
+          }
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setCurrentAgent(targetAgent)
+          setHandoverSuggestion(null)
+          
+          // Add handover message to conversation
+          const handoverMessage: Message = {
+            id: Date.now().toString(),
+            text: data.agentResponse,
+            isUser: false,
+            timestamp: new Date(),
+            playbook: currentPlaybook
+          }
+          setMessages(prev => [...prev, handoverMessage])
+          
+          // Store any todos from productivity agent
+          if (data.todos) {
+            setAgentTodos(data.todos)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error executing handover:', error)
+    }
+  }
+
+  const handleRejectHandover = () => {
+    setHandoverSuggestion(null)
+  }
+
+  const handleManualHandover = async (targetAgent: string) => {
+    await handleAcceptHandover(targetAgent)
+  }
+
+  const sendAgentMessage = async (message: string) => {
+    if (!user?.id || currentAgent === 'quest') return null
+
+    try {
+      const response = await fetch('/api/agents/orchestrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'agent_response',
+          userId: user.id,
+          message,
+          currentAgent
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        
+        // Handle handback to Quest
+        if (data.handedBack) {
+          setCurrentAgent('quest')
+          if (data.todos) {
+            setAgentTodos([])
+          }
+        }
+        
+        // Update todos if provided
+        if (data.todos) {
+          setAgentTodos(prev => [...prev, ...data.todos])
+        }
+        
+        return data.response
+      }
+    } catch (error) {
+      console.error('Error sending agent message:', error)
+    }
+    
+    return null
   }
 
   useEffect(() => {
@@ -639,6 +809,18 @@ export default function QuestPage() {
                   <div ref={messagesEndRef} />
                 </div>
 
+                {/* Agent Handover */}
+                <div className="border-t pt-4 pb-4">
+                  <AgentHandover
+                    handoverSuggestion={handoverSuggestion}
+                    currentAgent={currentAgent}
+                    onAcceptHandover={handleAcceptHandover}
+                    onRejectHandover={handleRejectHandover}
+                    onManualHandover={handleManualHandover}
+                    availableAgents={availableAgents}
+                  />
+                </div>
+
                 {/* Skill Confirmation */}
                 {pendingSkills.length > 0 && (
                   <div className="border-t pt-4 pb-4">
@@ -695,6 +877,47 @@ export default function QuestPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Productivity Agent Todos */}
+            {currentAgent === 'productivity' && agentTodos.length > 0 && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span>📋 Your Tasks</span>
+                    <span className="text-sm font-normal text-gray-500">
+                      ({agentTodos.length} items)
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {agentTodos.map((todo, index) => (
+                      <div key={todo.id || index} className="flex items-start gap-3 p-3 bg-gray-50 rounded">
+                        <div className="w-4 h-4 border border-gray-300 rounded mt-0.5"></div>
+                        <div className="flex-1">
+                          <div className="font-medium">{todo.title}</div>
+                          {todo.description && (
+                            <div className="text-sm text-gray-600">{todo.description}</div>
+                          )}
+                          <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                            <span className={`px-2 py-1 rounded ${
+                              todo.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                              todo.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                              todo.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {todo.priority} priority
+                            </span>
+                            {todo.deadline && <span>Due: {todo.deadline}</span>}
+                            {todo.estimatedTime && <span>Est: {todo.estimatedTime}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* AI-Powered Skills Graph Visualization */}
             {user?.id && (
