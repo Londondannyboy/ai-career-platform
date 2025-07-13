@@ -69,7 +69,7 @@ export default function QuestPage() {
   const [availableAgents, setAvailableAgents] = useState<any[]>([])
   const [agentTodos, setAgentTodos] = useState<any[]>([])
   const [graphRefreshKey, setGraphRefreshKey] = useState(0)
-  const [useNeo4jFallback, setUseNeo4jFallback] = useState(false)
+  const [useNeo4jFallback, setUseNeo4jFallback] = useState(true)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [conversationHistory, setConversationHistory] = useState<{id: string; title: string; transcript: string; ai_analysis: string; created_at: string}[]>([])
@@ -173,35 +173,28 @@ export default function QuestPage() {
     }
 
     try {
-      // Check if user exists
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('id', user.id)
-        .single()
+      // Create user in Neon PostgreSQL database (where skills API looks)
+      console.log('📝 Ensuring user exists in Neon PostgreSQL for skills API:', user.id)
+      const response = await fetch('/api/users/ensure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          name: user.fullName || user.firstName || 'Quest User',
+          email: user.emailAddresses?.[0]?.emailAddress || ''
+        })
+      })
 
-      if (!existingUser) {
-        // Create user if doesn't exist
-        console.log('📝 Creating new user in database:', user.id)
-        const { error } = await supabase
-          .from('users')
-          .insert({
-            id: user.id,
-            name: user.fullName || user.firstName || 'Quest User',
-            email: user.emailAddresses?.[0]?.emailAddress || '',
-            created_at: new Date().toISOString()
-          })
-
-        if (error) {
-          console.error('❌ Error creating user:', error)
-        } else {
-          console.log('✅ User created successfully')
-        }
+      if (response.ok) {
+        console.log('✅ User exists in Neon PostgreSQL database')
+      } else {
+        const error = await response.text()
+        console.error('❌ Error ensuring user exists in Neon:', error)
       }
     } catch (error) {
       console.error('❌ Error ensuring user exists:', error)
     }
-  }, [user, supabase])
+  }, [user])
 
   useEffect(() => {
     if (isLoaded) {
