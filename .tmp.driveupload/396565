@@ -1,0 +1,63 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { query } from '@/lib/database/neon';
+
+export async function GET(request: NextRequest) {
+  try {
+    console.log('🔍 Testing users table...');
+
+    // Check if users table exists
+    const tableExistsResult = await query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'users'
+      );
+    `);
+
+    const tableExists = tableExistsResult.rows[0]?.exists;
+    console.log('📊 Users table exists:', tableExists);
+
+    let tableSchema = null;
+    let users = [];
+    let error = null;
+
+    if (tableExists) {
+      try {
+        // Get table schema
+        const schemaResult = await query(`
+          SELECT column_name, data_type, is_nullable 
+          FROM information_schema.columns 
+          WHERE table_name = 'users' 
+          ORDER BY ordinal_position;
+        `);
+        tableSchema = schemaResult.rows;
+
+        // Get sample users
+        const usersResult = await query('SELECT * FROM users LIMIT 5');
+        users = usersResult.rows;
+        console.log('📊 Found users:', users.length);
+      } catch (err) {
+        error = err instanceof Error ? err.message : String(err);
+        console.error('❌ Error querying users:', error);
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      debug: {
+        tableExists,
+        tableSchema,
+        totalUsers: users.length,
+        users: users.map(u => ({ id: u.id, name: u.name, email: u.email })),
+        error
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Database debug error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : String(error) 
+    }, { status: 500 });
+  }
+}
