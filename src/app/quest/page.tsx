@@ -701,12 +701,13 @@ export default function QuestPage() {
       return
     }
 
-    // Use debug user ID if no authenticated user
+    // Use real user ID or debug user (now that debug user exists in database)
     const effectiveUserId = user?.id || 'debug-user-001'
     console.log('🎯 Adding skill:', skill.name, 'for user:', effectiveUserId)
 
     if (!user?.id) {
       console.warn('⚠️ Running in debug mode - using fallback user ID:', effectiveUserId)
+      console.log('💡 Note: Debug user now exists in database and should work')
     }
 
     try {
@@ -896,8 +897,23 @@ export default function QuestPage() {
     )
   }
 
-  // TEMPORARY: Remove authentication requirement for debugging
-  // if (!user) return null
+  // Enable authentication - redirect to sign in if no user
+  if (!user && isLoaded) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Sign In Required</h1>
+          <p className="text-gray-600 mb-6">Please sign in to use Quest</p>
+          <a 
+            href="/sign-in" 
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Sign In
+          </a>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
