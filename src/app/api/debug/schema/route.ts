@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const tables = tablesResult.rows.map((row: any) => row.table_name);
     console.log('📊 Found tables:', tables);
 
-    let schemas = {};
+    let schemas: Record<string, any> = {};
 
     // Get schema for each table
     for (const tableName of tables) {
@@ -28,19 +28,19 @@ export async function GET(request: NextRequest) {
           ORDER BY ordinal_position;
         `, [tableName]);
         schemas[tableName] = schemaResult.rows;
-      } catch (err) {
+      } catch (err: any) {
         schemas[tableName] = { error: err.message };
       }
     }
 
     // Test specific tables we need
-    let testResults = {};
+    let testResults: Record<string, any> = {};
 
     // Test users table
     try {
       const usersTest = await query('SELECT COUNT(*) as count FROM users LIMIT 1');
       testResults.users = { exists: true, count: usersTest.rows[0]?.count || 0 };
-    } catch (err) {
+    } catch (err: any) {
       testResults.users = { exists: false, error: err.message };
     }
 
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     try {
       const skillsTest = await query('SELECT COUNT(*) as count FROM user_skills LIMIT 1');
       testResults.user_skills = { exists: true, count: skillsTest.rows[0]?.count || 0 };
-    } catch (err) {
+    } catch (err: any) {
       testResults.user_skills = { exists: false, error: err.message };
     }
 
