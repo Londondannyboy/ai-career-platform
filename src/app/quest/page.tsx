@@ -25,6 +25,11 @@ const Neo4jSkillGraph = dynamicImport(() => import('@/components/conversation/Ne
   loading: () => <div className="h-64 bg-gray-100 rounded animate-pulse" />
 })
 
+const PostgreSQLSkillGraph = dynamicImport(() => import('@/components/conversation/PostgreSQLSkillGraph'), { 
+  ssr: false,
+  loading: () => <div className="h-64 bg-gray-100 rounded animate-pulse" />
+})
+
 const AgentHandover = dynamicImport(() => import('@/components/conversation/AgentHandover'), { 
   ssr: false,
   loading: () => <div className="h-16 bg-gray-100 rounded animate-pulse" />
@@ -64,6 +69,7 @@ export default function QuestPage() {
   const [availableAgents, setAvailableAgents] = useState<any[]>([])
   const [agentTodos, setAgentTodos] = useState<any[]>([])
   const [graphRefreshKey, setGraphRefreshKey] = useState(0)
+  const [useNeo4jFallback, setUseNeo4jFallback] = useState(false)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [conversationHistory, setConversationHistory] = useState<{id: string; title: string; transcript: string; ai_analysis: string; created_at: string}[]>([])
@@ -727,6 +733,8 @@ export default function QuestPage() {
 
       if (!neo4jResponse.ok) {
         console.error('❌ Neo4j save failed:', neo4jResponse.status, await neo4jResponse.text())
+        console.log('🔄 Switching to PostgreSQL fallback for graph visualization')
+        setUseNeo4jFallback(true)
       } else {
         console.log('✅ Neo4j save successful')
         const neo4jResult = await neo4jResponse.json()
@@ -1081,19 +1089,28 @@ export default function QuestPage() {
               <Card className="mt-6">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <span>AI Skills Network</span>
+                    <span>Skills Network</span>
                     <span className="text-sm font-normal text-gray-500">
-                      (Neo4j + GPT-4 Relationships)
+                      {useNeo4jFallback ? '(PostgreSQL + Smart Relationships)' : '(Neo4j + GPT-4 Relationships)'}
                     </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Neo4jSkillGraph 
-                    key={graphRefreshKey}
-                    userId={user.id} 
-                    height={400}
-                    refreshTrigger={graphRefreshKey}
-                  />
+                  {useNeo4jFallback ? (
+                    <PostgreSQLSkillGraph 
+                      key={`postgres-${graphRefreshKey}`}
+                      userId={user.id} 
+                      height={400}
+                      refreshTrigger={graphRefreshKey}
+                    />
+                  ) : (
+                    <Neo4jSkillGraph 
+                      key={`neo4j-${graphRefreshKey}`}
+                      userId={user.id} 
+                      height={400}
+                      refreshTrigger={graphRefreshKey}
+                    />
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -1176,16 +1193,29 @@ export default function QuestPage() {
                   )}
                   
                   {/* Refresh Graph Button for Debugging */}
-                  <button 
-                    onClick={() => {
-                      console.log('🔄 Manual graph refresh triggered')
-                      setGraphRefreshKey(prev => prev + 1)
-                      loadUserSkills()
-                    }}
-                    className="w-full mt-3 px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                  >
-                    🔄 Refresh Graph & Skills
-                  </button>
+                  <div className="mt-3 space-y-2">
+                    <button 
+                      onClick={() => {
+                        console.log('🔄 Manual graph refresh triggered')
+                        setGraphRefreshKey(prev => prev + 1)
+                        loadUserSkills()
+                      }}
+                      className="w-full px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                    >
+                      🔄 Refresh Graph & Skills
+                    </button>
+                    
+                    <button 
+                      onClick={() => {
+                        console.log('🔄 Toggling graph mode:', useNeo4jFallback ? 'Neo4j' : 'PostgreSQL')
+                        setUseNeo4jFallback(prev => !prev)
+                        setGraphRefreshKey(prev => prev + 1)
+                      }}
+                      className="w-full px-3 py-1 text-xs bg-orange-100 text-orange-700 rounded hover:bg-orange-200"
+                    >
+                      🔄 {useNeo4jFallback ? 'Try Neo4j' : 'Use PostgreSQL Fallback'}
+                    </button>
+                  </div>
                 </CardContent>
               </Card>
             )}
