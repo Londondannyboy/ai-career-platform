@@ -29,9 +29,10 @@ interface Props {
   height?: number;
   onNodeClick?: (node: SkillNode) => void;
   className?: string;
+  refreshTrigger?: number;
 }
 
-export default function Neo4jSkillGraph({ userId, height = 400, onNodeClick, className = '' }: Props) {
+export default function Neo4jSkillGraph({ userId, height = 400, onNodeClick, className = '', refreshTrigger }: Props) {
   const [graphData, setGraphData] = useState<{ nodes: SkillNode[]; links: SkillLink[] }>({
     nodes: [],
     links: []
@@ -60,7 +61,7 @@ export default function Neo4jSkillGraph({ userId, height = 400, onNodeClick, cla
     if (userId) {
       loadSkillGraph();
     }
-  }, [userId]);
+  }, [userId, refreshTrigger]);
 
   const loadSkillGraph = async () => {
     setLoading(true);

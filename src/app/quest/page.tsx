@@ -30,6 +30,11 @@ const AgentHandover = dynamicImport(() => import('@/components/conversation/Agen
   loading: () => <div className="h-16 bg-gray-100 rounded animate-pulse" />
 })
 
+const AgentSidebar = dynamicImport(() => import('@/components/conversation/AgentSidebar'), { 
+  ssr: false,
+  loading: () => <div className="h-32 bg-gray-100 rounded animate-pulse" />
+})
+
 type ConversationState = 'idle' | 'listening' | 'thinking' | 'speaking'
 type PlaybookType = 'career_coaching' | 'job_search' | 'cv_enhancement' | 'peer_feedback' | 'synthetic_intelligence'
 
@@ -58,6 +63,7 @@ export default function QuestPage() {
   const [handoverSuggestion, setHandoverSuggestion] = useState<any>(null)
   const [availableAgents, setAvailableAgents] = useState<any[]>([])
   const [agentTodos, setAgentTodos] = useState<any[]>([])
+  const [graphRefreshKey, setGraphRefreshKey] = useState(0)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [conversationHistory, setConversationHistory] = useState<{id: string; title: string; transcript: string; ai_analysis: string; created_at: string}[]>([])
@@ -679,9 +685,12 @@ export default function QuestPage() {
     const skill = pendingSkills.find(s => s.id === skillId)
     if (!skill || !user?.id) return
 
+    console.log('🎯 Adding skill:', skill.name)
+
     try {
       // Add skill to PostgreSQL database
-      await fetch('/api/skills', {
+      console.log('📊 Adding to PostgreSQL...')
+      const pgResponse = await fetch('/api/skills', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -694,8 +703,15 @@ export default function QuestPage() {
         })
       })
 
+      if (!pgResponse.ok) {
+        console.error('❌ PostgreSQL save failed:', pgResponse.status, await pgResponse.text())
+      } else {
+        console.log('✅ PostgreSQL save successful')
+      }
+
       // Add skill to Neo4j graph with AI relationship discovery
-      await fetch('/api/skills/graph', {
+      console.log('🕸️ Adding to Neo4j graph...')
+      const neo4jResponse = await fetch('/api/skills/graph', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -709,6 +725,14 @@ export default function QuestPage() {
         })
       })
 
+      if (!neo4jResponse.ok) {
+        console.error('❌ Neo4j save failed:', neo4jResponse.status, await neo4jResponse.text())
+      } else {
+        console.log('✅ Neo4j save successful')
+        const neo4jResult = await neo4jResponse.json()
+        console.log('🕸️ Neo4j result:', neo4jResult)
+      }
+
       // Update local state
       setUserSkills(prev => [...prev, {
         name: skill.name,
@@ -721,8 +745,16 @@ export default function QuestPage() {
       setPendingSkills(prev => prev.filter(s => s.id !== skillId))
 
       console.log('✅ Skill added to both PostgreSQL and Neo4j with AI relationships:', skill.name)
+      
+      // Force refresh the Neo4j graph component by triggering a key change
+      // This will make the Neo4jSkillGraph component reload
+      setTimeout(() => {
+        console.log('🔄 Triggering graph refresh...')
+        setGraphRefreshKey(prev => prev + 1)
+      }, 1000)
+
     } catch (error) {
-      console.error('Error adding skill:', error)
+      console.error('❌ Error adding skill:', error)
     }
   }
 
@@ -861,9 +893,32 @@ export default function QuestPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Agent Sidebar */}
+          <div className="lg:col-span-1 order-2 lg:order-1">
+            <Card className="sticky top-4">
+              <CardContent className="p-4">
+                <AgentSidebar
+                  currentAgent={currentAgent}
+                  availableAgents={availableAgents}
+                  onRequestHandover={(agentId) => {
+                    console.log('🤖 Manual handover requested to:', agentId)
+                    setHandoverSuggestion({
+                      shouldHandover: true,
+                      targetAgent: agentId,
+                      confidence: 100,
+                      reason: 'Manual handover requested by user',
+                      suggestedMessage: `Switching to ${agentId} agent as requested.`,
+                      urgency: 'high'
+                    })
+                  }}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Conversation Area */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 order-1 lg:order-2">
             <Card className="h-[600px] flex flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -1033,14 +1088,19 @@ export default function QuestPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Neo4jSkillGraph userId={user.id} height={400} />
+                  <Neo4jSkillGraph 
+                    key={graphRefreshKey}
+                    userId={user.id} 
+                    height={400}
+                    refreshTrigger={graphRefreshKey}
+                  />
                 </CardContent>
               </Card>
             )}
           </div>
 
           {/* Quest Info */}
-          <div className="space-y-6">
+          <div className="lg:col-span-1 order-3 space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Quest Status</CardTitle>
