@@ -40,7 +40,10 @@ const isPublicRoute = createRouteMatcher([
   '/api/deep-repo/(.*)', // Deep Repo endpoints for testing
   '/api/surface-repo/(.*)', // Surface Repo endpoints for testing
   '/profile/(.*)', // Public profile pages
-  '/api/visualization/(.*)'  // Visualization endpoints
+  '/api/visualization/(.*)',  // Visualization endpoints
+  '/api/skills',              // Skills endpoints for Quest
+  '/api/skills/(.*)',         // Skills sub-endpoints
+  '/api/users/ensure'         // User creation endpoint
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
