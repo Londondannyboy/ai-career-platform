@@ -20,7 +20,7 @@ const SkillConfirmation = dynamicImport(() => import('@/components/conversation/
   loading: () => <div className="h-12 bg-blue-50 rounded animate-pulse" />
 })
 
-const SkillGraph = dynamicImport(() => import('@/components/conversation/MiniSkillGraph'), { 
+const Neo4jSkillGraph = dynamicImport(() => import('@/components/conversation/Neo4jSkillGraph'), { 
   ssr: false,
   loading: () => <div className="h-64 bg-gray-100 rounded animate-pulse" />
 })
@@ -338,7 +338,7 @@ export default function QuestPage() {
     if (!skill || !user?.id) return
 
     try {
-      // Add skill to database
+      // Add skill to PostgreSQL database
       await fetch('/api/skills', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -349,6 +349,21 @@ export default function QuestPage() {
             category: skill.category,
             proficiency: 'intermediate'
           }
+        })
+      })
+
+      // Add skill to Neo4j graph with AI relationship discovery
+      await fetch('/api/skills/graph', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          skill: {
+            name: skill.name,
+            category: skill.category,
+            proficiency: 'intermediate'
+          },
+          action: 'add'
         })
       })
 
@@ -363,7 +378,7 @@ export default function QuestPage() {
       // Remove from pending
       setPendingSkills(prev => prev.filter(s => s.id !== skillId))
 
-      console.log('✅ Skill added successfully:', skill.name)
+      console.log('✅ Skill added to both PostgreSQL and Neo4j with AI relationships:', skill.name)
     } catch (error) {
       console.error('Error adding skill:', error)
     }
@@ -611,19 +626,19 @@ export default function QuestPage() {
               </CardContent>
             </Card>
 
-            {/* Skills Graph Visualization */}
-            {userSkills.length > 0 && (
+            {/* AI-Powered Skills Graph Visualization */}
+            {user?.id && (
               <Card className="mt-6">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <span>Your Skills Network</span>
+                    <span>AI Skills Network</span>
                     <span className="text-sm font-normal text-gray-500">
-                      ({userSkills.length} skills)
+                      (Neo4j + GPT-4 Relationships)
                     </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <SkillGraph skills={userSkills} height={300} />
+                  <Neo4jSkillGraph userId={user.id} height={400} />
                 </CardContent>
               </Card>
             )}
