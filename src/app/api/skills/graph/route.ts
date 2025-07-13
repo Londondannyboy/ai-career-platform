@@ -5,13 +5,17 @@ export async function POST(request: NextRequest) {
   try {
     const { userId, skill, action } = await request.json();
 
+    console.log('🕸️ Neo4j API POST request:', { userId, skill: skill?.name, action });
+
     if (!userId || !skill) {
       return NextResponse.json({ error: 'Missing userId or skill data' }, { status: 400 });
     }
 
     if (action === 'add') {
       // Add skill to Neo4j graph
+      console.log('🕸️ Adding skill to Neo4j:', skill);
       await skillGraphService.addSkillToGraph(userId, skill);
+      console.log('🕸️ Skill successfully added to Neo4j');
       
       return NextResponse.json({ 
         success: true, 
@@ -22,8 +26,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
   } catch (error) {
-    console.error('Error in skills graph API:', error);
-    return NextResponse.json({ error: 'Failed to process skill graph operation' }, { status: 500 });
+    console.error('🕸️ Error in skills graph API:', error);
+    return NextResponse.json({ 
+      error: 'Failed to process skill graph operation',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 
@@ -34,13 +41,22 @@ export async function GET(request: NextRequest) {
     const skillName = url.searchParams.get('skill');
     const action = url.searchParams.get('action') || 'graph';
 
+    console.log('🕸️ Neo4j API GET request:', { userId, skillName, action });
+
     if (!userId) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
     }
 
     if (action === 'graph') {
       // Get full skill graph
+      console.log('🕸️ Fetching skill graph for user:', userId);
       const graph = await skillGraphService.getUserSkillGraph(userId);
+      console.log('🕸️ Graph data from Neo4j:', {
+        nodeCount: graph.nodes.length,
+        edgeCount: graph.edges.length,
+        nodes: graph.nodes.map(n => n.name),
+        edges: graph.edges.map(e => `${e.source} -> ${e.target}`)
+      });
       return NextResponse.json(graph);
     }
 
@@ -53,7 +69,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid action or missing parameters' }, { status: 400 });
 
   } catch (error) {
-    console.error('Error fetching skill graph:', error);
+    console.error('🕸️ Error fetching skill graph:', error);
     return NextResponse.json({ error: 'Failed to fetch skill graph' }, { status: 500 });
   }
 }

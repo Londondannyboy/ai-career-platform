@@ -746,12 +746,12 @@ export default function QuestPage() {
 
       console.log('✅ Skill added to both PostgreSQL and Neo4j with AI relationships:', skill.name)
       
-      // Force refresh the Neo4j graph component by triggering a key change
-      // This will make the Neo4jSkillGraph component reload
+      // Force refresh the Neo4j graph component and reload skills
       setTimeout(() => {
-        console.log('🔄 Triggering graph refresh...')
+        console.log('🔄 Triggering graph refresh and reloading skills...')
         setGraphRefreshKey(prev => prev + 1)
-      }, 1000)
+        loadUserSkills() // Reload skills from database
+      }, 1500) // Give more time for Neo4j to process
 
     } catch (error) {
       console.error('❌ Error adding skill:', error)
@@ -1134,6 +1134,61 @@ export default function QuestPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Skills Debug Display */}
+            {user?.id && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span>Your Skills</span>
+                    <span className="text-sm font-normal text-gray-500">
+                      ({userSkills.length})
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {userSkills.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {userSkills.map((skill, index) => {
+                        const skillName = typeof skill === 'string' ? skill : skill.name;
+                        const skillCategory = typeof skill === 'object' ? skill.category : 'unknown';
+                        const isNew = typeof skill === 'object' ? skill.isNew : false;
+                        return (
+                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className={isNew ? 'font-semibold text-green-600' : ''}>{skillName}</span>
+                              {isNew && <span className="text-xs bg-green-100 text-green-700 px-1 rounded">NEW</span>}
+                            </div>
+                            <span className="text-xs text-gray-500">{skillCategory}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <div className="text-sm text-gray-500 mb-2">
+                        No skills added yet
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Skills you confirm will appear here
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Refresh Graph Button for Debugging */}
+                  <button 
+                    onClick={() => {
+                      console.log('🔄 Manual graph refresh triggered')
+                      setGraphRefreshKey(prev => prev + 1)
+                      loadUserSkills()
+                    }}
+                    className="w-full mt-3 px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                  >
+                    🔄 Refresh Graph & Skills
+                  </button>
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>

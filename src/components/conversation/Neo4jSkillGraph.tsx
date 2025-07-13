@@ -65,10 +65,24 @@ export default function Neo4jSkillGraph({ userId, height = 400, onNodeClick, cla
 
   const loadSkillGraph = async () => {
     setLoading(true);
+    console.log('🕸️ Loading Neo4j skill graph for user:', userId);
+    
     try {
-      const response = await fetch(`/api/skills/graph?userId=${userId}&action=graph`);
+      const url = `/api/skills/graph?userId=${userId}&action=graph`;
+      console.log('🕸️ Fetching from:', url);
+      
+      const response = await fetch(url);
+      console.log('🕸️ Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('🕸️ Neo4j data received:', data);
+        
+        if (!data.nodes || !data.edges) {
+          console.warn('🕸️ Invalid data structure:', data);
+          setGraphData({ nodes: [], links: [] });
+          return;
+        }
         
         // Transform Neo4j data to graph format
         const nodes: SkillNode[] = data.nodes.map((node: any) => ({
@@ -80,6 +94,7 @@ export default function Neo4jSkillGraph({ userId, height = 400, onNodeClick, cla
           value: getProficiencyValue(node.proficiency),
           isNew: isRecentlyAdded(node.addedAt)
         }));
+        console.log('🕸️ Transformed nodes:', nodes);
 
         const links: SkillLink[] = data.edges.map((edge: any) => ({
           source: edge.source,
@@ -91,11 +106,18 @@ export default function Neo4jSkillGraph({ userId, height = 400, onNodeClick, cla
           color: getRelationshipColor(edge.relationship.type, edge.relationship.discoveredBy),
           width: Math.max(1, edge.relationship.strength * 4)
         }));
+        console.log('🕸️ Transformed links:', links);
 
         setGraphData({ nodes, links });
+        console.log('🕸️ Graph data updated successfully');
+      } else {
+        const errorText = await response.text();
+        console.error('🕸️ API error:', response.status, errorText);
+        setGraphData({ nodes: [], links: [] });
       }
     } catch (error) {
-      console.error('Error loading skill graph:', error);
+      console.error('🕸️ Error loading skill graph:', error);
+      setGraphData({ nodes: [], links: [] });
     } finally {
       setLoading(false);
     }
