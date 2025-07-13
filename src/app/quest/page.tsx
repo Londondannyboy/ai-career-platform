@@ -1110,6 +1110,9 @@ export default function QuestPage() {
                       {useNeo4jFallback ? '(PostgreSQL + Smart Relationships)' : '(Neo4j + GPT-4 Relationships)'}
                     </span>
                   </CardTitle>
+                  <div className="text-xs text-gray-400 mt-1">
+                    Debug: Mode = {useNeo4jFallback ? 'PostgreSQL Fallback' : 'Neo4j'} | Refresh Key = {graphRefreshKey}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {useNeo4jFallback ? (
@@ -1180,6 +1183,10 @@ export default function QuestPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
+                  <div className="mb-3 text-xs text-gray-500">
+                    Debug: User ID = {user?.id || 'debug-user-001'} | Skills Array Length = {userSkills.length}
+                  </div>
+                  
                   {userSkills.length > 0 ? (
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {userSkills.map((skill, index) => {
@@ -1200,10 +1207,10 @@ export default function QuestPage() {
                   ) : (
                     <div className="text-center py-4">
                       <div className="text-sm text-gray-500 mb-2">
-                        No skills added yet
+                        No skills loaded from database
                       </div>
                       <div className="text-xs text-gray-400">
-                        Skills you confirm will appear here
+                        Use "Test Create Marketing Skill" to add a skill directly
                       </div>
                     </div>
                   )}
@@ -1230,6 +1237,45 @@ export default function QuestPage() {
                       className="w-full px-3 py-1 text-xs bg-orange-100 text-orange-700 rounded hover:bg-orange-200"
                     >
                       🔄 {useNeo4jFallback ? 'Try Neo4j' : 'Use PostgreSQL Fallback'}
+                    </button>
+                    
+                    <button 
+                      onClick={async () => {
+                        const effectiveUserId = user?.id || 'debug-user-001'
+                        console.log('🧪 Testing direct skill creation for user:', effectiveUserId)
+                        
+                        try {
+                          const response = await fetch('/api/skills', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              userId: effectiveUserId,
+                              skill: {
+                                name: 'Marketing Test',
+                                category: 'business',
+                                proficiency: 'intermediate'
+                              }
+                            })
+                          })
+                          
+                          const result = await response.json()
+                          console.log('🧪 Test skill creation result:', result)
+                          
+                          if (response.ok) {
+                            alert('✅ Test skill created! Check console and refresh.')
+                            loadUserSkills()
+                            setGraphRefreshKey(prev => prev + 1)
+                          } else {
+                            alert('❌ Test skill failed: ' + result.error)
+                          }
+                        } catch (error) {
+                          console.error('🧪 Test skill error:', error)
+                          alert('❌ Test skill error: ' + error)
+                        }
+                      }}
+                      className="w-full px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"
+                    >
+                      🧪 Test Create Marketing Skill
                     </button>
                   </div>
                 </CardContent>
