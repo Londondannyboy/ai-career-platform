@@ -1,6 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/database/neon';
 
+async function ensureTablesExist() {
+  try {
+    // Create users table if it doesn't exist
+    await query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        email TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    // Create user_skills table if it doesn't exist
+    await query(`
+      CREATE TABLE IF NOT EXISTS user_skills (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+        skill_name TEXT NOT NULL,
+        skill_category TEXT DEFAULT 'technical',
+        proficiency_level INTEGER DEFAULT 2,
+        years_experience INTEGER,
+        evidence_sources JSONB,
+        last_used_date TIMESTAMP,
+        improvement_goals TEXT,
+        market_demand INTEGER,
+        growth_potential INTEGER,
+        related_skills JSONB,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(user_id, skill_name)
+      );
+    `);
+
+    console.log('✅ Tables ensured to exist');
+  } catch (error) {
+    console.error('⚠️ Error ensuring tables exist:', error);
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
@@ -11,6 +51,9 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('📚 Fetching skills from user_skills table for:', userId);
+
+    // Ensure tables exist
+    await ensureTablesExist();
 
     // Get user's skills from dedicated user_skills table
     const result = await query(
@@ -83,6 +126,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('💾 Saving skill to user_skills table:', { userId, skill: skill.name });
+
+    // Ensure tables exist
+    await ensureTablesExist();
 
     // Ensure user exists in users table first (to satisfy foreign key constraint)
     try {
