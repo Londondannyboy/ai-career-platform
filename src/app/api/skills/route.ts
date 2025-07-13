@@ -84,6 +84,20 @@ export async function POST(request: NextRequest) {
 
     console.log('💾 Saving skill to user_skills table:', { userId, skill: skill.name });
 
+    // Ensure user exists in users table first (to satisfy foreign key constraint)
+    try {
+      await query(
+        `INSERT INTO users (id, name, email, created_at, updated_at) 
+         VALUES ($1, $2, $3, NOW(), NOW()) 
+         ON CONFLICT (id) DO NOTHING`,
+        [userId, 'Quest User', '']
+      );
+      console.log('✅ User ensured in users table');
+    } catch (userError) {
+      console.error('⚠️ Error ensuring user exists:', userError);
+      // Continue anyway - maybe user already exists
+    }
+
     // Check if skill already exists
     const existingResult = await query(
       'SELECT id FROM user_skills WHERE user_id = $1 AND skill_name = $2',
